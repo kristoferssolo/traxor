@@ -1,0 +1,16 @@
+[package]
+name = "traxor"
+version = "0.0.1"
+authors = ["Kristofers Solo <dev@kristofers.xyz>"]
+license = "GPLv3"
+edition = "2021"
+
+
+[dependencies]
+crossterm = "0.27"
+ratatui = { version = "0.23" }
+transmission-rpc = "0.4"
+# transmission-rpc = { path = "/home/kristofers/repos/transmission-rpc" }
+url = "2.4"
+anyhow = "1.0"
+tokio = { version = "1", features = ["full"] }
