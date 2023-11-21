@@ -22,7 +22,7 @@ impl<'a> App<'a> {
     pub fn new() -> Self {
         Self {
             running: true,
-            tabs: &[Tab::All, Tab::Active, Tab::Downloading, Tab::Settings],
+            tabs: &[Tab::All, Tab::Active, Tab::Downloading],
             index: 0,
             state: TableState::default(),
             torrents: Torrents::new(),

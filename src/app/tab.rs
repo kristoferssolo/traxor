@@ -8,7 +8,6 @@ pub enum Tab {
     All,
     Active,
     Downloading,
-    Settings,
 }
 
 impl Tab {
@@ -45,7 +44,6 @@ impl Tab {
                 TorrentGetField::DownloadDir,
                 TorrentGetField::Name,
             ],
-            Tab::Settings => &[],
         }
     }
 }
@@ -56,7 +54,6 @@ impl ToString for Tab {
             Tab::All => String::from("All"),
             Tab::Active => String::from("Active"),
             Tab::Downloading => String::from("Downloading"),
-            Tab::Settings => String::from("Settings"),
         }
     }
 }

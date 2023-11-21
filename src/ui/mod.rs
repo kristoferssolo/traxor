@@ -93,7 +93,6 @@ pub fn render<'a, B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
         0 => render_table(app, Tab::All),
         1 => render_table(app, Tab::Active),
         2 => render_table(app, Tab::Downloading),
-        3 => render_table(app, Tab::Settings),
         _ => unreachable!(),
     };
     frame.render_stateful_widget(inner.widths(widths.as_ref()), chunks[1], &mut app.state)
