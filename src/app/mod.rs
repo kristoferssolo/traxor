@@ -53,6 +53,7 @@ impl<'a> App<'a> {
             }
             None => 0,
         };
+        self.close_popup();
         self.state.select(Some(i));
     }
 
@@ -67,16 +68,19 @@ impl<'a> App<'a> {
             }
             None => 0,
         };
+        self.close_popup();
         self.state.select(Some(i));
     }
 
     /// Switches to the next tab.
     pub fn next_tab(&mut self) {
+        self.close_popup();
         self.index = (self.index + 1) % self.tabs.len();
     }
 
     /// Switches to the previous tab.
     pub fn prev_tab(&mut self) {
+        self.close_popup();
         if self.index > 0 {
             self.index -= 1;
         } else {
@@ -86,6 +90,7 @@ impl<'a> App<'a> {
 
     /// Switches to the tab whose index is `idx`.
     pub fn switch_tab(&mut self, idx: usize) {
+        self.close_popup();
         self.index = idx
     }
 
