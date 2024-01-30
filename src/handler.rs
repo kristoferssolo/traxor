@@ -30,7 +30,11 @@ pub async fn handle_key_events(key_event: KeyEvent, app: &mut App<'_>) -> Result
         KeyCode::Char('4') => app.switch_tab(3),
         KeyCode::Char('t') | KeyCode::Enter | KeyCode::Menu => {
             app.toggle_popup();
-            app.toggle_torrent().await.unwrap();
+            app.toggle_torrent().await;
+        }
+        KeyCode::Char('a') => {
+            app.toggle_popup();
+            app.torrents.toggle_all().await;
         }
         // Other handlers you could add here.
         _ => (),

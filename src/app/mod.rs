@@ -118,11 +118,10 @@ impl<'a> App<'a> {
         self.show_popup = true;
     }
 
-    pub async fn toggle_torrent(&mut self) -> transmission_rpc::types::Result<()> {
-        let torrent = self.selected().ok_or_else(|| "Torrent not found")?;
-        self.torrents.toggle(&torrent.clone()).await?;
+    pub async fn toggle_torrent(&mut self) {
+        let torrent = self.selected().expect("Torrent not found");
+        self.torrents.toggle(&torrent.clone()).await;
         self.close_popup();
-        Ok(())
     }
 
     fn selected(&self) -> Option<&Torrent> {
