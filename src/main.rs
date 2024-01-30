@@ -26,7 +26,7 @@ async fn main() -> Result<()> {
         // Handle events.
         match tui.events.next()? {
             Event::Tick => app.tick().await,
-            Event::Key(key_event) => handle_key_events(key_event, &mut app)?,
+            Event::Key(key_event) => handle_key_events(key_event, &mut app).await?,
             Event::Mouse(_) => {}
             Event::Resize(_, _) => {}
         }

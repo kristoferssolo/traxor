@@ -3,7 +3,7 @@ use anyhow::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 /// Handles the key events and updates the state of [`App`].
-pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> Result<()> {
+pub async fn handle_key_events(key_event: KeyEvent, app: &mut App<'_>) -> Result<()> {
     match key_event.code {
         // Exit application on `ESC` or `q`
         KeyCode::Esc | KeyCode::Char('q') => {
@@ -28,9 +28,12 @@ pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> Result<()> {
         KeyCode::Char('2') => app.switch_tab(1),
         KeyCode::Char('3') => app.switch_tab(2),
         KeyCode::Char('4') => app.switch_tab(3),
-        KeyCode::Char('t') => app.toggle_popup(),
+        KeyCode::Char('t') | KeyCode::Enter | KeyCode::Menu => {
+            app.toggle_popup();
+            app.toggle_torrent().await.unwrap();
+        }
         // Other handlers you could add here.
-        _ => {}
+        _ => (),
     }
     Ok(())
 }

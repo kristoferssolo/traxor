@@ -11,7 +11,7 @@ use url::Url;
 /// List of torrents.
 pub struct Torrents {
     /// Constructs a new instance of [`Torrents`].
-    client: TransClient,
+    pub client: TransClient,
     torrents: Vec<Torrent>,
     ids: Option<Vec<Id>>,
     fields: Option<Vec<TorrentGetField>>,

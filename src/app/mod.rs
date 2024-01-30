@@ -3,6 +3,7 @@ mod torrent;
 pub mod utils;
 
 use ratatui::widgets::TableState;
+use transmission_rpc::types::{Result, Torrent, TorrentAction, TorrentStatus};
 
 pub use self::{tab::Tab, torrent::Torrents};
 
@@ -114,5 +115,26 @@ impl<'a> App<'a> {
 
     pub fn open_popup(&mut self) {
         self.show_popup = true;
+    }
+
+    pub async fn toggle_torrent(&mut self) -> Result<()> {
+        let torrent = self.selected().ok_or_else(|| "Torrent not found")?;
+        let id = torrent.id().ok_or_else(|| "ID not found")?;
+        let action = match torrent.status.ok_or_else(|| "Torrent status not found")? {
+            TorrentStatus::Stopped => TorrentAction::StartNow,
+            _ => TorrentAction::Stop,
+        };
+        self.torrents
+            .client
+            .torrent_action(action, vec![id])
+            .await?;
+        self.close_popup();
+        Ok(())
+    }
+
+    fn selected(&self) -> Option<&Torrent> {
+        let idx = self.state.selected()?;
+        let torrent = self.torrents.torrents().get(idx)?;
+        Some(torrent)
     }
 }

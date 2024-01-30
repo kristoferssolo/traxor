@@ -26,7 +26,6 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         .constraints([Constraint::Length(3), Constraint::Min(0)].as_ref())
         .split(size);
 
-    // let titles = app.tabs.iter().map(Line::from).collect();
     let titles = app
         .tabs()
         .iter()

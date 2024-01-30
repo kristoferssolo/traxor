@@ -2,7 +2,7 @@
 name = "traxor"
 version = "0.1.0"
 authors = ["Kristofers Solo <dev@kristofers.xyz>"]
-license = "GPL3"
+license = "GPLv3"
 edition = "2021"
 
 
@@ -14,3 +14,4 @@ transmission-rpc = "0.4"
 url = "2.4"
 anyhow = "1.0"
 tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
