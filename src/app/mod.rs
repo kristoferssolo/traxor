@@ -102,4 +102,12 @@ impl<'a> App<'a> {
     pub fn toggle_popup(&mut self) {
         self.show_popup = !self.show_popup;
     }
+
+    pub fn close_popup(&mut self) {
+        self.show_popup = false;
+    }
+
+    pub fn open_popup(&mut self) {
+        self.show_popup = true;
+    }
 }

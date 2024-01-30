@@ -56,7 +56,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
 
     if app.show_popup {
         let block = Block::default().title("Popup").borders(Borders::ALL);
-        let size = render_popup(60, 20, size);
+        let size = render_popup(size);
         frame.render_widget(Clear, size);
         frame.render_widget(block, size);
     }
