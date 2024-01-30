@@ -8,7 +8,7 @@ use crate::app::{utils::Wrapper, App, Tab};
 
 pub fn render_table<'a>(app: &mut App, tab: Tab) -> Table<'a> {
     let fields = tab.fields();
-    let torrents = app.torrents.set_fields(None).torrents();
+    let torrents = &app.torrents.set_fields(None).torrents;
 
     let rows: Vec<Row<'_>> = torrents
         .iter()

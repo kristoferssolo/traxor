@@ -126,7 +126,7 @@ impl<'a> App<'a> {
 
     fn selected(&self) -> Option<&Torrent> {
         let idx = self.state.selected()?;
-        let torrent = self.torrents.torrents().get(idx)?;
+        let torrent = self.torrents.torrents.get(idx)?;
         Some(torrent)
     }
 }

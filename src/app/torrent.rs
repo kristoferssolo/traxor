@@ -12,9 +12,9 @@ use url::Url;
 pub struct Torrents {
     /// Constructs a new instance of [`Torrents`].
     pub client: TransClient,
-    torrents: Vec<Torrent>,
-    ids: Option<Vec<Id>>,
-    fields: Option<Vec<TorrentGetField>>,
+    pub torrents: Vec<Torrent>,
+    pub ids: Option<Vec<Id>>,
+    pub fields: Option<Vec<TorrentGetField>>,
 }
 
 impl Torrents {
@@ -56,11 +56,6 @@ impl Torrents {
             .arguments
             .torrents;
         self
-    }
-
-    /// Returns [`Vec`] of [`Torrent`] as reference.
-    pub fn torrents(&self) -> &Vec<Torrent> {
-        &self.torrents
     }
 }
 

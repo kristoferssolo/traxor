@@ -18,7 +18,7 @@ impl Torrents {
 
     pub async fn toggle_all(&mut self) {
         let torrents: Vec<(Id, TorrentAction)> = self
-            .torrents()
+            .torrents
             .iter()
             .map(|torrent| {
                 (
@@ -39,6 +39,18 @@ impl Torrents {
         }
     }
 
+    pub async fn start_all(&mut self) {
+        self.action_all(TorrentAction::StartNow)
+            .await
+            .expect("Error starting all torrents");
+    }
+
+    pub async fn stop_all(&mut self) {
+        self.action_all(TorrentAction::Stop)
+            .await
+            .expect("Error stopping all torrents");
+    }
+
     pub fn move_dir(&mut self) -> Result<()> {
         todo!()
     }
@@ -49,5 +61,16 @@ impl Torrents {
 
     pub fn rename(&mut self) -> Result<()> {
         todo!()
+    }
+
+    async fn action_all(&mut self, action: TorrentAction) -> transmission_rpc::types::Result<()> {
+        let ids = self
+            .torrents
+            .iter()
+            .filter_map(|torrent| torrent.id())
+            .collect::<Vec<_>>();
+
+        self.client.torrent_action(action, ids).await?;
+        Ok(())
     }
 }
