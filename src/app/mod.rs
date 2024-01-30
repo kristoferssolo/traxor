@@ -15,6 +15,7 @@ pub struct App<'a> {
     tabs: &'a [Tab],
     pub state: TableState,
     pub torrents: Torrents,
+    pub show_popup: bool,
 }
 
 impl<'a> App<'a> {
@@ -27,6 +28,7 @@ impl<'a> App<'a> {
             index: 0,
             state: TableState::default(),
             torrents: Torrents::new(),
+            show_popup: false,
         }
     }
 
@@ -95,5 +97,9 @@ impl<'a> App<'a> {
     /// Returns [`Tab`] slice
     pub fn tabs(&self) -> &[Tab] {
         self.tabs
+    }
+
+    pub fn toggle_popup(&mut self) {
+        self.show_popup = !self.show_popup;
     }
 }

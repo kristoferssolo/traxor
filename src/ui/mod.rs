@@ -3,51 +3,15 @@ use ratatui::{
     prelude::{Constraint, Direction, Layout},
     style::{Color, Style},
     text::Line,
-    widgets::{Block, BorderType, Borders, Row, Table, Tabs},
+    widgets::{Block, BorderType, Borders, Clear, Tabs},
     Frame,
 };
+mod popup;
+mod table;
 
-use crate::app::{utils::Wrapper, App, Tab};
+use crate::app::{App, Tab};
 
-fn render_table<'a>(app: &mut App, tab: Tab) -> Table<'a> {
-    let fields = tab.fields();
-    let torrents = app.torrents.set_fields(None).torrents();
-
-    let rows: Vec<Row<'_>> = torrents
-        .iter()
-        .map(|torrent| {
-            Row::new(
-                fields
-                    .iter()
-                    .map(|&field| field.value(torrent.clone()))
-                    .collect::<Vec<_>>(),
-            )
-        })
-        .collect();
-
-    let widths = fields
-        .iter()
-        .map(|&field| Constraint::Length(field.width()))
-        .collect::<Vec<_>>();
-
-    let header = Row::new(
-        fields
-            .iter()
-            .map(|&field| field.title())
-            .collect::<Vec<_>>(),
-    )
-    .style(Style::default().fg(Color::Yellow));
-    Table::new(rows, widths)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded),
-        )
-        .header(header)
-        .highlight_style(Style::default().fg(Color::Red))
-        .highlight_symbol(">> ")
-        .column_spacing(1)
-}
+use self::{popup::render_popup, table::render_table};
 
 /// Renders the user interface widgets.
 pub fn render(app: &mut App, frame: &mut Frame) {
@@ -88,5 +52,12 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         2 => render_table(app, Tab::Downloading),
         _ => unreachable!(),
     };
-    frame.render_stateful_widget(table, chunks[1], &mut app.state) // renders table
+    frame.render_stateful_widget(table, chunks[1], &mut app.state); // renders table
+
+    if app.show_popup {
+        let block = Block::default().title("Popup").borders(Borders::ALL);
+        let size = render_popup(60, 20, size);
+        frame.render_widget(Clear, size);
+        frame.render_widget(block, size);
+    }
 }

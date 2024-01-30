@@ -28,6 +28,7 @@ pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> Result<()> {
         KeyCode::Char('2') => app.switch_tab(1),
         KeyCode::Char('3') => app.switch_tab(2),
         KeyCode::Char('4') => app.switch_tab(3),
+        KeyCode::Char('t') => app.toggle_popup(),
         // Other handlers you could add here.
         _ => {}
     }
