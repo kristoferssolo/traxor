@@ -1,5 +1,6 @@
 mod tab;
 mod torrent;
+pub mod utils;
 
 use ratatui::widgets::TableState;
 

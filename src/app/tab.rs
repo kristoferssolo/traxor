@@ -38,6 +38,7 @@ impl Tab {
             ],
             Tab::Downloading => &[
                 TorrentGetField::TotalSize,
+                TorrentGetField::LeftUntilDone,
                 TorrentGetField::PercentDone,
                 TorrentGetField::RateDownload,
                 TorrentGetField::Eta,

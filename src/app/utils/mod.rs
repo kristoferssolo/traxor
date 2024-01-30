@@ -1,5 +1,11 @@
 use transmission_rpc::types::{ErrorType, Torrent, TorrentGetField, TorrentStatus};
 
+mod filesize;
+mod netspeed;
+use filesize::FileSize;
+
+use self::netspeed::NetSpeed;
+
 pub trait Wrapper {
     fn title(&self) -> String {
         String::from("")
@@ -79,8 +85,9 @@ impl Wrapper for TorrentGetField {
             TorrentGetField::ErrorString => optional_to_string(torrent.error_string),
             TorrentGetField::Eta => match torrent.eta {
                 Some(eta) => match eta {
-                    -1 => String::from(""),
-                    _ => eta.to_string(),
+                    -1 => "".into(),
+                    -2 => "?".into(),
+                    _ => format!("{} s", eta),
                 },
                 None => String::from(""),
             },
@@ -101,7 +108,9 @@ impl Wrapper for TorrentGetField {
                 Some(labels) => labels.join(" "),
                 None => String::from("N/A"),
             },
-            TorrentGetField::LeftUntilDone => optional_to_string(torrent.left_until_done),
+            TorrentGetField::LeftUntilDone => {
+                FileSize(torrent.left_until_done.unwrap_or(0)).to_string()
+            }
             TorrentGetField::MetadataPercentComplete => {
                 optional_to_string(torrent.metadata_percent_complete)
             }
@@ -120,13 +129,17 @@ impl Wrapper for TorrentGetField {
                 None => String::from("N/A"),
             },
             TorrentGetField::QueuePosition => String::from("N/A"),
-            TorrentGetField::RateDownload => optional_to_string(torrent.rate_download),
-            TorrentGetField::RateUpload => optional_to_string(torrent.rate_upload),
+            TorrentGetField::RateDownload => {
+                NetSpeed(torrent.rate_download.unwrap_or(0)).to_string()
+            }
+            TorrentGetField::RateUpload => NetSpeed(torrent.rate_upload.unwrap_or(0)).to_string(),
             TorrentGetField::RecheckProgress => optional_to_string(torrent.recheck_progress),
             TorrentGetField::SecondsSeeding => optional_to_string(torrent.seconds_seeding),
             TorrentGetField::SeedRatioLimit => optional_to_string(torrent.seed_ratio_limit),
             TorrentGetField::SeedRatioMode => String::from("N/A"),
-            TorrentGetField::SizeWhenDone => optional_to_string(torrent.size_when_done),
+            TorrentGetField::SizeWhenDone => {
+                FileSize(torrent.size_when_done.unwrap_or(0)).to_string()
+            }
             TorrentGetField::Status => match torrent.status {
                 Some(status) => match status {
                     TorrentStatus::Stopped => String::from("Stopped"),
@@ -140,7 +153,7 @@ impl Wrapper for TorrentGetField {
                 None => String::from("N/A"),
             },
             TorrentGetField::TorrentFile => optional_to_string(torrent.torrent_file),
-            TorrentGetField::TotalSize => optional_to_string(torrent.total_size),
+            TorrentGetField::TotalSize => FileSize(torrent.total_size.unwrap_or(0)).to_string(),
             TorrentGetField::Trackers => match torrent.trackers {
                 Some(trackers) => trackers.iter().map(|x| x.announce.to_string()).collect(),
                 None => String::from("N/A"),
@@ -149,7 +162,9 @@ impl Wrapper for TorrentGetField {
                 Some(upload_ratio) => format!("{:.2}", upload_ratio),
                 None => String::from("N/A"),
             },
-            TorrentGetField::UploadedEver => optional_to_string(torrent.uploaded_ever),
+            TorrentGetField::UploadedEver => {
+                FileSize(torrent.uploaded_ever.unwrap_or(0)).to_string()
+            }
             TorrentGetField::Wanted => match torrent.wanted {
                 Some(wanted) => wanted.iter().map(|x| x.to_string()).collect(),
                 None => String::from("N/A"),
@@ -205,8 +220,5 @@ impl Wrapper for TorrentGetField {
 }
 
 fn optional_to_string<T: ToString>(option: Option<T>) -> String {
-    match option {
-        Some(val) => val.to_string(),
-        None => String::from("N/A"),
-    }
+    option.map_or_else(|| "N/A".into(), |val| val.to_string())
 }

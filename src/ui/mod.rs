@@ -1,5 +1,4 @@
 use ratatui::{
-    backend::Backend,
     layout::Alignment,
     prelude::{Constraint, Direction, Layout},
     style::{Color, Style},
@@ -8,13 +7,9 @@ use ratatui::{
     Frame,
 };
 
-use crate::app::{App, Tab};
+use crate::app::{utils::Wrapper, App, Tab};
 
-use self::utils::Wrapper;
-
-mod utils;
-
-fn render_table<'a>(app: &mut App, tab: Tab) -> (Table<'a>, Vec<Constraint>) {
+fn render_table<'a>(app: &mut App, tab: Tab) -> Table<'a> {
     let fields = tab.fields();
     let torrents = app.torrents.set_fields(None).torrents();
 
@@ -33,7 +28,7 @@ fn render_table<'a>(app: &mut App, tab: Tab) -> (Table<'a>, Vec<Constraint>) {
     let widths = fields
         .iter()
         .map(|&field| Constraint::Length(field.width()))
-        .collect();
+        .collect::<Vec<_>>();
 
     let header = Row::new(
         fields
@@ -42,23 +37,20 @@ fn render_table<'a>(app: &mut App, tab: Tab) -> (Table<'a>, Vec<Constraint>) {
             .collect::<Vec<_>>(),
     )
     .style(Style::default().fg(Color::Yellow));
-    (
-        Table::new(rows)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .border_type(BorderType::Rounded),
-            )
-            .header(header)
-            .highlight_style(Style::default().fg(Color::Red))
-            .highlight_symbol(">> ")
-            .column_spacing(1),
-        widths,
-    )
+    Table::new(rows, widths)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded),
+        )
+        .header(header)
+        .highlight_style(Style::default().fg(Color::Red))
+        .highlight_symbol(">> ")
+        .column_spacing(1)
 }
 
 /// Renders the user interface widgets.
-pub fn render<'a, B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
+pub fn render(app: &mut App, frame: &mut Frame) {
     // This is where you add new widgets.
     // See the following resources:
     // - https://docs.rs/ratatui/latest/ratatui/widgets/index.html
@@ -88,12 +80,13 @@ pub fn render<'a, B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
         .highlight_style(Style::default().fg(Color::Green))
         .divider("|");
 
-    frame.render_widget(tabs, chunks[0]);
-    let (inner, widths) = match app.index() {
+    frame.render_widget(tabs, chunks[0]); // renders tab
+
+    let table = match app.index() {
         0 => render_table(app, Tab::All),
         1 => render_table(app, Tab::Active),
         2 => render_table(app, Tab::Downloading),
         _ => unreachable!(),
     };
-    frame.render_stateful_widget(inner.widths(widths.as_ref()), chunks[1], &mut app.state)
+    frame.render_stateful_widget(table, chunks[1], &mut app.state) // renders table
 }
