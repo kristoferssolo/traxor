@@ -55,7 +55,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     frame.render_stateful_widget(table, chunks[1], &mut app.state); // renders table
 
     if app.show_popup {
-        let block = Block::default().title("Popup").borders(Borders::ALL);
+        let block = Block::default().borders(Borders::ALL);
         let size = render_popup(size);
         frame.render_widget(Clear, size);
         frame.render_widget(block, size);
