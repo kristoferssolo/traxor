@@ -6,8 +6,8 @@ use super::Torrents;
 impl Torrents {
     pub async fn toggle(&mut self, torrent: &Torrent) {
         let id = torrent.id().expect("ID not found");
-        let action = match torrent.status.expect("Torrent status not found") {
-            TorrentStatus::Stopped => TorrentAction::StartNow,
+        let action = match torrent.status {
+            Some(TorrentStatus::Stopped) => TorrentAction::StartNow,
             _ => TorrentAction::Stop,
         };
         self.client
@@ -55,8 +55,16 @@ impl Torrents {
         todo!()
     }
 
-    pub fn delete(&mut self) -> Result<()> {
-        todo!()
+    pub async fn delete(
+        &mut self,
+        torrent: &Torrent,
+        delete_local_data: bool,
+    ) -> transmission_rpc::types::Result<()> {
+        let id = torrent.id().expect("ID not found");
+        self.client
+            .torrent_remove(vec![id], delete_local_data)
+            .await?;
+        Ok(())
     }
 
     pub fn rename(&mut self) -> Result<()> {
