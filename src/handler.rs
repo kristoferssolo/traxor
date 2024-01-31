@@ -1,37 +1,49 @@
-use crate::app::App;
-use anyhow::Result;
+use crate::app::{action::Action, App};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
-/// Handles the key events and updates the state of [`App`].
-pub async fn handle_key_events(key_event: KeyEvent, app: &mut App<'_>) -> Result<()> {
+/// Handles the key events of [`App`].
+pub fn get_action(key_event: KeyEvent) -> Option<Action> {
     match key_event.code {
         // Exit application on `ESC` or `q`
-        KeyCode::Esc | KeyCode::Char('q') => app.quit(),
+        KeyCode::Esc | KeyCode::Char('q') => Some(Action::Quit),
 
         // Exit application on `Ctrl-C`
-        KeyCode::Char('c') | KeyCode::Char('C') => {
-            if key_event.modifiers == KeyModifiers::CONTROL {
-                app.quit();
-            }
-        }
-        KeyCode::Char('l') | KeyCode::Right => app.next_tab(),
-        KeyCode::Char('h') | KeyCode::Left => app.prev_tab(),
-        KeyCode::Char('j') | KeyCode::Down => app.next(),
-        KeyCode::Char('k') | KeyCode::Up => app.previous(),
-        KeyCode::Char('1') => app.switch_tab(0),
-        KeyCode::Char('2') => app.switch_tab(1),
-        KeyCode::Char('3') => app.switch_tab(2),
-        KeyCode::Char('4') => app.switch_tab(3),
-        KeyCode::Char('t') | KeyCode::Enter | KeyCode::Menu => {
-            app.toggle_popup();
-            app.toggle_torrent().await;
-        }
-        KeyCode::Char('a') => {
-            app.toggle_popup();
-            app.torrents.toggle_all().await;
-        }
+        KeyCode::Char('c') | KeyCode::Char('C') => match key_event.modifiers {
+            KeyModifiers::CONTROL => Some(Action::Quit),
+            _ => None,
+        },
+        KeyCode::Char('l') | KeyCode::Right => Some(Action::NextTab),
+        KeyCode::Char('h') | KeyCode::Left => Some(Action::PrevTab),
+        KeyCode::Char('j') | KeyCode::Down => Some(Action::NextTorrent),
+        KeyCode::Char('k') | KeyCode::Up => Some(Action::PrevTorrent),
+        KeyCode::Char('1') => Some(Action::SwitchTab(0)),
+        KeyCode::Char('2') => Some(Action::SwitchTab(1)),
+        KeyCode::Char('3') => Some(Action::SwitchTab(2)),
+        KeyCode::Char('4') => Some(Action::SwitchTab(3)),
+        KeyCode::Char('t') | KeyCode::Enter | KeyCode::Menu => Some(Action::ToggleTorrent),
+        KeyCode::Char('a') => Some(Action::ToggleAll),
         // Other handlers you could add here.
-        _ => (),
+        _ => None,
+    }
+}
+
+/// Handles the updates of [`App`].
+pub async fn update(app: &mut App<'_>, action: Action) -> transmission_rpc::types::Result<()> {
+    match action {
+        Action::Quit => app.quit(),
+        Action::NextTab => app.next_tab(),
+        Action::PrevTab => app.prev_tab(),
+        Action::NextTorrent => app.next(),
+        Action::PrevTorrent => app.previous(),
+        Action::SwitchTab(x) => app.switch_tab(x as usize),
+        Action::TogglePopup => app.toggle_popup(),
+        Action::ToggleTorrent => app.toggle_torrent().await,
+        Action::ToggleAll => app.torrents.toggle_all().await,
+        Action::PauseAll => app.torrents.stop_all().await,
+        Action::StartAll => app.torrents.start_all().await,
+        Action::Move => unimplemented!(),
+        Action::Delete(x) => app.delete(x).await?,
+        Action::Rename => unimplemented!(),
     }
     Ok(())
 }

@@ -4,7 +4,7 @@ use ratatui::Terminal;
 use std::io;
 use traxor::app::App;
 use traxor::event::{Event, EventHandler};
-use traxor::handler::handle_key_events;
+use traxor::handler::{get_action, update};
 use traxor::tui::Tui;
 
 #[tokio::main]
@@ -26,7 +26,12 @@ async fn main() -> Result<()> {
         // Handle events.
         match tui.events.next()? {
             Event::Tick => app.tick().await,
-            Event::Key(key_event) => handle_key_events(key_event, &mut app).await?,
+            // Event::Key(key_event) => handle_key_events(key_event, &mut app).await?,
+            Event::Key(key_event) => {
+                if let Some(action) = get_action(key_event) {
+                    update(&mut app, action).await.unwrap();
+                }
+            }
             Event::Mouse(_) => {}
             Event::Resize(_, _) => {}
         }
