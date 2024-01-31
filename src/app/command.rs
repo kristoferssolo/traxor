@@ -1,6 +1,5 @@
 use std::path::Path;
 
-use anyhow::Result;
 use transmission_rpc::types::{Id, Torrent, TorrentAction, TorrentStatus};
 
 use super::Torrents;

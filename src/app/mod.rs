@@ -4,6 +4,7 @@ pub mod utils;
 
 use ratatui::widgets::TableState;
 use transmission_rpc::types::Torrent;
+pub mod action;
 mod command;
 
 pub use self::{tab::Tab, torrent::Torrents};
@@ -122,6 +123,15 @@ impl<'a> App<'a> {
         let torrent = self.selected().expect("Torrent not found");
         self.torrents.toggle(&torrent.clone()).await;
         self.close_popup();
+    }
+
+    pub async fn delete(&mut self, delete_local_data: bool) -> transmission_rpc::types::Result<()> {
+        let torrent = self.selected().expect("Torrent not found");
+        self.torrents
+            .delete(&torrent.clone(), delete_local_data)
+            .await?;
+        self.close_popup();
+        Ok(())
     }
 
     fn selected(&self) -> Option<&Torrent> {
