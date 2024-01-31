@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use anyhow::Result;
 use transmission_rpc::types::{Id, Torrent, TorrentAction, TorrentStatus};
 
@@ -51,8 +53,17 @@ impl Torrents {
             .expect("Error stopping all torrents");
     }
 
-    pub fn move_dir(&mut self) -> Result<()> {
-        todo!()
+    pub async fn move_dir(
+        &mut self,
+        torrent: &Torrent,
+        location: &Path,
+        move_from: Option<bool>,
+    ) -> transmission_rpc::types::Result<()> {
+        let id = torrent.id().expect("ID not found");
+        self.client
+            .torrent_set_location(vec![id], location.to_string_lossy().into(), move_from)
+            .await?;
+        Ok(())
     }
 
     pub async fn delete(
