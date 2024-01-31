@@ -78,8 +78,17 @@ impl Torrents {
         Ok(())
     }
 
-    pub fn rename(&mut self) -> Result<()> {
-        todo!()
+    pub async fn rename(
+        &mut self,
+        torrent: &Torrent,
+        name: &Path,
+    ) -> transmission_rpc::types::Result<()> {
+        let id = torrent.id().expect("ID not found");
+        let old_name = torrent.name.clone().unwrap();
+        self.client
+            .torrent_rename_path(vec![id], old_name, name.to_string_lossy().into())
+            .await?;
+        Ok(())
     }
 
     async fn action_all(&mut self, action: TorrentAction) -> transmission_rpc::types::Result<()> {
