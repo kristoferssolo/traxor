@@ -134,6 +134,18 @@ impl<'a> App<'a> {
         Ok(())
     }
 
+    pub fn select(&mut self) {
+        let torrent = self.selected().expect("Torrent not found");
+        if let Some(id) = torrent.id {
+            if self.torrents.selected.contains(&id) {
+                self.torrents.selected.remove(&id);
+            } else {
+                self.torrents.selected.insert(id);
+            }
+        }
+        self.next();
+    }
+
     fn selected(&self) -> Option<&Torrent> {
         let idx = self.state.selected()?;
         let torrent = self.torrents.torrents.get(idx)?;

@@ -19,9 +19,9 @@ pub fn get_action(key_event: KeyEvent) -> Option<Action> {
         KeyCode::Char('1') => Some(Action::SwitchTab(0)),
         KeyCode::Char('2') => Some(Action::SwitchTab(1)),
         KeyCode::Char('3') => Some(Action::SwitchTab(2)),
-        KeyCode::Char('4') => Some(Action::SwitchTab(3)),
         KeyCode::Char('t') | KeyCode::Enter | KeyCode::Menu => Some(Action::ToggleTorrent),
         KeyCode::Char('a') => Some(Action::ToggleAll),
+        KeyCode::Char(' ') => Some(Action::Select),
         // Other handlers you could add here.
         _ => None,
     }
@@ -44,6 +44,7 @@ pub async fn update(app: &mut App<'_>, action: Action) -> transmission_rpc::type
         Action::Move => unimplemented!(),
         Action::Delete(x) => app.delete(x).await?,
         Action::Rename => unimplemented!(),
+        Action::Select => app.select(),
     }
     Ok(())
 }

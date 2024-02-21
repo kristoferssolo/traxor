@@ -1,8 +1,8 @@
-use std::fmt::Debug;
+use std::{collections::HashSet, fmt::Debug};
 
 use anyhow::Result;
 use transmission_rpc::{
-    types::{Id, Torrent, TorrentGetField},
+    types::{Torrent, TorrentGetField},
     TransClient,
 };
 
@@ -13,7 +13,7 @@ pub struct Torrents {
     /// Constructs a new instance of [`Torrents`].
     pub client: TransClient,
     pub torrents: Vec<Torrent>,
-    pub ids: Option<Vec<Id>>,
+    pub selected: HashSet<i64>, // Torrent::id
     pub fields: Option<Vec<TorrentGetField>>,
 }
 
@@ -24,7 +24,7 @@ impl Torrents {
         Self {
             client: TransClient::new(url),
             torrents: Vec::new(),
-            ids: None,
+            selected: HashSet::new(),
             fields: None,
         }
     }
@@ -50,7 +50,7 @@ impl Torrents {
     pub async fn update(&mut self) -> &mut Self {
         self.torrents = self
             .client
-            .torrent_get(self.fields.clone(), self.ids.clone())
+            .torrent_get(self.fields.clone(), None)
             .await
             .unwrap()
             .arguments

@@ -63,6 +63,7 @@ impl Wrapper for TorrentGetField {
             TorrentGetField::UploadedEver => String::from("Uploaded"),
             TorrentGetField::Wanted => String::from("Wanted"),
             TorrentGetField::WebseedsSendingToUs => String::from("Webseeds Sending to Us"),
+            TorrentGetField::FileCount => unimplemented!(),
         }
     }
 
@@ -170,6 +171,7 @@ impl Wrapper for TorrentGetField {
                 None => String::from("N/A"),
             },
             TorrentGetField::WebseedsSendingToUs => String::from("N/A"),
+            TorrentGetField::FileCount => unimplemented!(),
         }
     }
 
@@ -215,6 +217,7 @@ impl Wrapper for TorrentGetField {
             TorrentGetField::UploadedEver => 10,
             TorrentGetField::Wanted => 10,
             TorrentGetField::WebseedsSendingToUs => 10,
+            TorrentGetField::FileCount => unimplemented!(),
         }
     }
 }
