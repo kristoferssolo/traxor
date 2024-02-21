@@ -1,20 +1,45 @@
 use std::path::Path;
 
+use tracing::debug;
 use transmission_rpc::types::{Id, Torrent, TorrentAction, TorrentStatus};
 
 use super::Torrents;
 
 impl Torrents {
-    pub async fn toggle(&mut self, torrent: &Torrent) {
-        let id = torrent.id().expect("ID not found");
-        let action = match torrent.status {
-            Some(TorrentStatus::Stopped) => TorrentAction::StartNow,
-            _ => TorrentAction::Stop,
-        };
-        self.client
-            .torrent_action(action, vec![id])
-            .await
-            .expect("Error toggling torrent");
+    pub async fn toggle(&mut self, ids: &Vec<i64>) {
+        debug!("ID list - {:?}", ids);
+
+        let api_ids: Vec<_> = self
+            .torrents
+            .iter()
+            .filter_map(|torrent| {
+                if let Some(id) = torrent.id {
+                    if ids.contains(&id) {
+                        return torrent.id();
+                    }
+                }
+                return None;
+            })
+            .collect();
+
+        debug!("API ID list - {:?}", api_ids);
+
+        for torrent in &self.torrents {
+            if let Some(id) = torrent.id {
+                if ids.contains(&id) {
+                    let action = match torrent.status {
+                        Some(TorrentStatus::Stopped) => TorrentAction::Start,
+                        _ => TorrentAction::Stop,
+                    };
+                    if !api_ids.is_empty() {
+                        if let Err(err) = self.client.torrent_action(action, api_ids.clone()).await
+                        {
+                            eprintln!("Error toggling torrent: {}", err);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     pub async fn toggle_all(&mut self) {
@@ -65,16 +90,18 @@ impl Torrents {
         Ok(())
     }
 
-    pub async fn delete(
-        &mut self,
-        torrent: &Torrent,
-        delete_local_data: bool,
-    ) -> transmission_rpc::types::Result<()> {
-        let id = torrent.id().expect("ID not found");
+    pub async fn delete(&mut self, ids: &Vec<i64>, delete_local_data: bool) {
+        let api_ids = self
+            .torrents
+            .iter()
+            .filter(|torrent| ids.contains(&torrent.id.unwrap()))
+            .map(|torrent| torrent.id().unwrap())
+            .collect();
+
         self.client
-            .torrent_remove(vec![id], delete_local_data)
-            .await?;
-        Ok(())
+            .torrent_remove(api_ids, delete_local_data)
+            .await
+            .unwrap();
     }
 
     pub async fn rename(
