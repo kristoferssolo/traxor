@@ -10,8 +10,8 @@ edition = "2021"
 crossterm = "0.27"
 ratatui = { version = "0.26" }
 transmission-rpc = "0.4"
-# transmission-rpc = { path = "/home/kristofers/repos/transmission-rpc" }
 url = "2.4"
 anyhow = "1.0"
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
+tracing-subscriber = "0.3"
