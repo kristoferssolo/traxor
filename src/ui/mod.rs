@@ -26,7 +26,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         .constraints([Constraint::Length(3), Constraint::Min(0)].as_ref())
         .split(size);
 
-    let titles = app
+    let titles: Vec<_> = app
         .tabs()
         .iter()
         .map(|x| Line::from(x.to_string()))
