@@ -14,4 +14,5 @@ pub enum Action {
     Move,
     Delete(bool),
     Rename,
+    Select,
 }
