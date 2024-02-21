@@ -3,7 +3,6 @@ mod torrent;
 pub mod utils;
 
 use ratatui::widgets::TableState;
-use transmission_rpc::types::Torrent;
 pub mod action;
 mod command;
 
@@ -119,36 +118,50 @@ impl<'a> App<'a> {
         self.show_popup = true;
     }
 
-    pub async fn toggle_torrent(&mut self) {
-        let torrent = self.selected().expect("Torrent not found");
-        self.torrents.toggle(&torrent.clone()).await;
+    pub async fn toggle_torrents(&mut self) {
+        let ids = &self.selected(false);
+        self.torrents.toggle(ids).await;
         self.close_popup();
     }
 
-    pub async fn delete(&mut self, delete_local_data: bool) -> transmission_rpc::types::Result<()> {
-        let torrent = self.selected().expect("Torrent not found");
-        self.torrents
-            .delete(&torrent.clone(), delete_local_data)
-            .await?;
+    pub async fn delete(&mut self, delete_local_data: bool) {
+        let ids = &self.selected(false);
+        self.torrents.delete(ids, delete_local_data).await;
         self.close_popup();
-        Ok(())
     }
 
     pub fn select(&mut self) {
-        let torrent = self.selected().expect("Torrent not found");
-        if let Some(id) = torrent.id {
-            if self.torrents.selected.contains(&id) {
-                self.torrents.selected.remove(&id);
-            } else {
-                self.torrents.selected.insert(id);
-            }
+        let current_id = *self.selected(true).first().unwrap();
+        if self.torrents.selected.contains(&current_id) {
+            self.torrents.selected.remove(&current_id);
+        } else {
+            self.torrents.selected.insert(current_id);
         }
         self.next();
     }
 
-    fn selected(&self) -> Option<&Torrent> {
-        let idx = self.state.selected()?;
-        let torrent = self.torrents.torrents.get(idx)?;
-        Some(torrent)
+    fn selected(&self, highlighted: bool) -> Vec<i64> {
+        let torrents = &self.torrents.torrents;
+        if self.torrents.selected.is_empty() || highlighted {
+            let torrent_id = || {
+                let idx = self.state.selected()?;
+                let torrent = torrents.get(idx)?;
+                torrent.id
+            };
+            if let Some(id) = torrent_id() {
+                return vec![id];
+            }
+        }
+        let selected_torrents: Vec<_> = torrents
+            .iter()
+            .filter_map(|torrent| {
+                let id = torrent.id;
+                if self.torrents.selected.contains(&id?) {
+                    return id;
+                }
+                return None;
+            })
+            .collect();
+        selected_torrents
     }
 }
