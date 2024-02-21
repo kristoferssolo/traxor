@@ -8,7 +8,7 @@ edition = "2021"
 
 [dependencies]
 crossterm = "0.27"
-ratatui = { version = "0.25" }
+ratatui = { version = "0.26" }
 transmission-rpc = "0.4"
 # transmission-rpc = { path = "/home/kristofers/repos/transmission-rpc" }
 url = "2.4"
