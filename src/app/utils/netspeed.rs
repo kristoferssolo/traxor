@@ -20,6 +20,9 @@ impl NetSpeed {
 
 impl ToString for NetSpeed {
     fn to_string(&self) -> String {
+        if self.0 == 0 {
+            return "0".to_string();
+        }
         match self.0 as f64 {
             b if b >= 1e9 => self.to_gbps(),
             b if b >= 1e6 => self.to_mbps(),
