@@ -1,4 +1,5 @@
 use anyhow::Result;
+use log::setup_logger;
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
 use std::io;
@@ -6,9 +7,13 @@ use traxor::app::App;
 use traxor::event::{Event, EventHandler};
 use traxor::handler::{get_action, update};
 use traxor::tui::Tui;
+mod log;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Setup the logger.
+    setup_logger();
+
     // Create an application.
     let mut app = App::new();
 
