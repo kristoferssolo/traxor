@@ -13,7 +13,7 @@ pub struct Torrents {
     /// Constructs a new instance of [`Torrents`].
     pub client: TransClient,
     pub torrents: Vec<Torrent>,
-    pub selected: HashSet<i64>, // Torrent::id
+    pub selected: HashSet<i64>,
     pub fields: Option<Vec<TorrentGetField>>,
 }
 

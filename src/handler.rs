@@ -21,6 +21,8 @@ pub fn get_action(key_event: KeyEvent) -> Option<Action> {
         KeyCode::Char('3') => Some(Action::SwitchTab(2)),
         KeyCode::Char('t') | KeyCode::Enter | KeyCode::Menu => Some(Action::ToggleTorrent),
         KeyCode::Char('a') => Some(Action::ToggleAll),
+        KeyCode::Char('d') => Some(Action::Delete(false)),
+        KeyCode::Char('D') => Some(Action::Delete(true)),
         KeyCode::Char(' ') => Some(Action::Select),
         // Other handlers you could add here.
         _ => None,
