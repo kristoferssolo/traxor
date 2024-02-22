@@ -1,43 +1,26 @@
-use std::path::Path;
+use std::{collections::HashSet, path::Path, vec};
 
-use tracing::debug;
 use transmission_rpc::types::{Id, Torrent, TorrentAction, TorrentStatus};
 
-use super::Torrents;
+use super::{types::Selected, Torrents};
 
 impl Torrents {
-    pub async fn toggle(&mut self, ids: &Vec<i64>) {
-        debug!("ID list - {:?}", ids);
-
-        let api_ids: Vec<_> = self
-            .torrents
-            .iter()
-            .filter_map(|torrent| {
-                if let Some(id) = torrent.id {
-                    if ids.contains(&id) {
-                        return torrent.id();
-                    }
-                }
-                return None;
-            })
-            .collect();
-
-        debug!("API ID list - {:?}", api_ids);
-
-        for torrent in &self.torrents {
+    pub async fn toggle(&mut self, ids: Selected) {
+        let ids: HashSet<_> = ids.into();
+        let torrents = self.torrents.iter().filter(|torrent| {
             if let Some(id) = torrent.id {
-                if ids.contains(&id) {
-                    let action = match torrent.status {
-                        Some(TorrentStatus::Stopped) => TorrentAction::Start,
-                        _ => TorrentAction::Stop,
-                    };
-                    if !api_ids.is_empty() {
-                        if let Err(err) = self.client.torrent_action(action, api_ids.clone()).await
-                        {
-                            eprintln!("Error toggling torrent: {}", err);
-                        }
-                    }
-                }
+                return ids.contains(&id);
+            }
+            false
+        });
+
+        for torrent in torrents {
+            let action = match torrent.status {
+                Some(TorrentStatus::Stopped) => TorrentAction::Start,
+                _ => TorrentAction::Stop,
+            };
+            if let Some(id) = torrent.id() {
+                self.client.torrent_action(action, vec![id]).await.unwrap();
             }
         }
     }
@@ -90,16 +73,9 @@ impl Torrents {
         Ok(())
     }
 
-    pub async fn delete(&mut self, ids: &Vec<i64>, delete_local_data: bool) {
-        let api_ids = self
-            .torrents
-            .iter()
-            .filter(|torrent| ids.contains(&torrent.id.unwrap()))
-            .map(|torrent| torrent.id().unwrap())
-            .collect();
-
+    pub async fn delete(&mut self, ids: Selected, delete_local_data: bool) {
         self.client
-            .torrent_remove(api_ids, delete_local_data)
+            .torrent_remove(ids.into(), delete_local_data)
             .await
             .unwrap();
     }

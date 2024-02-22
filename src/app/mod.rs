@@ -5,7 +5,9 @@ pub mod utils;
 use ratatui::widgets::TableState;
 pub mod action;
 mod command;
+pub mod types;
 
+use self::types::Selected;
 pub use self::{tab::Tab, torrent::Torrents};
 
 /// Main Application.
@@ -119,28 +121,29 @@ impl<'a> App<'a> {
     }
 
     pub async fn toggle_torrents(&mut self) {
-        let ids = &self.selected(false);
+        let ids = self.selected(false);
         self.torrents.toggle(ids).await;
         self.close_popup();
     }
 
     pub async fn delete(&mut self, delete_local_data: bool) {
-        let ids = &self.selected(false);
+        let ids = self.selected(false);
         self.torrents.delete(ids, delete_local_data).await;
         self.close_popup();
     }
 
     pub fn select(&mut self) {
-        let current_id = *self.selected(true).first().unwrap();
-        if self.torrents.selected.contains(&current_id) {
-            self.torrents.selected.remove(&current_id);
-        } else {
-            self.torrents.selected.insert(current_id);
+        if let Selected::Current(current_id) = self.selected(true) {
+            if self.torrents.selected.contains(&current_id) {
+                self.torrents.selected.remove(&current_id);
+            } else {
+                self.torrents.selected.insert(current_id);
+            }
         }
         self.next();
     }
 
-    fn selected(&self, highlighted: bool) -> Vec<i64> {
+    fn selected(&self, highlighted: bool) -> Selected {
         let torrents = &self.torrents.torrents;
         if self.torrents.selected.is_empty() || highlighted {
             let torrent_id = || {
@@ -149,19 +152,19 @@ impl<'a> App<'a> {
                 torrent.id
             };
             if let Some(id) = torrent_id() {
-                return vec![id];
+                return Selected::Current(id);
             }
         }
-        let selected_torrents: Vec<_> = torrents
+        let selected_torrents = torrents
             .iter()
             .filter_map(|torrent| {
                 let id = torrent.id;
                 if self.torrents.selected.contains(&id?) {
                     return id;
                 }
-                return None;
+                None
             })
             .collect();
-        selected_torrents
+        Selected::List(selected_torrents)
     }
 }
