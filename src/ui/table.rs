@@ -24,7 +24,7 @@ pub fn render_table<'a>(app: &mut App, tab: Tab) -> Table<'a> {
                                 return field.value(torrent.clone()).set_style(highlight_style);
                             }
                         }
-                        return field.value(torrent.clone()).into();
+                        field.value(torrent.clone()).into()
                     })
                     .collect::<Vec<_>>(),
             )
