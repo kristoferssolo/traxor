@@ -5,12 +5,11 @@ authors = ["Kristofers Solo <dev@kristofers.xyz>"]
 license = "GPLv3"
 edition = "2021"
 
-
 [dependencies]
-crossterm = "0.27"
-ratatui = { version = "0.26" }
-transmission-rpc = "0.4"
-url = "2.4"
+crossterm = "0.29"
+ratatui = { version = "0.29" }
+transmission-rpc = "0.5"
+url = "2.5"
 anyhow = "1.0"
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
