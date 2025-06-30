@@ -53,6 +53,6 @@ pub fn render_table<'a>(app: &mut App, tab: Tab) -> Table<'a> {
                 .border_type(BorderType::Rounded),
         )
         .header(header)
-        .highlight_style(highlight_style)
+        .row_highlight_style(highlight_style)
         .column_spacing(1)
 }
