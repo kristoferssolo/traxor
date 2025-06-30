@@ -45,11 +45,15 @@ impl EventHandler {
                         .unwrap_or(tick_rate);
 
                     if event::poll(timeout).expect("no events available") {
-                        match event::read().expect("unable to read event") {
-                            CrosstermEvent::Key(e) => sender.send(Event::Key(e)),
-                            CrosstermEvent::Mouse(e) => sender.send(Event::Mouse(e)),
-                            CrosstermEvent::Resize(w, h) => sender.send(Event::Resize(w, h)),
-                            _ => unimplemented!(),
+                        match event::read() {
+                            Ok(CrosstermEvent::Key(e)) => sender.send(Event::Key(e)),
+                            Ok(CrosstermEvent::Mouse(e)) => sender.send(Event::Mouse(e)),
+                            Ok(CrosstermEvent::Resize(w, h)) => sender.send(Event::Resize(w, h)),
+                            Err(e) => {
+                                eprintln!("Error reading event: {:?}", e);
+                                break;
+                            }
+                            _ => Ok(()), // Ignore other events
                         }
                         .expect("failed to send terminal event")
                     }

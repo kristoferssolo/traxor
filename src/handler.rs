@@ -30,7 +30,7 @@ pub fn get_action(key_event: KeyEvent) -> Option<Action> {
 }
 
 /// Handles the updates of [`App`].
-pub async fn update(app: &mut App<'_>, action: Action) -> transmission_rpc::types::Result<()> {
+pub async fn update(app: &mut App<'_>, action: Action) -> anyhow::Result<()> {
     match action {
         Action::Quit => app.quit(),
         Action::NextTab => app.next_tab(),
@@ -39,12 +39,12 @@ pub async fn update(app: &mut App<'_>, action: Action) -> transmission_rpc::type
         Action::PrevTorrent => app.previous(),
         Action::SwitchTab(x) => app.switch_tab(x as usize),
         Action::TogglePopup => app.toggle_popup(),
-        Action::ToggleTorrent => app.toggle_torrents().await,
-        Action::ToggleAll => app.torrents.toggle_all().await,
-        Action::PauseAll => app.torrents.stop_all().await,
-        Action::StartAll => app.torrents.start_all().await,
+        Action::ToggleTorrent => app.toggle_torrents().await?,
+        Action::ToggleAll => app.torrents.toggle_all().await?,
+        Action::PauseAll => app.torrents.stop_all().await?,
+        Action::StartAll => app.torrents.start_all().await?,
         Action::Move => unimplemented!(),
-        Action::Delete(x) => app.delete(x).await,
+        Action::Delete(x) => app.delete(x).await?,
         Action::Rename => unimplemented!(),
         Action::Select => app.select(),
     }

@@ -19,12 +19,12 @@ pub fn render_table<'a>(app: &mut App, tab: Tab) -> Table<'a> {
                 fields
                     .iter()
                     .map(|&field| {
-                        if let Some(id) = &torrent.clone().id {
-                            if selected.contains(id) {
-                                return field.value(torrent.clone()).set_style(highlight_style);
+                        if let Some(id) = torrent.id {
+                            if selected.contains(&id) {
+                                return field.value(torrent).set_style(highlight_style);
                             }
                         }
-                        field.value(torrent.clone()).into()
+                        field.value(torrent).into()
                     })
                     .collect::<Vec<_>>(),
             )
