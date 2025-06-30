@@ -11,7 +11,7 @@ pub enum Selected {
 impl Into<HashSet<i64>> for Selected {
     fn into(self) -> HashSet<i64> {
         match self {
-            Selected::Current(id) => vec![id].into_iter().collect(),
+            Selected::Current(id) => std::iter::once(id).collect(),
             Selected::List(ids) => ids,
         }
     }

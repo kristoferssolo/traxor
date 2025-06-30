@@ -45,11 +45,15 @@ pub fn render(app: &mut App, frame: &mut Frame) {
 
     frame.render_widget(tabs, chunks[0]); // renders tab
 
-    let table = match app.index() {
-        0 => render_table(app, Tab::All),
-        1 => render_table(app, Tab::Active),
-        2 => render_table(app, Tab::Downloading),
-        _ => unreachable!(),
+    let table = if app.index() == 0 {
+        render_table(app, Tab::All)
+    } else if app.index() == 1 {
+        render_table(app, Tab::Active)
+    } else if app.index() == 2 {
+        render_table(app, Tab::Downloading)
+    } else {
+        // Fallback or handle error, though unreachable!() implies this won't happen
+        render_table(app, Tab::All) // Default to Tab::All if index is unexpected
     };
     frame.render_stateful_widget(table, chunks[1], &mut app.state); // renders table
 

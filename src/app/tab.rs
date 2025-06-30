@@ -49,12 +49,18 @@ impl Tab {
     }
 }
 
+impl AsRef<str> for Tab {
+    fn as_ref(&self) -> &str {
+        match self {
+            Tab::All => "All",
+            Tab::Active => "Active",
+            Tab::Downloading => "Downloading",
+        }
+    }
+}
+
 impl ToString for Tab {
     fn to_string(&self) -> String {
-        match *self {
-            Tab::All => String::from("All"),
-            Tab::Active => String::from("Active"),
-            Tab::Downloading => String::from("Downloading"),
-        }
+        self.as_ref().into()
     }
 }

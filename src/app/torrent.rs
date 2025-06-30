@@ -19,14 +19,14 @@ pub struct Torrents {
 
 impl Torrents {
     /// Constructs a new instance of [`Torrents`].
-    pub fn new() -> Torrents {
-        let url = Url::parse("http://localhost:9091/transmission/rpc").unwrap();
-        Self {
+    pub fn new() -> Result<Torrents> {
+        let url = Url::parse("http://localhost:9091/transmission/rpc")?;
+        Ok(Self {
             client: TransClient::new(url),
             torrents: Vec::new(),
             selected: HashSet::new(),
             fields: None,
-        }
+        })
     }
 
     /// Returns the number of [`Torrent`]s in [`Torrents`]
@@ -47,15 +47,15 @@ impl Torrents {
     }
 
     /// Updates [`Torrent`] values.
-    pub async fn update(&mut self) -> &mut Self {
+    pub async fn update(&mut self) -> Result<&mut Self> {
         self.torrents = self
             .client
             .torrent_get(self.fields.clone(), None)
             .await
-            .unwrap()
+            .map_err(|e| anyhow::anyhow!("Transmission RPC error: {}", e.to_string()))?
             .arguments
             .torrents;
-        self
+        Ok(self)
     }
 }
 

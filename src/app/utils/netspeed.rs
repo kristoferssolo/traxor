@@ -1,33 +1,35 @@
+use std::fmt;
+
+const KBPS: f64 = 1_000.0;
+const MBPS: f64 = 1_000_000.0;
+const GBPS: f64 = 1_000_000_000.0;
+
 pub struct NetSpeed(pub i64);
 
-impl NetSpeed {
-    pub fn to_bps(&self) -> String {
-        format!("{} bps", self.0)
-    }
+impl fmt::Display for NetSpeed {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let speed = self.0 as f64;
+        if speed == 0.0 {
+            return write!(f, "0 bps");
+        }
 
-    pub fn to_kbps(&self) -> String {
-        format!("{:.2} kbps", self.0 as f64 / 1e3)
-    }
+        let (value, unit) = match speed {
+            s if s >= GBPS => (s / GBPS, "Gbps"),
+            s if s >= MBPS => (s / MBPS, "Mbps"),
+            s if s >= KBPS => (s / KBPS, "kbps"),
+            _ => (speed, "bps"),
+        };
 
-    pub fn to_mbps(&self) -> String {
-        format!("{:.2} mbps", self.0 as f64 / 1e6)
-    }
-
-    pub fn to_gbps(&self) -> String {
-        format!("{:.2} gbps", self.0 as f64 / 1e9)
+        if unit == "bps" {
+            write!(f, "{:.0} {}", value, unit)
+        } else {
+            write!(f, "{:.2} {}", value, unit)
+        }
     }
 }
 
-impl ToString for NetSpeed {
-    fn to_string(&self) -> String {
-        if self.0 == 0 {
-            return "0".to_string();
-        }
-        match self.0 as f64 {
-            b if b >= 1e9 => self.to_gbps(),
-            b if b >= 1e6 => self.to_mbps(),
-            b if b >= 1e3 => self.to_kbps(),
-            _ => self.to_bps(),
-        }
+impl From<i64> for NetSpeed {
+    fn from(speed: i64) -> Self {
+        NetSpeed(speed)
     }
 }

@@ -38,7 +38,9 @@ impl<B: Backend> Tui<B> {
         // This way, you won't have your terminal messed up if an unexpected error happens.
         let panic_hook = panic::take_hook();
         panic::set_hook(Box::new(move |panic| {
-            Self::reset().expect("failed to reset the terminal");
+            if let Err(e) = Self::reset() {
+                eprintln!("Error resetting terminal: {:?}", e);
+            }
             panic_hook(panic);
         }));
 

@@ -12,10 +12,10 @@ mod log;
 #[tokio::main]
 async fn main() -> Result<()> {
     // Setup the logger.
-    setup_logger();
+    setup_logger()?;
 
     // Create an application.
-    let mut app = App::new();
+    let mut app = App::new()?;
 
     // Initialize the terminal user interface.
     let backend = CrosstermBackend::new(io::stderr());
@@ -30,7 +30,7 @@ async fn main() -> Result<()> {
         tui.draw(&mut app)?;
         // Handle events.
         match tui.events.next()? {
-            Event::Tick => app.tick().await,
+            Event::Tick => app.tick().await?,
             // Event::Key(key_event) => handle_key_events(key_event, &mut app).await?,
             Event::Key(key_event) => {
                 if let Some(action) = get_action(key_event) {

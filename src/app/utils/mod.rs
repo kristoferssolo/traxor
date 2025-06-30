@@ -1,17 +1,18 @@
+use transmission_rpc::types::{ErrorType, Torrent, TorrentGetField, TorrentStatus};
+
+mod filesize;
 mod netspeed;
 
-use transmission_rpc::types::{ErrorType, Torrent, TorrentGetField, TorrentStatus};
-mod filesize;
-use filesize::FileSize;
-use netspeed::NetSpeed;
+use crate::app::utils::filesize::FileSize;
+use crate::app::utils::netspeed::NetSpeed;
 
 pub trait Wrapper {
     fn title(&self) -> String {
-        String::from("")
+        "".to_string()
     }
 
-    fn value(&self, torrent: Torrent) -> String {
-        format!("{}", torrent.name.unwrap_or(String::from("")))
+    fn value(&self, torrent: &Torrent) -> String {
+        format!("{}", torrent.name.as_ref().unwrap_or(&String::from("")))
     }
 
     fn width(&self) -> u16 {
@@ -22,8 +23,8 @@ pub trait Wrapper {
 impl Wrapper for TorrentGetField {
     fn title(&self) -> String {
         match self {
-            Self::ActivityDate => String::from("Activity Date"),
-            Self::AddedDate => String::from("Added Date"),
+            Self::ActivityDate => "Activity Date".to_string(),
+            Self::AddedDate => "Added Date".to_string(),
             Self::Availability => todo!(),
             Self::BandwidthPriority => todo!(),
             Self::Comment => todo!(),
@@ -31,81 +32,81 @@ impl Wrapper for TorrentGetField {
             Self::Creator => todo!(),
             Self::DateCreated => todo!(),
             Self::DesiredAvailable => todo!(),
-            Self::DoneDate => String::from("Done Date"),
-            Self::DownloadDir => String::from("Path"),
+            Self::DoneDate => "Done Date".to_string(),
+            Self::DownloadDir => "Path".to_string(),
             Self::DownloadLimit => todo!(),
             Self::DownloadLimited => todo!(),
             Self::DownloadedEver => todo!(),
-            Self::EditDate => String::from("Edit Date"),
-            Self::Error => String::from("Error Type"),
-            Self::ErrorString => String::from("Error String"),
-            Self::Eta => String::from("ETA"),
+            Self::EditDate => "Edit Date".to_string(),
+            Self::Error => "Error Type".to_string(),
+            Self::ErrorString => "Error String".to_string(),
+            Self::Eta => "ETA".to_string(),
             Self::EtaIdle => todo!(),
             Self::FileCount => todo!(),
-            Self::FileStats => String::from("File Stats"),
-            Self::Files => String::from("Files"),
+            Self::FileStats => "File Stats".to_string(),
+            Self::Files => "Files".to_string(),
             Self::Group => todo!(),
-            Self::HashString => String::from("Hash String"),
+            Self::HashString => "Hash String".to_string(),
             Self::HaveUnchecked => todo!(),
             Self::HaveValid => todo!(),
             Self::HonorsSessionLimits => todo!(),
-            Self::Id => String::from("Id"),
-            Self::IsFinished => String::from("Finished"),
-            Self::IsPrivate => String::from("Private"),
-            Self::IsStalled => String::from("Stalled"),
-            Self::Labels => String::from("Labels"),
-            Self::LeftUntilDone => String::from("Left Until Done"),
+            Self::Id => "Id".to_string(),
+            Self::IsFinished => "Finished".to_string(),
+            Self::IsPrivate => "Private".to_string(),
+            Self::IsStalled => "Stalled".to_string(),
+            Self::Labels => "Labels".to_string(),
+            Self::LeftUntilDone => "Left Until Done".to_string(),
             Self::MagnetLink => todo!(),
             Self::ManualAnnounceTime => todo!(),
             Self::MaxConnectedPeers => todo!(),
-            Self::MetadataPercentComplete => String::from("Metadata Percent Complete"),
-            Self::Name => String::from("Name"),
+            Self::MetadataPercentComplete => "Metadata Percent Complete".to_string(),
+            Self::Name => "Name".to_string(),
             Self::PeerLimit => todo!(),
             Self::Peers => todo!(),
-            Self::PeersConnected => String::from("Connected"),
+            Self::PeersConnected => "Connected".to_string(),
             Self::PeersFrom => todo!(),
-            Self::PeersGettingFromUs => String::from("Peers"),
-            Self::PeersSendingToUs => String::from("Seeds"),
+            Self::PeersGettingFromUs => "Peers".to_string(),
+            Self::PeersSendingToUs => "Seeds".to_string(),
             Self::PercentComplete => todo!(),
-            Self::PercentDone => String::from("%"),
+            Self::PercentDone => "%".to_string(),
             Self::PieceCount => todo!(),
             Self::PieceSize => todo!(),
             Self::Pieces => todo!(),
             Self::PrimaryMimeType => todo!(),
-            Self::Priorities => String::from("Priorities"),
-            Self::QueuePosition => String::from("Queue"),
-            Self::RateDownload => String::from("Download Speed"),
-            Self::RateUpload => String::from("Upload Speed"),
-            Self::RecheckProgress => String::from("Progress"),
+            Self::Priorities => "Priorities".to_string(),
+            Self::QueuePosition => "Queue".to_string(),
+            Self::RateDownload => "Download Speed".to_string(),
+            Self::RateUpload => "Upload Speed".to_string(),
+            Self::RecheckProgress => "Progress".to_string(),
             Self::SecondsDownloading => todo!(),
-            Self::SecondsSeeding => String::from("Seconds Seeding"),
+            Self::SecondsSeeding => "Seconds Seeding".to_string(),
             Self::SeedIdleLimit => todo!(),
             Self::SeedIdleMode => todo!(),
-            Self::SeedRatioLimit => String::from("Seed Ratio Limit"),
-            Self::SeedRatioMode => String::from("Seed Ratio Mode"),
+            Self::SeedRatioLimit => "Seed Ratio Limit".to_string(),
+            Self::SeedRatioMode => "Seed Ratio Mode".to_string(),
             Self::SequentialDownload => todo!(),
-            Self::SizeWhenDone => String::from("Size"),
+            Self::SizeWhenDone => "Size".to_string(),
             Self::StartDate => todo!(),
-            Self::Status => String::from("Status"),
-            Self::TorrentFile => String::from("Torrent File"),
-            Self::TotalSize => String::from("Total Size"),
+            Self::Status => "Status".to_string(),
+            Self::TorrentFile => "Torrent File".to_string(),
+            Self::TotalSize => "Total Size".to_string(),
             Self::TrackerList => todo!(),
             Self::TrackerStats => todo!(),
-            Self::Trackers => String::from("Trackers"),
+            Self::Trackers => "Trackers".to_string(),
             Self::UploadLimit => todo!(),
             Self::UploadLimited => todo!(),
-            Self::UploadRatio => String::from("Ratio"),
-            Self::UploadedEver => String::from("Uploaded"),
-            Self::Wanted => String::from("Wanted"),
+            Self::UploadRatio => "Ratio".to_string(),
+            Self::UploadedEver => "Uploaded".to_string(),
+            Self::Wanted => "Wanted".to_string(),
             Self::Webseeds => todo!(),
-            Self::WebseedsSendingToUs => String::from("Webseeds Sending to Us"),
+            Self::WebseedsSendingToUs => "Webseeds Sending to Us".to_string(),
         }
     }
 
-    fn value(&self, torrent: Torrent) -> String {
+    fn value(&self, torrent: &Torrent) -> String {
         match self {
-            Self::ActivityDate => optional_to_string(torrent.activity_date),
-            Self::AddedDate => optional_to_string(torrent.added_date),
+            Self::ActivityDate => torrent.activity_date.as_ref().map_or_else(|| "N/A".to_string(), |v| v.to_string()),
+            Self::AddedDate => torrent.added_date.as_ref().map_or_else(|| "N/A".to_string(), |v| v.to_string()),
             Self::Availability => todo!(),
             Self::BandwidthPriority => todo!(),
             Self::Comment => todo!(),
@@ -113,127 +114,124 @@ impl Wrapper for TorrentGetField {
             Self::Creator => todo!(),
             Self::DateCreated => todo!(),
             Self::DesiredAvailable => todo!(),
-            Self::DoneDate => optional_to_string(torrent.done_date),
-            Self::DownloadDir => optional_to_string(torrent.download_dir),
+            Self::DoneDate => torrent.done_date.as_ref().map_or_else(|| "N/A".to_string(), |v| v.to_string()),
+            Self::DownloadDir => torrent.download_dir.as_ref().map_or_else(|| "N/A".to_string(), |v| v.to_string()),
             Self::DownloadLimit => todo!(),
             Self::DownloadLimited => todo!(),
             Self::DownloadedEver => todo!(),
-            Self::EditDate => optional_to_string(torrent.edit_date),
+            Self::EditDate => torrent.edit_date.as_ref().map_or_else(|| "N/A".to_string(), |v| v.to_string()),
             Self::Error => match torrent.error {
                 Some(error) => match error {
-                    ErrorType::Ok => String::from("Ok"),
-                    ErrorType::LocalError => String::from("LocalError"),
-                    ErrorType::TrackerError => String::from("TrackerError"),
-                    ErrorType::TrackerWarning => String::from("TrackerWarning"),
+                    ErrorType::Ok => "Ok".to_string(),
+                    ErrorType::LocalError => "LocalError".to_string(),
+                    ErrorType::TrackerError => "TrackerError".to_string(),
+                    ErrorType::TrackerWarning => "TrackerWarning".to_string(),
                 },
-                None => String::from("N/A"),
+                None => "N/A".to_string(),
             },
-            Self::ErrorString => optional_to_string(torrent.error_string),
+            Self::ErrorString => torrent.error_string.as_ref().map_or_else(|| "N/A".to_string(), |v| v.to_string()),
             Self::Eta => match torrent.eta {
                 Some(eta) => match eta {
-                    -1 => "".into(),
-                    -2 => "?".into(),
+                    -1 => "".to_string(),
+                    -2 => "?".to_string(),
                     _ => format!("{} s", eta),
                 },
-                None => String::from(""),
+                None => "".to_string(),
             },
             Self::EtaIdle => todo!(),
             Self::FileCount => todo!(),
-            Self::FileStats => match torrent.file_stats {
+            Self::FileStats => match &torrent.file_stats {
                 Some(file_stats) => file_stats
                     .iter()
                     .map(|x| format!("{:?}", x.priority))
                     .collect(),
-                None => String::from("N/A"),
+                None => "N/A".to_string(),
             },
-            Self::Files => match torrent.files {
+            Self::Files => match &torrent.files {
                 Some(files) => files.iter().map(|x| x.name.to_owned()).collect(),
-                None => String::from("N/A"),
+                None => "N/A".to_string(),
             },
             Self::Group => todo!(),
-            Self::HashString => optional_to_string(torrent.hash_string),
+            Self::HashString => torrent.hash_string.as_ref().map_or_else(|| "N/A".to_string(), |v| v.to_string()),
             Self::HaveUnchecked => todo!(),
             Self::HaveValid => todo!(),
             Self::HonorsSessionLimits => todo!(),
-            Self::Id => optional_to_string(torrent.id),
-            Self::IsFinished => optional_to_string(torrent.is_finished),
-            Self::IsPrivate => optional_to_string(torrent.is_private),
-            Self::IsStalled => optional_to_string(torrent.is_stalled),
-            Self::Labels => match torrent.labels {
-                Some(labels) => labels.join(" "),
-                None => String::from("N/A"),
-            },
-            Self::LeftUntilDone => FileSize(torrent.left_until_done.unwrap_or(0)).to_string(),
+            Self::Id => torrent.id.as_ref().map_or_else(|| "N/A".to_string(), |v| v.to_string()),
+            Self::IsFinished => torrent.is_finished.as_ref().map_or_else(|| "N/A".to_string(), |v| v.to_string()),
+            Self::IsPrivate => torrent.is_private.as_ref().map_or_else(|| "N/A".to_string(), |v| v.to_string()),
+            Self::IsStalled => torrent.is_stalled.as_ref().map_or_else(|| "N/A".to_string(), |v| v.to_string()),
+            Self::Labels => torrent.labels.as_ref().map_or_else(|| "N/A".to_string(), |v| v.join(" ")),
+            Self::LeftUntilDone => FileSize::from(torrent.left_until_done.unwrap_or(0)).to_string(),
             Self::MagnetLink => todo!(),
             Self::ManualAnnounceTime => todo!(),
             Self::MaxConnectedPeers => todo!(),
-            Self::MetadataPercentComplete => optional_to_string(torrent.metadata_percent_complete),
-            Self::Name => optional_to_string(torrent.name),
+            Self::MetadataPercentComplete => torrent.metadata_percent_complete.as_ref().map_or_else(|| "N/A".to_string(), |v| v.to_string()),
+            Self::Name => torrent.name.as_ref().map_or_else(|| "N/A".to_string(), |v| v.to_string()),
             Self::PeerLimit => todo!(),
             Self::Peers => todo!(),
-            Self::PeersConnected => optional_to_string(torrent.peers_connected),
+            Self::PeersConnected => torrent.peers_connected.as_ref().map_or_else(|| "N/A".to_string(), |v| v.to_string()),
             Self::PeersFrom => todo!(),
-            Self::PeersGettingFromUs => optional_to_string(torrent.peers_getting_from_us),
-            Self::PeersSendingToUs => optional_to_string(torrent.peers_sending_to_us),
+            Self::PeersGettingFromUs => torrent.peers_getting_from_us.as_ref().map_or_else(|| "N/A".to_string(), |v| v.to_string()),
+            Self::PeersSendingToUs => torrent.peers_sending_to_us.as_ref().map_or_else(|| "N/A".to_string(), |v| v.to_string()),
             Self::PercentComplete => todo!(),
             Self::PercentDone => match torrent.percent_done {
                 Some(percent_done) => format!("{:.0}", percent_done * 100.0),
-                None => String::from("N/A"),
+                None => "N/A".to_string(),
             },
             Self::PieceCount => todo!(),
             Self::PieceSize => todo!(),
             Self::Pieces => todo!(),
             Self::PrimaryMimeType => todo!(),
-            Self::Priorities => match torrent.priorities {
+            Self::Priorities => match &torrent.priorities {
                 Some(priorities) => priorities.iter().map(|x| format!("{:?}", x)).collect(),
-                None => String::from("N/A"),
+                None => "N/A".to_string(),
             },
-            Self::QueuePosition => String::from("N/A"),
-            Self::RateDownload => NetSpeed(torrent.rate_download.unwrap_or(0)).to_string(),
-            Self::RateUpload => NetSpeed(torrent.rate_upload.unwrap_or(0)).to_string(),
-            Self::RecheckProgress => optional_to_string(torrent.recheck_progress),
+            Self::QueuePosition => "N/A".to_string(),
+            Self::RateDownload => NetSpeed::from(torrent.rate_download.unwrap_or(0)).to_string(),
+            Self::RateUpload => NetSpeed::from(torrent.rate_upload.unwrap_or(0)).to_string(),
+            Self::RecheckProgress => torrent.recheck_progress.as_ref().map_or_else(|| "N/A".to_string(), |v| v.to_string()),
             Self::SecondsDownloading => todo!(),
-            Self::SecondsSeeding => optional_to_string(torrent.seconds_seeding),
+            Self::SecondsSeeding => torrent.seconds_seeding.as_ref().map_or_else(|| "N/A".to_string(), |v| v.to_string()),
             Self::SeedIdleLimit => todo!(),
             Self::SeedIdleMode => todo!(),
-            Self::SeedRatioLimit => optional_to_string(torrent.seed_ratio_limit),
-            Self::SeedRatioMode => String::from("N/A"),
+            Self::SeedRatioLimit => torrent.seed_ratio_limit.as_ref().map_or_else(|| "N/A".to_string(), |v| v.to_string()),
+            Self::SeedRatioMode => "N/A".to_string(),
             Self::SequentialDownload => todo!(),
-            Self::SizeWhenDone => FileSize(torrent.size_when_done.unwrap_or(0)).to_string(),
+            Self::SizeWhenDone => FileSize::from(torrent.size_when_done.unwrap_or(0)).to_string(),
             Self::StartDate => todo!(),
             Self::Status => match torrent.status {
                 Some(status) => match status {
-                    TorrentStatus::Stopped => String::from("Stopped"),
-                    TorrentStatus::Seeding => String::from("Seeding"),
-                    TorrentStatus::Verifying => String::from("Verifying"),
-                    TorrentStatus::Downloading => String::from("Downloading"),
-                    TorrentStatus::QueuedToSeed => String::from("QueuedToSeed"),
-                    TorrentStatus::QueuedToVerify => String::from("QueuedToVerify"),
-                    TorrentStatus::QueuedToDownload => String::from("QueuedToDownload"),
+                    TorrentStatus::Stopped => "Stopped".to_string(),
+                    TorrentStatus::Seeding => "Seeding".to_string(),
+                    TorrentStatus::Verifying => "Verifying".to_string(),
+                    TorrentStatus::Downloading => "Downloading".to_string(),
+                    TorrentStatus::QueuedToSeed => "QueuedToSeed".to_string(),
+                    TorrentStatus::QueuedToVerify => "QueuedToVerify".to_string(),
+                    TorrentStatus::QueuedToDownload => "QueuedToDownload".to_string(),
                 },
-                None => String::from("N/A"),
+                None => "N/A".to_string(),
             },
-            Self::TorrentFile => optional_to_string(torrent.torrent_file),
-            Self::TotalSize => FileSize(torrent.total_size.unwrap_or(0)).to_string(),
+            Self::TorrentFile => torrent.torrent_file.as_ref().map_or_else(|| "N/A".to_string(), |v| v.to_string()),
+            Self::TotalSize => FileSize::from(torrent.total_size.unwrap_or(0)).to_string(),
             Self::TrackerList => todo!(),
             Self::TrackerStats => todo!(),
-            Self::Trackers => match torrent.trackers {
+            Self::Trackers => match &torrent.trackers {
                 Some(trackers) => trackers.iter().map(|x| x.announce.to_string()).collect(),
-                None => String::from("N/A"),
+                None => "N/A".to_string(),
             },
             Self::UploadLimit => todo!(),
             Self::UploadLimited => todo!(),
             Self::UploadRatio => match torrent.upload_ratio {
                 Some(upload_ratio) => format!("{:.2}", upload_ratio),
-                None => String::from("N/A"),
+                None => "N/A".to_string(),
             },
-            Self::UploadedEver => FileSize(torrent.uploaded_ever.unwrap_or(0)).to_string(),
-            Self::Wanted => match torrent.wanted {
+            Self::UploadedEver => FileSize::from(torrent.uploaded_ever.unwrap_or(0)).to_string(),
+            Self::Wanted => match &torrent.wanted {
                 Some(wanted) => wanted.iter().map(|x| x.to_string()).collect(),
-                None => String::from("N/A"),
+                None => "N/A".to_string(),
             },
             Self::Webseeds => todo!(),
-            Self::WebseedsSendingToUs => String::from("N/A"),
+            Self::WebseedsSendingToUs => "N/A".to_string(),
         }
     }
 
@@ -320,6 +318,4 @@ impl Wrapper for TorrentGetField {
     }
 }
 
-fn optional_to_string<T: ToString>(option: Option<T>) -> String {
-    option.map_or_else(|| "N/A".into(), |val| val.to_string())
-}
+

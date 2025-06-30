@@ -25,20 +25,21 @@ pub struct App<'a> {
 impl<'a> App<'a> {
     /// Constructs a new instance of [`App`].
     /// Returns instance of `Self`.
-    pub fn new() -> Self {
-        Self {
+    pub fn new() -> anyhow::Result<Self> {
+        Ok(Self {
             running: true,
             tabs: &[Tab::All, Tab::Active, Tab::Downloading],
             index: 0,
             state: TableState::default(),
-            torrents: Torrents::new(),
+            torrents: Torrents::new()?, // Handle the Result here
             show_popup: false,
-        }
+        })
     }
 
     /// Handles the tick event of the terminal.
-    pub async fn tick(&mut self) {
-        self.torrents.update().await;
+    pub async fn tick(&mut self) -> anyhow::Result<()> {
+        self.torrents.update().await?;
+        Ok(())
     }
 
     /// Set running to false to quit the application.
@@ -120,16 +121,18 @@ impl<'a> App<'a> {
         self.show_popup = true;
     }
 
-    pub async fn toggle_torrents(&mut self) {
+    pub async fn toggle_torrents(&mut self) -> anyhow::Result<()> {
         let ids = self.selected(false);
-        self.torrents.toggle(ids).await;
+        self.torrents.toggle(ids).await?;
         self.close_popup();
+        Ok(())
     }
 
-    pub async fn delete(&mut self, delete_local_data: bool) {
+    pub async fn delete(&mut self, delete_local_data: bool) -> anyhow::Result<()> {
         let ids = self.selected(false);
-        self.torrents.delete(ids, delete_local_data).await;
+        self.torrents.delete(ids, delete_local_data).await?;
         self.close_popup();
+        Ok(())
     }
 
     pub fn select(&mut self) {
@@ -146,24 +149,14 @@ impl<'a> App<'a> {
     fn selected(&self, highlighted: bool) -> Selected {
         let torrents = &self.torrents.torrents;
         if self.torrents.selected.is_empty() || highlighted {
-            let torrent_id = || {
-                let idx = self.state.selected()?;
-                let torrent = torrents.get(idx)?;
-                torrent.id
-            };
-            if let Some(id) = torrent_id() {
+            let selected_id = self.state.selected().and_then(|idx| torrents.get(idx).and_then(|torrent| torrent.id));
+            if let Some(id) = selected_id {
                 return Selected::Current(id);
             }
         }
         let selected_torrents = torrents
             .iter()
-            .filter_map(|torrent| {
-                let id = torrent.id;
-                if self.torrents.selected.contains(&id?) {
-                    return id;
-                }
-                None
-            })
+            .filter_map(|torrent| torrent.id.filter(|id| self.torrents.selected.contains(id)))
             .collect();
         Selected::List(selected_torrents)
     }
