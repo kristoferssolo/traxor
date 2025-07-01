@@ -5,7 +5,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 /// Terminal events.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Event {
     /// Terminal tick.
     Tick,
