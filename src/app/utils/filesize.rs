@@ -1,31 +1,24 @@
 use std::fmt;
 
-const KB: f64 = 1e3;
-const MB: f64 = 1e6;
-const GB: f64 = 1e9;
-const TB: f64 = 1e12;
+pub struct FileSize(i64);
 
-pub struct FileSize(pub i64);
-
-impl fmt::Display for FileSize {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.0 == 0 {
-            return write!(f, "0");
-        }
-        let size = self.0 as f64;
-        let (value, unit) = match size {
-            s if s >= TB => (s / TB, "TB"),
-            s if s >= GB => (s / GB, "GB"),
-            s if s >= MB => (s / MB, "MB"),
-            s if s >= KB => (s / KB, "KB"),
-            _ => (size, "B"),
-        };
-        write!(f, "{:.2} {}", value, unit)
+impl From<i64> for FileSize {
+    fn from(bytes: i64) -> Self {
+        FileSize(bytes)
     }
 }
 
-impl From<i64> for FileSize {
-    fn from(size: i64) -> Self {
-        FileSize(size)
+impl fmt::Display for FileSize {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let bytes = self.0;
+        if bytes < 1024 {
+            write!(f, "{} B", bytes)
+        } else if bytes < 1024 * 1024 {
+            write!(f, "{:.2} KB", bytes as f64 / 1024.0)
+        } else if bytes < 1024 * 1024 * 1024 {
+            write!(f, "{:.2} MB", bytes as f64 / (1024.0 * 1024.0))
+        } else {
+            write!(f, "{:.2} GB", bytes as f64 / (1024.0 * 1024.0 * 1024.0))
+        }
     }
 }

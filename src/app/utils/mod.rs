@@ -1,7 +1,7 @@
 use transmission_rpc::types::{ErrorType, Torrent, TorrentGetField, TorrentStatus};
 
-mod filesize;
-mod netspeed;
+pub mod filesize;
+pub mod netspeed;
 
 use crate::app::utils::filesize::FileSize;
 use crate::app::utils::netspeed::NetSpeed;
