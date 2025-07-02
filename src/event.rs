@@ -20,7 +20,6 @@ pub enum Event {
 /// Terminal event handler.
 #[allow(dead_code)]
 #[derive(Debug)]
-/// TODO: write description
 pub struct EventHandler {
     /// Event sender channel.
     sender: mpsc::Sender<Event>,

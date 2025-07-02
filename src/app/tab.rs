@@ -1,7 +1,6 @@
 use transmission_rpc::types::TorrentGetField;
 
 /// Available tabs.
-/// TODO: write description
 #[derive(Debug, Default)]
 pub enum Tab {
     #[default]

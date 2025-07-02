@@ -1,17 +1,15 @@
-mod tab;
-mod torrent;
-pub mod utils;
-
-use ratatui::widgets::TableState;
 pub mod action;
 mod command;
+mod tab;
+mod torrent;
 pub mod types;
+pub mod utils;
+pub use {tab::Tab, torrent::Torrents};
 
-use self::types::Selected;
-pub use self::{tab::Tab, torrent::Torrents};
+use ratatui::widgets::TableState;
+use types::Selected;
 
 /// Main Application.
-/// TODO: write description
 #[derive(Debug)]
 pub struct App<'a> {
     pub running: bool,
@@ -149,7 +147,10 @@ impl<'a> App<'a> {
     fn selected(&self, highlighted: bool) -> Selected {
         let torrents = &self.torrents.torrents;
         if self.torrents.selected.is_empty() || highlighted {
-            let selected_id = self.state.selected().and_then(|idx| torrents.get(idx).and_then(|torrent| torrent.id));
+            let selected_id = self
+                .state
+                .selected()
+                .and_then(|idx| torrents.get(idx).and_then(|torrent| torrent.id));
             if let Some(id) = selected_id {
                 return Selected::Current(id);
             }

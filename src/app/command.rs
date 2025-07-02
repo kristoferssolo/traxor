@@ -1,9 +1,6 @@
-use std::{collections::HashSet, path::Path};
-
-
-use transmission_rpc::types::{Torrent, TorrentAction, TorrentStatus};
-
 use super::{types::Selected, Torrents};
+use std::{collections::HashSet, path::Path};
+use transmission_rpc::types::{Torrent, TorrentAction, TorrentStatus};
 
 impl Torrents {
     pub async fn toggle(&mut self, ids: Selected) -> anyhow::Result<()> {

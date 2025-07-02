@@ -1,5 +1,4 @@
 use std::collections::HashSet;
-
 use transmission_rpc::types::Id;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
