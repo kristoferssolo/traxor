@@ -1,5 +1,6 @@
 pub mod filesize;
 pub mod netspeed;
+pub mod unit;
 
 use filesize::FileSize;
 use netspeed::NetSpeed;
@@ -121,7 +122,9 @@ impl Wrapper for TorrentGetField {
                 .map(|v| format!("{:?}", v))
                 .unwrap_or_default(),
             Self::Comment => torrent.comment.clone().unwrap_or_default(),
-            Self::CorruptEver => FileSize::from(torrent.corrupt_ever.unwrap_or(0)).to_string(),
+            Self::CorruptEver => FileSize::try_from(torrent.corrupt_ever.unwrap_or(0))
+                .unwrap_or_default()
+                .to_string(),
             Self::Creator => torrent.creator.clone().unwrap_or_default(),
             Self::DateCreated => torrent
                 .date_created
@@ -179,7 +182,7 @@ impl Wrapper for TorrentGetField {
                 .unwrap_or_default(),
             Self::Group => torrent.group.clone().unwrap_or_default(),
             Self::HashString => torrent.hash_string.clone().unwrap_or_default(),
-            Self::HaveUnchecked => todo!(),
+            Self::HaveUnchecked => FileSize::from(torrent.have_unchecked.unwrap_or(0)).to_string(),
             Self::HaveValid => FileSize::from(torrent.have_valid.unwrap_or(0)).to_string(),
             Self::HonorsSessionLimits => torrent
                 .honors_session_limits
@@ -199,7 +202,9 @@ impl Wrapper for TorrentGetField {
                 .map(|v| v.to_string())
                 .unwrap_or_default(),
             Self::Labels => torrent.labels.clone().unwrap_or_default().join(", "),
-            Self::LeftUntilDone => todo!(),
+            Self::LeftUntilDone => FileSize::try_from(torrent.left_until_done.unwrap_or(0))
+                .unwrap_or_default()
+                .to_string(),
             Self::MagnetLink => torrent.magnet_link.clone().unwrap_or_default(),
             Self::ManualAnnounceTime => torrent
                 .manual_announce_time
