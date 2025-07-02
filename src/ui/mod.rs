@@ -1,3 +1,8 @@
+mod popup;
+mod table;
+
+use crate::app::{App, Tab};
+use popup::render_popup;
 use ratatui::{
     layout::Alignment,
     prelude::{Constraint, Direction, Layout},
@@ -6,12 +11,7 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Clear, Tabs},
     Frame,
 };
-mod popup;
-mod table;
-
-use crate::app::{App, Tab};
-
-use self::{popup::render_popup, table::render_table};
+use table::render_table;
 
 /// Renders the user interface widgets.
 pub fn render(app: &mut App, frame: &mut Frame) {

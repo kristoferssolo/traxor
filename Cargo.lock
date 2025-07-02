@@ -1628,6 +1628,7 @@ dependencies = [
  "anyhow",
  "crossterm 0.29.0",
  "ratatui",
+ "thiserror",
  "tokio",
  "tracing",
  "tracing-subscriber",

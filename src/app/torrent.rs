@@ -1,11 +1,9 @@
-use std::{collections::HashSet, fmt::Debug};
-
 use anyhow::Result;
+use std::{collections::HashSet, fmt::Debug};
 use transmission_rpc::{
     types::{Torrent, TorrentGetField},
     TransClient,
 };
-
 use url::Url;
 
 /// List of torrents.
