@@ -1,4 +1,4 @@
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent};
 use traxor::{app::action::Action, handler::get_action, app::App, config::Config};
 
 #[test]
