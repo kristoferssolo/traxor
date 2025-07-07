@@ -4,7 +4,7 @@ use tracing_subscriber::{self, layer::SubscriberExt, util::SubscriberInitExt, En
 
 pub fn setup_logger() -> Result<()> {
     std::fs::create_dir_all(".logs")?;
-    let logfile = rolling::daily(".logs", "traxor.log");
+    let logfile = rolling::daily(".log", "traxor.log");
     let log_layer = tracing_subscriber::fmt::layer()
         .with_writer(logfile)
         .with_ansi(false);
@@ -16,4 +16,3 @@ pub fn setup_logger() -> Result<()> {
 
     Ok(())
 }
-
