@@ -1,14 +1,14 @@
 use super::unit::{Unit, UnitDisplay};
-use crate::impl_unit_wrapper;
+use crate::impl_unit_newtype;
 use std::fmt::Display;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct FileSize(Unit);
-impl_unit_wrapper!(FileSize);
+impl_unit_newtype!(FileSize);
 
 impl FileSize {
     pub fn new(bytes: u64) -> Self {
-        Self(Unit::new(bytes))
+        Self(Unit::from_raw(bytes))
     }
 }
 
