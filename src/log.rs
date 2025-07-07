@@ -1,17 +1,19 @@
-use std::{fs::File, path::PathBuf, str::FromStr};
-
 use anyhow::Result;
-use tracing::Level;
-use tracing_subscriber::fmt;
+use tracing_appender::rolling;
+use tracing_subscriber::{self, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 pub fn setup_logger() -> Result<()> {
     std::fs::create_dir_all(".logs")?;
-    let path = PathBuf::from_str(".logs/traxor.log")?;
-    let log_file = File::create(path)?;
-    let subscriber = fmt::Subscriber::builder()
-        .with_max_level(Level::TRACE)
-        .with_writer(log_file)
-        .finish();
-    tracing::subscriber::set_global_default(subscriber)?;
+    let logfile = rolling::daily(".logs", "traxor.log");
+    let log_layer = tracing_subscriber::fmt::layer()
+        .with_writer(logfile)
+        .with_ansi(false);
+
+    tracing_subscriber::registry()
+        .with(log_layer)
+        .with(EnvFilter::from_default_env())
+        .init();
+
     Ok(())
 }
+
