@@ -7,6 +7,17 @@ use keybinds::KeybindsConfig;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+#[macro_export]
+macro_rules! merge_fields {
+    ($self:ident, $other:ident, $($field:ident),*) => {
+        $(
+            if let Some($field) = $other.$field {
+                $self.$field = Some($field);
+            }
+        )*
+    };
+}
+
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct Config {
     pub keybinds: KeybindsConfig,

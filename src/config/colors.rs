@@ -1,3 +1,4 @@
+use crate::merge_fields;
 use ratatui::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -33,21 +34,15 @@ impl ColorsConfig {
     }
 
     pub fn merge(&mut self, other: Self) {
-        if let Some(highlight_background) = other.highlight_background {
-            self.highlight_background = Some(highlight_background);
-        }
-        if let Some(highlight_foreground) = other.highlight_foreground {
-            self.highlight_foreground = Some(highlight_foreground);
-        }
-        if let Some(warning_foreground) = other.warning_foreground {
-            self.warning_foreground = Some(warning_foreground);
-        }
-        if let Some(info_foreground) = other.info_foreground {
-            self.info_foreground = Some(info_foreground);
-        }
-        if let Some(error_foreground) = other.error_foreground {
-            self.error_foreground = Some(error_foreground);
-        }
+        merge_fields!(
+            self,
+            other,
+            highlight_background,
+            highlight_foreground,
+            warning_foreground,
+            info_foreground,
+            error_foreground
+        );
     }
 }
 
