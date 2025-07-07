@@ -55,3 +55,4 @@ pub fn impl_merge_derive(input: DeriveInput) -> TokenStream {
 
     expanded.into()
 }
+
