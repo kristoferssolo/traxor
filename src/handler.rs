@@ -1,8 +1,13 @@
 use crate::app::{action::Action, App};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use tracing::{event, info_span, Level};
 
 /// Handles the key events of [`App`].
+#[tracing::instrument]
 pub fn get_action(key_event: KeyEvent) -> Option<Action> {
+    let span = info_span!("get_action");
+    let _enter = span.enter();
+    event!(Level::INFO, "handling key event: {:?}", key_event);
     match key_event.code {
         // Exit application on `ESC` or `q`
         KeyCode::Esc | KeyCode::Char('q') => Some(Action::Quit),
@@ -30,7 +35,11 @@ pub fn get_action(key_event: KeyEvent) -> Option<Action> {
 }
 
 /// Handles the updates of [`App`].
+#[tracing::instrument]
 pub async fn update(app: &mut App<'_>, action: Action) -> anyhow::Result<()> {
+    let span = info_span!("update");
+    let _enter = span.enter();
+    event!(Level::INFO, "updating app with action: {:?}", action);
     match action {
         Action::Quit => app.quit(),
         Action::NextTab => app.next_tab(),
