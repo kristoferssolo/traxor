@@ -1,3 +1,4 @@
+use derive_macro::UnitConversions;
 use std::fmt::Display;
 use thiserror::Error;
 
@@ -11,7 +12,8 @@ pub enum UnitError {
     InvalidValue { reason: String },
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Default, UnitConversions)]
+#[error(UnitError)]
 pub struct Unit(u64);
 
 impl Unit {
@@ -54,22 +56,5 @@ impl<'a> Display for UnitDisplay<'a> {
             unit_index += 1;
         }
         write!(f, "{:.2} {}", size, self.units[unit_index])
-    }
-}
-
-impl From<u64> for Unit {
-    fn from(value: u64) -> Self {
-        Self(value)
-    }
-}
-
-impl TryFrom<i64> for Unit {
-    type Error = UnitError;
-
-    fn try_from(value: i64) -> Result<Self, Self::Error> {
-        if value < 0 {
-            return Err(UnitError::NegativeValue { value });
-        }
-        Ok(Self(value as u64))
     }
 }
