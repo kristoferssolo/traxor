@@ -48,19 +48,19 @@ fn test_app_switch_tab() {
 #[test]
 fn test_app_toggle_popup() {
     let mut app = App::new().unwrap();
-    assert!(!app.show_popup);
-    app.toggle_popup();
-    assert!(app.show_popup);
-    app.toggle_popup();
-    assert!(!app.show_popup);
+    assert!(!app.show_help);
+    app.toggle_help();
+    assert!(app.show_help);
+    app.toggle_help();
+    assert!(!app.show_help);
 }
 
 #[test]
 fn test_app_open_close_popup() {
     let mut app = App::new().unwrap();
-    assert!(!app.show_popup);
-    app.open_popup();
-    assert!(app.show_popup);
-    app.close_popup();
-    assert!(!app.show_popup);
+    assert!(!app.show_help);
+    app.open_help();
+    assert!(app.show_help);
+    app.close_help();
+    assert!(!app.show_help);
 }

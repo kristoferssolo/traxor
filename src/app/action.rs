@@ -6,7 +6,7 @@ pub enum Action {
     NextTorrent,
     PrevTorrent,
     SwitchTab(u8),
-    TogglePopup,
+    ToggleHelp, // Add this line
     ToggleTorrent,
     ToggleAll,
     PauseAll,

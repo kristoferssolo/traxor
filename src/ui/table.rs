@@ -1,10 +1,9 @@
+use crate::app::{utils::Wrapper, App, Tab};
 use ratatui::{
     layout::Constraint,
     style::{Color, Style, Styled},
     widgets::{Block, BorderType, Borders, Row, Table},
 };
-
-use crate::app::{utils::Wrapper, App, Tab};
 
 pub fn render_table<'a>(app: &mut App, tab: Tab) -> Table<'a> {
     let fields = tab.fields();
