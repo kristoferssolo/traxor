@@ -4,10 +4,11 @@ mod tab;
 mod torrent;
 pub mod types;
 pub mod utils;
-pub use {tab::Tab, torrent::Torrents};
 
+use crate::config::Config;
 use ratatui::widgets::TableState;
 use types::Selected;
+pub use {tab::Tab, torrent::Torrents};
 
 /// Main Application.
 #[derive(Debug)]
@@ -18,12 +19,13 @@ pub struct App<'a> {
     pub state: TableState,
     pub torrents: Torrents,
     pub show_help: bool,
+    pub config: Config,
 }
 
 impl<'a> App<'a> {
     /// Constructs a new instance of [`App`].
     /// Returns instance of `Self`.
-    pub fn new() -> anyhow::Result<Self> {
+    pub fn new(config: Config) -> color_eyre::eyre::Result<Self> {
         Ok(Self {
             running: true,
             tabs: &[Tab::All, Tab::Active, Tab::Downloading],
@@ -31,11 +33,12 @@ impl<'a> App<'a> {
             state: TableState::default(),
             torrents: Torrents::new()?, // Handle the Result here
             show_help: false,
+            config,
         })
     }
 
     /// Handles the tick event of the terminal.
-    pub async fn tick(&mut self) -> anyhow::Result<()> {
+    pub async fn tick(&mut self) -> color_eyre::eyre::Result<()> {
         self.torrents.update().await?;
         Ok(())
     }
@@ -119,14 +122,14 @@ impl<'a> App<'a> {
         self.show_help = true;
     }
 
-    pub async fn toggle_torrents(&mut self) -> anyhow::Result<()> {
+    pub async fn toggle_torrents(&mut self) -> color_eyre::eyre::Result<()> {
         let ids = self.selected(false);
         self.torrents.toggle(ids).await?;
         self.close_help();
         Ok(())
     }
 
-    pub async fn delete(&mut self, delete_local_data: bool) -> anyhow::Result<()> {
+    pub async fn delete(&mut self, delete_local_data: bool) -> color_eyre::eyre::Result<()> {
         let ids = self.selected(false);
         self.torrents.delete(ids, delete_local_data).await?;
         self.close_help();
