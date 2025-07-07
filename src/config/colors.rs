@@ -1,8 +1,9 @@
-use crate::merge_fields;
+use crate::merge::Merge;
+use derive_macro::Merge;
 use ratatui::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Merge)]
 pub struct ColorsConfig {
     pub highlight_background: Option<String>,
     pub highlight_foreground: Option<String>,
@@ -31,18 +32,6 @@ impl ColorsConfig {
             },
             None => Color::Reset,
         }
-    }
-
-    pub fn merge(&mut self, other: Self) {
-        merge_fields!(
-            self,
-            other,
-            highlight_background,
-            highlight_foreground,
-            warning_foreground,
-            info_foreground,
-            error_foreground
-        );
     }
 }
 

@@ -1,24 +1,15 @@
 mod colors;
 mod keybinds;
 
+use crate::merge::Merge;
 use color_eyre::Result;
 use colors::ColorsConfig;
+use derive_macro::Merge;
 use keybinds::KeybindsConfig;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-#[macro_export]
-macro_rules! merge_fields {
-    ($self:ident, $other:ident, $($field:ident),*) => {
-        $(
-            if let Some($field) = $other.$field {
-                $self.$field = Some($field);
-            }
-        )*
-    };
-}
-
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize, Merge)]
 pub struct Config {
     pub keybinds: KeybindsConfig,
     pub colors: ColorsConfig,
@@ -63,10 +54,5 @@ impl Config {
                     .join(".config")
             });
         Ok(config_dir.join("traxor").join("config.toml"))
-    }
-
-    pub fn merge(&mut self, other: Self) {
-        self.keybinds.merge(other.keybinds);
-        self.colors.merge(other.colors);
     }
 }

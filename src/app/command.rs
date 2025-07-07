@@ -20,8 +20,9 @@ impl Torrents {
                 self.client
                     .torrent_action(action, vec![id])
                     .await
-                    .map_err(|e| color_eyre::eyre::eyre!("Transmission RPC error: {}", e.to_string()))?;
-
+                    .map_err(|e| {
+                        color_eyre::eyre::eyre!("Transmission RPC error: {}", e.to_string())
+                    })?;
             }
         }
         Ok(())
@@ -48,7 +49,9 @@ impl Torrents {
             self.client
                 .torrent_action(action, vec![id])
                 .await
-                .map_err(|e| color_eyre::eyre::eyre!("Transmission RPC error: {}", e.to_string()))?;
+                .map_err(|e| {
+                    color_eyre::eyre::eyre!("Transmission RPC error: {}", e.to_string())
+                })?;
         }
         Ok(())
     }
@@ -71,12 +74,18 @@ impl Torrents {
             self.client
                 .torrent_set_location(vec![id], location.to_string_lossy().into(), move_from)
                 .await
-                .map_err(|e| color_eyre::eyre::eyre!("Transmission RPC error: {}", e.to_string()))?;
+                .map_err(|e| {
+                    color_eyre::eyre::eyre!("Transmission RPC error: {}", e.to_string())
+                })?;
         }
         Ok(())
     }
 
-    pub async fn delete(&mut self, ids: Selected, delete_local_data: bool) -> color_eyre::eyre::Result<()> {
+    pub async fn delete(
+        &mut self,
+        ids: Selected,
+        delete_local_data: bool,
+    ) -> color_eyre::eyre::Result<()> {
         self.client
             .torrent_remove(ids.into(), delete_local_data)
             .await
@@ -89,7 +98,9 @@ impl Torrents {
             self.client
                 .torrent_rename_path(vec![id], old_name, name.to_string_lossy().into())
                 .await
-                .map_err(|e| color_eyre::eyre::eyre!("Transmission RPC error: {}", e.to_string()))?;
+                .map_err(|e| {
+                    color_eyre::eyre::eyre!("Transmission RPC error: {}", e.to_string())
+                })?;
         }
         Ok(())
     }
