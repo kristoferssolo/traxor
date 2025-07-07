@@ -1,3 +1,4 @@
+use derive_macro::UnitConversions;
 use std::fmt::Display;
 use thiserror::Error;
 
@@ -11,7 +12,8 @@ pub enum UnitError {
     InvalidValue { reason: String },
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Default, UnitConversions)]
+#[error(UnitError)]
 pub struct Unit(u64);
 
 impl Unit {
@@ -24,6 +26,7 @@ impl Unit {
     }
 }
 
+#[derive(Debug)]
 pub struct UnitDisplay<'a> {
     unit: &'a Unit,
     units: &'a [&'a str],
@@ -55,35 +58,3 @@ impl<'a> Display for UnitDisplay<'a> {
         write!(f, "{:.2} {}", size, self.units[unit_index])
     }
 }
-
-macro_rules! impl_from_unsigned {
-    ($type:ty, $($t:ty), *) => {
-        $(
-            impl From<$t> for $type {
-                fn from(value: $t) -> Self {
-                    Self(value as u64)
-                }
-            }
-        )*
-    };
-}
-
-macro_rules! impl_try_from_signed {
-    ($type:ty, $error:ty, $($t:ty), *) => {
-        $(
-            impl TryFrom<$t> for $type {
-                type Error = $error;
-
-                fn try_from(value: $t) -> Result<Self, Self::Error> {
-                    if value < 0 {
-                        return Err(UnitError::NegativeValue { value: value as i64 });
-                    }
-                    Ok(Self(value as u64))
-                }
-            }
-        )*
-    };
-}
-
-impl_from_unsigned!(Unit, u8, u16, u32, u64, usize);
-impl_try_from_signed!(Unit, UnitError, i8, i16, i32, i64, isize);
