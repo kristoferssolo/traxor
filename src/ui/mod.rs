@@ -32,8 +32,18 @@ pub fn render(app: &mut App, frame: &mut Frame) {
                 .border_type(BorderType::Rounded),
         )
         .select(app.index())
-        .style(Style::default().fg(app.config.colors.get_color(&app.config.colors.info_foreground)))
-        .highlight_style(Style::default().fg(app.config.colors.get_color(&app.config.colors.warning_foreground)))
+        .style(
+            Style::default().fg(app
+                .config
+                .colors
+                .get_color(&app.config.colors.info_foreground)),
+        )
+        .highlight_style(
+            Style::default().fg(app
+                .config
+                .colors
+                .get_color(&app.config.colors.warning_foreground)),
+        )
         .divider("|");
 
     frame.render_widget(tabs, chunks[0]); // renders tab

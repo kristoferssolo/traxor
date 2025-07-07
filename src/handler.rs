@@ -72,8 +72,12 @@ pub fn get_action(key_event: KeyEvent, app: &App) -> Option<Action> {
         _ if matches_keybind(&key_event, &config_keybinds.quit) => Some(Action::Quit),
         _ if matches_keybind(&key_event, &config_keybinds.next_tab) => Some(Action::NextTab),
         _ if matches_keybind(&key_event, &config_keybinds.prev_tab) => Some(Action::PrevTab),
-        _ if matches_keybind(&key_event, &config_keybinds.next_torrent) => Some(Action::NextTorrent),
-        _ if matches_keybind(&key_event, &config_keybinds.prev_torrent) => Some(Action::PrevTorrent),
+        _ if matches_keybind(&key_event, &config_keybinds.next_torrent) => {
+            Some(Action::NextTorrent)
+        }
+        _ if matches_keybind(&key_event, &config_keybinds.prev_torrent) => {
+            Some(Action::PrevTorrent)
+        }
         _ if matches_keybind(&key_event, &config_keybinds.switch_tab_1) => {
             Some(Action::SwitchTab(0))
         }

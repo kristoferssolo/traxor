@@ -1,5 +1,5 @@
 use crossterm::event::{KeyCode, KeyEvent};
-use traxor::{app::action::Action, handler::get_action, app::App, config::Config};
+use traxor::{app::action::Action, app::App, config::Config, handler::get_action};
 
 #[test]
 fn test_get_action_quit() {

@@ -1,7 +1,8 @@
+use crate::merge::Merge;
+use derive_macro::Merge;
 use serde::{Deserialize, Serialize};
-use crate::merge_fields;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Merge)]
 pub struct KeybindsConfig {
     pub quit: Option<String>,
     pub next_tab: Option<String>,
@@ -17,29 +18,6 @@ pub struct KeybindsConfig {
     pub delete_force: Option<String>,
     pub select: Option<String>,
     pub toggle_help: Option<String>,
-}
-
-impl KeybindsConfig {
-    pub fn merge(&mut self, other: Self) {
-        merge_fields!(
-            self,
-            other,
-            quit,
-            next_tab,
-            prev_tab,
-            next_torrent,
-            prev_torrent,
-            switch_tab_1,
-            switch_tab_2,
-            switch_tab_3,
-            toggle_torrent,
-            toggle_all,
-            delete,
-            delete_force,
-            select,
-            toggle_help
-        );
-    }
 }
 
 impl Default for KeybindsConfig {
