@@ -1,10 +1,10 @@
 use super::unit::{Unit, UnitDisplay};
-use derive_macro::UnitConversions;
+use crate::impl_unit_wrapper;
 use std::fmt::Display;
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Default, UnitConversions)]
-#[error(UnitError)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct NetSpeed(Unit);
+impl_unit_wrapper!(NetSpeed);
 
 impl NetSpeed {
     pub fn new(bytes_per_second: u64) -> Self {
