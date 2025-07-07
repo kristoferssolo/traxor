@@ -1,13 +1,15 @@
-use anyhow::Result;
-use log::setup_logger;
-use ratatui::backend::CrosstermBackend;
-use ratatui::Terminal;
-use std::io;
-use traxor::app::App;
-use traxor::event::{Event, EventHandler};
-use traxor::handler::{get_action, update};
-use traxor::tui::Tui;
 mod log;
+
+use color_eyre::Result;
+use log::setup_logger;
+use ratatui::{backend::CrosstermBackend, Terminal};
+use std::io;
+use traxor::{
+    app::App,
+    event::{Event, EventHandler},
+    handler::{get_action, update},
+    tui::Tui,
+};
 
 #[tokio::main]
 async fn main() -> Result<()> {
