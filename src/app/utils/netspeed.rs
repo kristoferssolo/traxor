@@ -1,14 +1,14 @@
 use super::unit::{Unit, UnitDisplay};
-use crate::impl_unit_wrapper;
+use crate::impl_unit_newtype;
 use std::fmt::Display;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct NetSpeed(Unit);
-impl_unit_wrapper!(NetSpeed);
+impl_unit_newtype!(NetSpeed);
 
 impl NetSpeed {
     pub fn new(bytes_per_second: u64) -> Self {
-        Self(Unit::new(bytes_per_second))
+        Self(Unit::from_raw(bytes_per_second))
     }
 }
 

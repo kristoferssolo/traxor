@@ -5,7 +5,10 @@ mod sealed {
 
     macro_rules! impl_sealed {
         ($($t:ty),*) => {
-            $(impl Sealed for $t {})*
+            $(
+                impl Sealed for $t {}
+                impl Sealed for Option<$t> {}
+            )*
         };
     }
 
@@ -23,48 +26,28 @@ macro_rules! impl_into_u64 {
                 self.try_into().unwrap_or(0)
             }
         }
+
+        impl IntoU64 for Option<$t> {
+            fn into_u64(self) -> u64 {
+                self.unwrap_or(0).try_into().unwrap_or(0)
+            }
+        }
     )*};
 }
 
 impl_into_u64!(u8, u16, u32, u64, usize, i8, i16, i32, i64, isize);
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct UnitWrapper<T = u64>(T);
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
+pub struct Unit(u64);
 
-impl<T> Default for UnitWrapper<T>
-where
-    T: From<u64>,
-{
-    fn default() -> Self {
-        Self(T::from(0))
-    }
-}
-
-impl<T, U> From<U> for UnitWrapper<T>
+impl<U> From<U> for Unit
 where
     U: IntoU64,
-    T: From<u64>,
 {
     fn from(value: U) -> Self {
-        Self(T::from(value.into_u64()))
+        Self(value.into_u64())
     }
 }
-
-impl<T> UnitWrapper<T> {
-    pub fn new(inner: T) -> Self {
-        Self(inner)
-    }
-
-    pub fn inner(&self) -> &T {
-        &self.0
-    }
-
-    pub fn into_inner(self) -> T {
-        self.0
-    }
-}
-
-pub type Unit = UnitWrapper<u64>;
 
 impl Unit {
     pub const fn from_raw(value: u64) -> Self {
@@ -110,7 +93,7 @@ impl<'a> Display for UnitDisplay<'a> {
 }
 
 #[macro_export]
-macro_rules! impl_unit_wrapper {
+macro_rules! impl_unit_newtype {
     ($wrapper:ident) => {
         impl From<Unit> for $wrapper {
             fn from(unit: $crate::app::utils::unit::Unit) -> Self {

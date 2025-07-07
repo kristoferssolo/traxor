@@ -5,7 +5,7 @@ pub mod unit;
 use filesize::FileSize;
 use netspeed::NetSpeed;
 use transmission_rpc::types::{
-    ErrorType, IdleMode, RatioMode, Torrent, TorrentGetField, TorrentStatus,
+    ErrorType, IdleMode, Priority, RatioMode, Torrent, TorrentGetField, TorrentStatus,
 };
 
 pub trait Wrapper {
@@ -108,130 +108,47 @@ impl Wrapper for TorrentGetField {
 
     fn value(&self, torrent: &Torrent) -> String {
         match self {
-            Self::ActivityDate => torrent
-                .activity_date
-                .map(|v| v.to_string())
-                .unwrap_or_default(),
-            Self::AddedDate => torrent
-                .added_date
-                .map(|v| v.to_string())
-                .unwrap_or_default(),
+            Self::ActivityDate => format_option_string(torrent.activity_date),
+            Self::AddedDate => format_option_string(torrent.added_date),
             Self::Availability => "N/A".to_string(),
-            Self::BandwidthPriority => torrent
-                .bandwidth_priority
-                .map(|v| format!("{:?}", v))
-                .unwrap_or_default(),
+            Self::BandwidthPriority => torrent.bandwidth_priority.format(),
             Self::Comment => torrent.comment.clone().unwrap_or_default(),
-            Self::CorruptEver => FileSize::try_from(torrent.corrupt_ever.unwrap_or(0))
-                .unwrap_or_default()
-                .to_string(),
+            Self::CorruptEver => FileSize::from(torrent.corrupt_ever).to_string(),
             Self::Creator => torrent.creator.clone().unwrap_or_default(),
-            Self::DateCreated => torrent
-                .date_created
-                .map(|v| v.to_string())
-                .unwrap_or_default()
-                .to_string(),
-            Self::DesiredAvailable => {
-                FileSize::from(torrent.desired_available.unwrap_or(0)).to_string()
-            }
-            Self::DoneDate => torrent.done_date.map(|v| v.to_string()).unwrap_or_default(),
-            Self::DownloadDir => torrent.download_dir.clone().unwrap_or_default().to_string(),
-            Self::DownloadLimit => NetSpeed::from(torrent.download_limit.unwrap_or(0)).to_string(),
-            Self::DownloadLimited => torrent
-                .download_limited
-                .map(|v| v.to_string())
-                .unwrap_or_default()
-                .to_string(),
-            Self::DownloadedEver => {
-                FileSize::from(torrent.downloaded_ever.unwrap_or(0)).to_string()
-            }
-            Self::EditDate => torrent.edit_date.map(|v| v.to_string()).unwrap_or_default(),
-            Self::Error => match torrent.error {
-                Some(error) => match error {
-                    ErrorType::Ok => "Ok",
-                    ErrorType::LocalError => "LocalError",
-                    ErrorType::TrackerError => "TrackerError",
-                    ErrorType::TrackerWarning => "TrackerWarning",
-                },
-                None => "N/A",
-            }
-            .to_string(),
+            Self::DateCreated => format_option_string(torrent.date_created),
+            Self::DesiredAvailable => FileSize::from(torrent.desired_available).to_string(),
+            Self::DoneDate => format_option_string(torrent.done_date),
+            Self::DownloadDir => torrent.download_dir.clone().unwrap_or_default(),
+            Self::DownloadLimit => NetSpeed::from(torrent.download_limit).to_string(),
+            Self::DownloadLimited => format_option_string(torrent.download_limited),
+            Self::DownloadedEver => FileSize::from(torrent.downloaded_ever).to_string(),
+            Self::EditDate => format_option_string(torrent.edit_date),
+            Self::Error => torrent.error.format(),
             Self::ErrorString => torrent.error_string.clone().unwrap_or_default(),
-            Self::Eta => match torrent.eta {
-                Some(eta) => match eta {
-                    -1 => "".to_string(),
-                    -2 => "?".to_string(),
-                    _ => format!("{} s", eta),
-                },
-                None => "".to_string(),
-            },
-            Self::EtaIdle => torrent.eta_idle.map(|v| v.to_string()).unwrap_or_default(),
-            Self::FileCount => torrent
-                .file_count
-                .map(|v| v.to_string())
-                .unwrap_or_default(),
-            Self::FileStats => torrent
-                .file_stats
-                .as_ref()
-                .map(|v| format!("{}", v.len()))
-                .unwrap_or_default(),
-            Self::Files => torrent
-                .files
-                .as_ref()
-                .map(|v| format!("{}", v.len()))
-                .unwrap_or_default(),
+            Self::Eta => format_eta(torrent.eta),
+            Self::EtaIdle => format_option_string(torrent.eta_idle),
+            Self::FileCount => format_option_string(torrent.file_count),
+            Self::FileStats => torrent.file_stats.format(),
+            Self::Files => torrent.files.format(),
             Self::Group => torrent.group.clone().unwrap_or_default(),
             Self::HashString => torrent.hash_string.clone().unwrap_or_default(),
-            Self::HaveUnchecked => FileSize::from(torrent.have_unchecked.unwrap_or(0)).to_string(),
-            Self::HaveValid => FileSize::from(torrent.have_valid.unwrap_or(0)).to_string(),
-            Self::HonorsSessionLimits => torrent
-                .honors_session_limits
-                .map(|v| v.to_string())
-                .unwrap_or_default(),
-            Self::Id => torrent.id.map(|v| v.to_string()).unwrap_or_default(),
-            Self::IsFinished => torrent
-                .is_finished
-                .map(|v| v.to_string())
-                .unwrap_or_default(),
-            Self::IsPrivate => torrent
-                .is_private
-                .map(|v| v.to_string())
-                .unwrap_or_default(),
-            Self::IsStalled => torrent
-                .is_stalled
-                .map(|v| v.to_string())
-                .unwrap_or_default(),
+            Self::HaveUnchecked => FileSize::from(torrent.have_unchecked).to_string(),
+            Self::HaveValid => FileSize::from(torrent.have_valid).to_string(),
+            Self::HonorsSessionLimits => format_option_string(torrent.honors_session_limits),
+            Self::Id => format_option_string(torrent.id),
+            Self::IsFinished => format_option_string(torrent.is_finished),
+            Self::IsPrivate => format_option_string(torrent.is_private),
+            Self::IsStalled => format_option_string(torrent.is_stalled),
             Self::Labels => torrent.labels.clone().unwrap_or_default().join(", "),
-            Self::LeftUntilDone => FileSize::try_from(torrent.left_until_done.unwrap_or(0))
-                .unwrap_or_default()
-                .to_string(),
+            Self::LeftUntilDone => FileSize::from(torrent.left_until_done).to_string(),
             Self::MagnetLink => torrent.magnet_link.clone().unwrap_or_default(),
-            Self::ManualAnnounceTime => torrent
-                .manual_announce_time
-                .map(|v| v.to_string())
-                .unwrap_or_default(),
-            Self::MaxConnectedPeers => torrent
-                .max_connected_peers
-                .map(|v| v.to_string())
-                .unwrap_or_default(),
-            Self::MetadataPercentComplete => torrent
-                .metadata_percent_complete
-                .map(|v| format!("{:.2}", v))
-                .unwrap_or_default(),
+            Self::ManualAnnounceTime => format_option_string(torrent.manual_announce_time),
+            Self::MaxConnectedPeers => format_option_string(torrent.max_connected_peers),
+            Self::MetadataPercentComplete => torrent.metadata_percent_complete.format(),
             Self::Name => torrent.name.clone().unwrap_or_default(),
-            Self::PeerLimit => torrent
-                .peer_limit
-                .map(|v| v.to_string())
-                .unwrap_or_default(),
-            Self::Peers => torrent
-                .peers
-                .as_ref()
-                .map(|v| format!("{}", v.len()))
-                .unwrap_or_default(),
-            Self::PeersConnected => torrent
-                .peers_connected
-                .map(|v| v.to_string())
-                .unwrap_or_default(),
+            Self::PeerLimit => format_option_string(torrent.peer_limit),
+            Self::Peers => torrent.peers.format(),
+            Self::PeersConnected => format_option_string(torrent.peers_connected),
             Self::PeersFrom => torrent
                 .peers_from
                 .as_ref()
@@ -242,149 +159,45 @@ impl Wrapper for TorrentGetField {
                     )
                 })
                 .unwrap_or_default(),
-            Self::PeersGettingFromUs => torrent
-                .peers_getting_from_us
-                .map(|v| v.to_string())
-                .unwrap_or_default(),
-            Self::PeersSendingToUs => torrent
-                .peers_sending_to_us
-                .map(|v| v.to_string())
-                .unwrap_or_default(),
-            Self::PercentComplete => torrent
-                .percent_complete
-                .map(|v| format!("{:.2}", v))
-                .unwrap_or_default(),
-            Self::PercentDone => torrent
-                .percent_done
-                .map(|v| format!("{:.2}", v))
-                .unwrap_or_default(),
-            Self::PieceCount => torrent
-                .piece_count
-                .map(|v| v.to_string())
-                .unwrap_or_default(),
-            Self::PieceSize => FileSize::from(torrent.piece_size.unwrap_or(0)).to_string(),
+            Self::PeersGettingFromUs => format_option_string(torrent.peers_getting_from_us),
+            Self::PeersSendingToUs => format_option_string(torrent.peers_sending_to_us),
+            Self::PercentComplete => torrent.percent_complete.format(),
+            Self::PercentDone => torrent.percent_done.format(),
+            Self::PieceCount => format_option_string(torrent.piece_count),
+            Self::PieceSize => FileSize::from(torrent.piece_size).to_string(),
             Self::Pieces => torrent
                 .pieces
                 .as_ref()
                 .map(|p| format!("{} bytes", p.len()))
                 .unwrap_or_default(),
             Self::PrimaryMimeType => torrent.primary_mime_type.clone().unwrap_or_default(),
-            Self::Priorities => torrent
-                .priorities
-                .as_ref()
-                .map(|v| format!("{}", v.len()))
-                .unwrap_or_default(),
-            Self::QueuePosition => torrent
-                .queue_position
-                .map(|v| v.to_string())
-                .unwrap_or_default(),
-            Self::RateDownload => NetSpeed::try_from(torrent.rate_download.unwrap_or(0))
-                .unwrap_or_default()
-                .to_string(),
-            Self::RateUpload => NetSpeed::try_from(torrent.rate_upload.unwrap_or(0))
-                .unwrap_or_default()
-                .to_string(),
-            Self::RecheckProgress => torrent
-                .recheck_progress
-                .map(|v| format!("{:.2}", v))
-                .unwrap_or_default(),
-            Self::SecondsDownloading => torrent
-                .seconds_downloading
-                .map(|v| v.to_string())
-                .unwrap_or_default(),
-            Self::SecondsSeeding => torrent
-                .seconds_seeding
-                .map(|v| v.to_string())
-                .unwrap_or_default(),
-            Self::SeedIdleLimit => torrent
-                .seed_idle_limit
-                .map(|v| v.to_string())
-                .unwrap_or_default(),
-            Self::SeedIdleMode => torrent
-                .seed_idle_mode
-                .map(|v| match v {
-                    IdleMode::Global => "Global",
-                    IdleMode::Single => "Single",
-                    IdleMode::Unlimited => "Unlimited",
-                })
-                .unwrap_or("N/A")
-                .to_string(),
-            Self::SeedRatioLimit => torrent
-                .seed_ratio_limit
-                .map(|v| format!("{:.2}", v))
-                .unwrap_or_default(),
-            Self::SeedRatioMode => torrent
-                .seed_ratio_mode
-                .map(|v| match v {
-                    RatioMode::Global => "Global",
-                    RatioMode::Single => "Single",
-                    RatioMode::Unlimited => "Unlimited",
-                })
-                .unwrap_or_default()
-                .to_string(),
-            Self::SequentialDownload => torrent
-                .sequential_download
-                .map(|v| v.to_string())
-                .unwrap_or_default(),
-            Self::SizeWhenDone => FileSize::try_from(torrent.size_when_done.unwrap_or(0))
-                .unwrap_or_default()
-                .to_string(),
-            Self::StartDate => torrent
-                .start_date
-                .map(|v| v.to_string())
-                .unwrap_or_default(),
-            Self::Status => match torrent.status {
-                Some(status) => match status {
-                    TorrentStatus::Stopped => "Stopped",
-                    TorrentStatus::Seeding => "Seeding",
-                    TorrentStatus::Verifying => "Verifying",
-                    TorrentStatus::Downloading => "Downloading",
-                    TorrentStatus::QueuedToSeed => "QueuedToSeed",
-                    TorrentStatus::QueuedToVerify => "QueuedToVerify",
-                    TorrentStatus::QueuedToDownload => "QueuedToDownload",
-                },
-                None => "N/A",
-            }
-            .to_string(),
+            Self::Priorities => torrent.priorities.format(),
+            Self::QueuePosition => format_option_string(torrent.queue_position),
+            Self::RateDownload => NetSpeed::from(torrent.rate_download).to_string(),
+            Self::RateUpload => NetSpeed::from(torrent.rate_upload).to_string(),
+            Self::RecheckProgress => torrent.recheck_progress.format(),
+            Self::SecondsDownloading => format_option_string(torrent.seconds_downloading),
+            Self::SecondsSeeding => format_option_string(torrent.seconds_seeding),
+            Self::SeedIdleLimit => format_option_string(torrent.seed_idle_limit),
+            Self::SeedIdleMode => torrent.seed_idle_mode.format(),
+            Self::SeedRatioLimit => torrent.seed_ratio_limit.format(),
+            Self::SeedRatioMode => torrent.seed_ratio_mode.format(),
+            Self::SequentialDownload => format_option_string(torrent.sequential_download),
+            Self::SizeWhenDone => FileSize::from(torrent.size_when_done).to_string(),
+            Self::StartDate => format_option_string(torrent.start_date),
+            Self::Status => torrent.status.format(),
             Self::TorrentFile => torrent.torrent_file.clone().unwrap_or_default(),
-            Self::TotalSize => FileSize::try_from(torrent.total_size.unwrap_or(0))
-                .unwrap_or_default()
-                .to_string(),
+            Self::TotalSize => FileSize::from(torrent.total_size).to_string(),
             Self::TrackerList => torrent.tracker_list.clone().unwrap_or_default(),
-            Self::TrackerStats => torrent
-                .tracker_stats
-                .as_ref()
-                .map(|v| format!("{}", v.len()))
-                .unwrap_or_default(),
-            Self::Trackers => torrent
-                .trackers
-                .as_ref()
-                .map(|v| format!("{}", v.len()))
-                .unwrap_or_default(),
-            Self::UploadLimit => NetSpeed::try_from(torrent.upload_limit.unwrap_or(0))
-                .unwrap_or_default()
-                .to_string(),
-            Self::UploadLimited => torrent
-                .upload_limited
-                .map(|v| v.to_string())
-                .unwrap_or_default(),
-            Self::UploadRatio => torrent
-                .upload_ratio
-                .map(|v| format!("{:.2}", v))
-                .unwrap_or_default(),
-            Self::UploadedEver => FileSize::try_from(torrent.uploaded_ever.unwrap_or(0))
-                .unwrap_or_default()
-                .to_string(),
-            Self::Wanted => torrent
-                .wanted
-                .as_ref()
-                .map(|v| format!("{}", v.len()))
-                .unwrap_or_default(),
+            Self::TrackerStats => torrent.tracker_stats.format(),
+            Self::Trackers => torrent.trackers.format(),
+            Self::UploadLimit => NetSpeed::from(torrent.upload_limit).to_string(),
+            Self::UploadLimited => format_option_string(torrent.upload_limited),
+            Self::UploadRatio => torrent.upload_ratio.format(),
+            Self::UploadedEver => FileSize::from(torrent.uploaded_ever).to_string(),
+            Self::Wanted => torrent.wanted.format(),
             Self::Webseeds => torrent.webseeds.clone().unwrap_or_default().join(", "),
-            Self::WebseedsSendingToUs => torrent
-                .webseeds_sending_to_us
-                .map(|v| v.to_string())
-                .unwrap_or_default(),
+            Self::WebseedsSendingToUs => format_option_string(torrent.webseeds_sending_to_us),
         }
     }
 
@@ -470,3 +283,80 @@ impl Wrapper for TorrentGetField {
         }
     }
 }
+
+fn format_option_string<T: ToString>(value: Option<T>) -> String {
+    value.map(|v| v.to_string()).unwrap_or_default()
+}
+
+fn format_eta(value: Option<i64>) -> String {
+    value
+        .map(|v| match v {
+            -1 => "".into(),
+            -2 => "?".into(),
+            _ => format!("{} s", v),
+        })
+        .unwrap_or("".into())
+}
+
+trait Formatter {
+    fn format(&self) -> String;
+}
+
+impl Formatter for Option<f32> {
+    fn format(&self) -> String {
+        self.map(|v| format!("{:.2}", v)).unwrap_or_default()
+    }
+}
+
+impl<T> Formatter for Option<Vec<T>> {
+    fn format(&self) -> String {
+        self.as_ref()
+            .map(|v| format!("{}", v.len()))
+            .unwrap_or_default()
+    }
+}
+
+macro_rules! impl_enum_formatter {
+    ($enum_type:ty, { $($variant:pat => $str:expr),* $(,)? }) => {
+        impl Formatter for Option<$enum_type> {
+            fn format(&self) -> String {
+                self.map(|v| match v { $($variant => $str,)* }).unwrap_or("N/A").into()
+            }
+        }
+    };
+}
+
+impl_enum_formatter!(Priority, {
+    Priority::Low => "Low",
+    Priority::Normal => "Normal",
+    Priority::High => "High",
+});
+
+impl_enum_formatter!(IdleMode, {
+    IdleMode::Global => "Global",
+    IdleMode::Single => "Single",
+    IdleMode::Unlimited => "Unlimited",
+});
+
+impl_enum_formatter!(RatioMode, {
+    RatioMode::Global => "Global",
+    RatioMode::Single => "Single",
+    RatioMode::Unlimited => "Unlimited",
+});
+
+impl_enum_formatter!(TorrentStatus, {
+    TorrentStatus::Stopped => "Stopped",
+    TorrentStatus::Seeding => "Seeding",
+    TorrentStatus::Verifying => "Verifying",
+    TorrentStatus::Downloading => "Downloading",
+    TorrentStatus::QueuedToSeed => "QueuedToSeed",
+    TorrentStatus::QueuedToVerify => "QueuedToVerify",
+    TorrentStatus::QueuedToDownload => "QueuedToDownload",
+});
+
+impl_enum_formatter!(ErrorType, {
+    ErrorType::Ok => "OK",
+    ErrorType::TrackerWarning => "TrackerWarning",
+    ErrorType::TrackerError => "TrackerError",
+    ErrorType::LocalError => "LocalError",
+});
