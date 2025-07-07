@@ -1,11 +1,12 @@
 mod log;
 
-use color_eyre::Result;
+use color_eyre::eyre::Result;
 use log::setup_logger;
 use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io;
 use traxor::{
     app::App,
+    config::Config,
     event::{Event, EventHandler},
     handler::{get_action, update},
     tui::Tui,
@@ -13,11 +14,16 @@ use traxor::{
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    color_eyre::install()?;
+
     // Setup the logger.
     setup_logger()?;
 
+    // Load configuration.
+    let config = Config::load()?;
+
     // Create an application.
-    let mut app = App::new()?;
+    let mut app = App::new(config)?;
 
     // Initialize the terminal user interface.
     let backend = CrosstermBackend::new(io::stderr());
@@ -33,10 +39,9 @@ async fn main() -> Result<()> {
         // Handle events.
         match tui.events.next()? {
             Event::Tick => app.tick().await?,
-            // Event::Key(key_event) => handle_key_events(key_event, &mut app).await?,
             Event::Key(key_event) => {
-                if let Some(action) = get_action(key_event) {
-                    update(&mut app, action).await.unwrap();
+                if let Some(action) = get_action(key_event, &app) {
+                    update(&mut app, action).await?;
                 }
             }
             Event::Mouse(_) => {}
@@ -48,3 +53,4 @@ async fn main() -> Result<()> {
     tui.exit()?;
     Ok(())
 }
+

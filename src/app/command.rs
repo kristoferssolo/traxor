@@ -3,7 +3,7 @@ use std::{collections::HashSet, path::Path};
 use transmission_rpc::types::{Torrent, TorrentAction, TorrentStatus};
 
 impl Torrents {
-    pub async fn toggle(&mut self, ids: Selected) -> anyhow::Result<()> {
+    pub async fn toggle(&mut self, ids: Selected) -> color_eyre::eyre::Result<()> {
         let ids: HashSet<_> = ids.into();
         let torrents_to_toggle: Vec<_> = self
             .torrents
@@ -20,13 +20,14 @@ impl Torrents {
                 self.client
                     .torrent_action(action, vec![id])
                     .await
-                    .map_err(|e| anyhow::anyhow!("Transmission RPC error: {}", e.to_string()))?;
+                    .map_err(|e| color_eyre::eyre::eyre!("Transmission RPC error: {}", e.to_string()))?;
+
             }
         }
         Ok(())
     }
 
-    pub async fn toggle_all(&mut self) -> anyhow::Result<()> {
+    pub async fn toggle_all(&mut self) -> color_eyre::eyre::Result<()> {
         let torrents_to_toggle: Vec<_> = self
             .torrents
             .iter()
@@ -47,16 +48,16 @@ impl Torrents {
             self.client
                 .torrent_action(action, vec![id])
                 .await
-                .map_err(|e| anyhow::anyhow!("Transmission RPC error: {}", e.to_string()))?;
+                .map_err(|e| color_eyre::eyre::eyre!("Transmission RPC error: {}", e.to_string()))?;
         }
         Ok(())
     }
 
-    pub async fn start_all(&mut self) -> anyhow::Result<()> {
+    pub async fn start_all(&mut self) -> color_eyre::eyre::Result<()> {
         self.action_all(TorrentAction::StartNow).await
     }
 
-    pub async fn stop_all(&mut self) -> anyhow::Result<()> {
+    pub async fn stop_all(&mut self) -> color_eyre::eyre::Result<()> {
         self.action_all(TorrentAction::Stop).await
     }
 
@@ -65,35 +66,35 @@ impl Torrents {
         torrent: &Torrent,
         location: &Path,
         move_from: Option<bool>,
-    ) -> anyhow::Result<()> {
+    ) -> color_eyre::eyre::Result<()> {
         if let Some(id) = torrent.id() {
             self.client
                 .torrent_set_location(vec![id], location.to_string_lossy().into(), move_from)
                 .await
-                .map_err(|e| anyhow::anyhow!("Transmission RPC error: {}", e.to_string()))?;
+                .map_err(|e| color_eyre::eyre::eyre!("Transmission RPC error: {}", e.to_string()))?;
         }
         Ok(())
     }
 
-    pub async fn delete(&mut self, ids: Selected, delete_local_data: bool) -> anyhow::Result<()> {
+    pub async fn delete(&mut self, ids: Selected, delete_local_data: bool) -> color_eyre::eyre::Result<()> {
         self.client
             .torrent_remove(ids.into(), delete_local_data)
             .await
-            .map_err(|e| anyhow::anyhow!("Transmission RPC error: {}", e.to_string()))?;
+            .map_err(|e| color_eyre::eyre::eyre!("Transmission RPC error: {}", e.to_string()))?;
         Ok(())
     }
 
-    pub async fn rename(&mut self, torrent: &Torrent, name: &Path) -> anyhow::Result<()> {
+    pub async fn rename(&mut self, torrent: &Torrent, name: &Path) -> color_eyre::eyre::Result<()> {
         if let (Some(id), Some(old_name)) = (torrent.id(), torrent.name.clone()) {
             self.client
                 .torrent_rename_path(vec![id], old_name, name.to_string_lossy().into())
                 .await
-                .map_err(|e| anyhow::anyhow!("Transmission RPC error: {}", e.to_string()))?;
+                .map_err(|e| color_eyre::eyre::eyre!("Transmission RPC error: {}", e.to_string()))?;
         }
         Ok(())
     }
 
-    async fn action_all(&mut self, action: TorrentAction) -> anyhow::Result<()> {
+    async fn action_all(&mut self, action: TorrentAction) -> color_eyre::eyre::Result<()> {
         let ids = self
             .torrents
             .iter()
@@ -103,7 +104,7 @@ impl Torrents {
         self.client
             .torrent_action(action, ids)
             .await
-            .map_err(|e| anyhow::anyhow!("Transmission RPC error: {}", e.to_string()))?;
+            .map_err(|e| color_eyre::eyre::eyre!("Transmission RPC error: {}", e.to_string()))?;
         Ok(())
     }
 }

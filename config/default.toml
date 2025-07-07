@@ -1,0 +1,22 @@
+[keybinds]
+quit = "q"
+next_tab = "l"
+prev_tab = "h"
+next_torrent = "j"
+prev_torrent = "k"
+switch_tab_1 = "1"
+switch_tab_2 = "2"
+switch_tab_3 = "3"
+toggle_torrent = "enter"
+toggle_all = "a"
+delete = "d"
+delete_force = "D"
+select = " "
+toggle_help = "?"
+
+[colors]
+highlight_background = "magenta"
+highlight_foreground = "black"
+warning_foreground = "yellow"
+info_foreground = "blue"
+error_foreground = "red"

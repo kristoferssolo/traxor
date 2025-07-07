@@ -32,8 +32,8 @@ pub fn render(app: &mut App, frame: &mut Frame) {
                 .border_type(BorderType::Rounded),
         )
         .select(app.index())
-        .style(Style::default().fg(Color::Blue))
-        .highlight_style(Style::default().fg(Color::Green))
+        .style(Style::default().fg(app.config.colors.get_color(&app.config.colors.info_foreground)))
+        .highlight_style(Style::default().fg(app.config.colors.get_color(&app.config.colors.warning_foreground)))
         .divider("|");
 
     frame.render_widget(tabs, chunks[0]); // renders tab
@@ -51,6 +51,6 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     frame.render_stateful_widget(table, chunks[1], &mut app.state); // renders table
 
     if app.show_help {
-        render_help(frame);
+        render_help(frame, app);
     }
 }

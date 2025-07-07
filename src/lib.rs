@@ -1,14 +1,7 @@
-/// Application.
+pub mod config;
 pub mod app;
-
-/// Terminal events handler.
 pub mod event;
-
-/// Widget renderer.
-pub mod ui;
-
-/// Terminal user interface.
-pub mod tui;
-
-/// Event handler.
 pub mod handler;
+pub mod log;
+pub mod tui;
+pub mod ui;

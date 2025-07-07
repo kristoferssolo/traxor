@@ -1,4 +1,4 @@
-use anyhow::Result;
+use color_eyre::eyre::Result;
 use std::{collections::HashSet, fmt::Debug};
 use transmission_rpc::{
     types::{Torrent, TorrentGetField},
@@ -50,7 +50,7 @@ impl Torrents {
             .client
             .torrent_get(self.fields.clone(), None)
             .await
-            .map_err(|e| anyhow::anyhow!("Transmission RPC error: {}", e.to_string()))?
+            .map_err(|e| color_eyre::eyre::eyre!("Transmission RPC error: {}", e.to_string()))?
             .arguments
             .torrents;
         Ok(self)
