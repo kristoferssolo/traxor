@@ -1,10 +1,10 @@
 use super::unit::{Unit, UnitDisplay};
-use derive_macro::UnitConversions;
+use crate::impl_unit_wrapper;
 use std::fmt::Display;
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Default, UnitConversions)]
-#[error(UnitError)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct FileSize(Unit);
+impl_unit_wrapper!(FileSize);
 
 impl FileSize {
     pub fn new(bytes: u64) -> Self {
