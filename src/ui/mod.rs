@@ -1,16 +1,9 @@
-mod popup;
+mod help;
 mod table;
 
 use crate::app::{App, Tab};
-use popup::render_popup;
-use ratatui::{
-    layout::Alignment,
-    prelude::{Constraint, Direction, Layout},
-    style::{Color, Style},
-    text::Line,
-    widgets::{Block, BorderType, Borders, Clear, Tabs},
-    Frame,
-};
+use help::render_help;
+use ratatui::{prelude::*, widgets::*};
 use table::render_table;
 
 /// Renders the user interface widgets.
@@ -57,10 +50,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     };
     frame.render_stateful_widget(table, chunks[1], &mut app.state); // renders table
 
-    if app.show_popup {
-        let block = Block::default().borders(Borders::ALL);
-        let size = render_popup(size);
-        frame.render_widget(Clear, size);
-        frame.render_widget(block, size);
+    if app.show_help {
+        render_help(frame);
     }
 }

@@ -24,7 +24,7 @@ pub fn get_action(key_event: KeyEvent) -> Option<Action> {
         KeyCode::Char('d') => Some(Action::Delete(false)),
         KeyCode::Char('D') => Some(Action::Delete(true)),
         KeyCode::Char(' ') => Some(Action::Select),
-        // Other handlers you could add here.
+        KeyCode::Char('?') => Some(Action::ToggleHelp),
         _ => None,
     }
 }
@@ -38,7 +38,7 @@ pub async fn update(app: &mut App<'_>, action: Action) -> anyhow::Result<()> {
         Action::NextTorrent => app.next(),
         Action::PrevTorrent => app.previous(),
         Action::SwitchTab(x) => app.switch_tab(x as usize),
-        Action::TogglePopup => app.toggle_popup(),
+        Action::ToggleHelp => app.toggle_help(),
         Action::ToggleTorrent => app.toggle_torrents().await?,
         Action::ToggleAll => app.torrents.toggle_all().await?,
         Action::PauseAll => app.torrents.stop_all().await?,

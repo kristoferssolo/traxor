@@ -17,7 +17,7 @@ pub struct App<'a> {
     tabs: &'a [Tab],
     pub state: TableState,
     pub torrents: Torrents,
-    pub show_popup: bool,
+    pub show_help: bool,
 }
 
 impl<'a> App<'a> {
@@ -30,7 +30,7 @@ impl<'a> App<'a> {
             index: 0,
             state: TableState::default(),
             torrents: Torrents::new()?, // Handle the Result here
-            show_popup: false,
+            show_help: false,
         })
     }
 
@@ -56,7 +56,7 @@ impl<'a> App<'a> {
             }
             None => 0,
         };
-        self.close_popup();
+        self.close_help();
         self.state.select(Some(i));
     }
 
@@ -71,19 +71,19 @@ impl<'a> App<'a> {
             }
             None => 0,
         };
-        self.close_popup();
+        self.close_help();
         self.state.select(Some(i));
     }
 
     /// Switches to the next tab.
     pub fn next_tab(&mut self) {
-        self.close_popup();
+        self.close_help();
         self.index = (self.index + 1) % self.tabs.len();
     }
 
     /// Switches to the previous tab.
     pub fn prev_tab(&mut self) {
-        self.close_popup();
+        self.close_help();
         if self.index > 0 {
             self.index -= 1;
         } else {
@@ -93,7 +93,7 @@ impl<'a> App<'a> {
 
     /// Switches to the tab whose index is `idx`.
     pub fn switch_tab(&mut self, idx: usize) {
-        self.close_popup();
+        self.close_help();
         self.index = idx
     }
 
@@ -107,29 +107,29 @@ impl<'a> App<'a> {
         self.tabs
     }
 
-    pub fn toggle_popup(&mut self) {
-        self.show_popup = !self.show_popup;
+    pub fn toggle_help(&mut self) {
+        self.show_help = !self.show_help;
     }
 
-    pub fn close_popup(&mut self) {
-        self.show_popup = false;
+    pub fn close_help(&mut self) {
+        self.show_help = false;
     }
 
-    pub fn open_popup(&mut self) {
-        self.show_popup = true;
+    pub fn open_help(&mut self) {
+        self.show_help = true;
     }
 
     pub async fn toggle_torrents(&mut self) -> anyhow::Result<()> {
         let ids = self.selected(false);
         self.torrents.toggle(ids).await?;
-        self.close_popup();
+        self.close_help();
         Ok(())
     }
 
     pub async fn delete(&mut self, delete_local_data: bool) -> anyhow::Result<()> {
         let ids = self.selected(false);
         self.torrents.delete(ids, delete_local_data).await?;
-        self.close_popup();
+        self.close_help();
         Ok(())
     }
 
