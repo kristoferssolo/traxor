@@ -6,6 +6,7 @@ pub mod types;
 pub mod utils;
 
 use crate::config::Config;
+use color_eyre::Result;
 use ratatui::widgets::TableState;
 use types::Selected;
 pub use {tab::Tab, torrent::Torrents};
@@ -20,12 +21,15 @@ pub struct App<'a> {
     pub torrents: Torrents,
     pub show_help: bool,
     pub config: Config,
+    pub input: String,
+    pub cursor_position: usize,
+    pub input_mode: bool,
 }
 
 impl<'a> App<'a> {
     /// Constructs a new instance of [`App`].
     /// Returns instance of `Self`.
-    pub fn new(config: Config) -> color_eyre::eyre::Result<Self> {
+    pub fn new(config: Config) -> Result<Self> {
         Ok(Self {
             running: true,
             tabs: &[Tab::All, Tab::Active, Tab::Downloading],
@@ -34,11 +38,14 @@ impl<'a> App<'a> {
             torrents: Torrents::new()?, // Handle the Result here
             show_help: false,
             config,
+            input: String::new(),
+            cursor_position: 0,
+            input_mode: false,
         })
     }
 
     /// Handles the tick event of the terminal.
-    pub async fn tick(&mut self) -> color_eyre::eyre::Result<()> {
+    pub async fn tick(&mut self) -> Result<()> {
         self.torrents.update().await?;
         Ok(())
     }
@@ -122,17 +129,25 @@ impl<'a> App<'a> {
         self.show_help = true;
     }
 
-    pub async fn toggle_torrents(&mut self) -> color_eyre::eyre::Result<()> {
+    pub async fn toggle_torrents(&mut self) -> Result<()> {
         let ids = self.selected(false);
         self.torrents.toggle(ids).await?;
         self.close_help();
         Ok(())
     }
 
-    pub async fn delete(&mut self, delete_local_data: bool) -> color_eyre::eyre::Result<()> {
+    pub async fn delete(&mut self, delete_local_data: bool) -> Result<()> {
         let ids = self.selected(false);
         self.torrents.delete(ids, delete_local_data).await?;
         self.close_help();
+        Ok(())
+    }
+
+    pub async fn move_torrent(&mut self) -> Result<()> {
+        self.torrents.move_selection(&self.input).await?;
+        self.input.clear();
+        self.cursor_position = 0;
+        self.input_mode = false;
         Ok(())
     }
 

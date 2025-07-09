@@ -1,7 +1,7 @@
 use crate::app::App;
 use crate::event::EventHandler;
 use crate::ui;
-use color_eyre::eyre::Result;
+use color_eyre::Result;
 use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
 use crossterm::terminal::{self, EnterAlternateScreen, LeaveAlternateScreen};
 use ratatui::backend::Backend;

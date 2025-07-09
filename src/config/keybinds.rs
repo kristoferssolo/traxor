@@ -18,6 +18,7 @@ pub struct KeybindsConfig {
     pub delete_force: Option<String>,
     pub select: Option<String>,
     pub toggle_help: Option<String>,
+    pub move_torrent: Option<String>,
 }
 
 impl Default for KeybindsConfig {
@@ -37,6 +38,7 @@ impl Default for KeybindsConfig {
             delete_force: Some("D".to_string()),
             select: Some(" ".to_string()),
             toggle_help: Some("?".to_string()),
+            move_torrent: Some("m".to_string()),
         }
     }
 }
