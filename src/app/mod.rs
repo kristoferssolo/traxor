@@ -169,18 +169,8 @@ impl<'a> App<'a> {
     }
 
     pub fn prepare_move_action(&mut self) {
-        if let Selected::Current(current_id) = self.selected(true) {
-            if let Some(torrent) = self
-                .torrents
-                .torrents
-                .iter()
-                .find(|t| t.id == Some(current_id))
-            {
-                if let Some(download_dir) = &torrent.download_dir {
-                    self.input = download_dir.clone();
-                    self.cursor_position = self.input.len();
-                }
-            }
+        if let Some(download_dir) = self.get_current_downlaod_dir() {
+            self.set_input_from_path(&download_dir);
         }
         self.input_mode = true;
     }
@@ -202,14 +192,14 @@ impl<'a> App<'a> {
             let selected_id = self
                 .state
                 .selected()
-                .and_then(|idx| torrents.get(idx).and_then(|torrent| torrent.id));
+                .and_then(|idx| torrents.get(idx).and_then(|t| t.id));
             if let Some(id) = selected_id {
                 return Selected::Current(id);
             }
         }
         let selected_torrents = torrents
             .iter()
-            .filter_map(|torrent| torrent.id.filter(|id| self.torrents.selected.contains(id)))
+            .filter_map(|t| t.id.filter(|id| self.torrents.selected.contains(id)))
             .collect();
         Selected::List(selected_torrents)
     }
@@ -235,6 +225,32 @@ impl<'a> App<'a> {
             self.input = completion.clone();
             self.cursor_position = self.input.len();
         }
+    }
+
+    fn get_current_downlaod_dir(&self) -> Option<String> {
+        match self.selected(true) {
+            Selected::Current(current_id) => self
+                .torrents
+                .torrents
+                .iter()
+                .find(|&t| t.id == Some(current_id))
+                .and_then(|t| t.download_dir.clone()),
+            _ => None,
+        }
+    }
+
+    fn set_input_from_path(&mut self, download_dir: &str) {
+        let mut path_buf = PathBuf::from(download_dir);
+
+        if path_buf.is_dir() && !download_dir.ends_with('/') {
+            path_buf.push("/");
+        }
+        self.update_cursor(path_buf);
+    }
+
+    fn update_cursor(&mut self, path: PathBuf) {
+        self.input = path.to_string_lossy().to_string();
+        self.cursor_position = self.input.len();
     }
 }
 
