@@ -3,29 +3,33 @@ use color_eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use tracing::{event, info_span, Level};
 
-fn handle_input(key_event: KeyEvent, app: &mut App) -> Option<Action> {
+async fn handle_input(key_event: KeyEvent, app: &mut App<'_>) -> Result<Option<Action>> {
     match key_event.code {
-        KeyCode::Enter => Some(Action::Submit),
+        KeyCode::Enter => Ok(Some(Action::Submit)),
+        KeyCode::Tab => {
+            app.complete_input().await?;
+            Ok(None)
+        }
         KeyCode::Char(c) => {
             app.input.push(c);
             app.cursor_position = app.input.len();
-            None
+            Ok(None)
         }
         KeyCode::Backspace => {
             app.input.pop();
             app.cursor_position = app.input.len();
-            None
+            Ok(None)
         }
-        KeyCode::Esc => Some(Action::Cancel),
-        _ => None,
+        KeyCode::Esc => Ok(Some(Action::Cancel)),
+        _ => Ok(None),
     }
 }
 
 /// Handles the key events of [`App`].
 #[tracing::instrument]
-pub fn get_action(key_event: KeyEvent, app: &mut App) -> Option<Action> {
+pub async fn get_action(key_event: KeyEvent, app: &mut App<'_>) -> Result<Option<Action>> {
     if app.input_mode {
-        return handle_input(key_event, app);
+        return handle_input(key_event, app).await;
     }
 
     let span = info_span!("get_action");
@@ -54,10 +58,10 @@ pub fn get_action(key_event: KeyEvent, app: &mut App) -> Option<Action> {
 
     for (action, keybind) in actions {
         if matches_keybind(&key_event, keybind) {
-            return Some(action);
+            return Ok(Some(action));
         }
     }
-    None
+    Ok(None)
 }
 
 /// Handles the updates of [`App`].
@@ -140,7 +144,6 @@ fn parse_keybind(key_str: &str) -> (KeyModifiers, Option<KeyCode>) {
                     key_code = Some(KeyCode::F(num));
                 }
             }
-
             single_char if single_char.len() == 1 => {
                 if let Some(c) = single_char.chars().next() {
                     key_code = Some(KeyCode::Char(c));
