@@ -4,6 +4,7 @@ pub mod unit;
 
 use filesize::FileSize;
 use netspeed::NetSpeed;
+use std::fmt::Display;
 use transmission_rpc::types::{
     ErrorType, IdleMode, Priority, RatioMode, Torrent, TorrentGetField, TorrentStatus,
 };
@@ -284,18 +285,16 @@ impl Wrapper for TorrentGetField {
     }
 }
 
-fn format_option_string<T: ToString>(value: Option<T>) -> String {
+fn format_option_string<T: Display>(value: Option<T>) -> String {
     value.map(|v| v.to_string()).unwrap_or_default()
 }
 
 fn format_eta(value: Option<i64>) -> String {
-    value
-        .map(|v| match v {
-            -1 => "".into(),
-            -2 => "?".into(),
-            _ => format!("{} s", v),
-        })
-        .unwrap_or("".into())
+    match value {
+        Some(-2) => "?".into(),
+        None | Some(-1) | Some(..0) => String::new(),
+        Some(v) => format!("{} s", v),
+    }
 }
 
 trait Formatter {
@@ -311,7 +310,7 @@ impl Formatter for Option<f32> {
 impl<T> Formatter for Option<Vec<T>> {
     fn format(&self) -> String {
         self.as_ref()
-            .map(|v| format!("{}", v.len()))
+            .map(|v| v.len().to_string())
             .unwrap_or_default()
     }
 }
@@ -320,7 +319,7 @@ macro_rules! impl_enum_formatter {
     ($enum_type:ty, { $($variant:pat => $str:expr),* $(,)? }) => {
         impl Formatter for Option<$enum_type> {
             fn format(&self) -> String {
-                self.map(|v| match v { $($variant => $str,)* }).unwrap_or("N/A").into()
+                self.map_or("N/A".to_string(),|v| match v { $($variant => $str,)* }.to_string())
             }
         }
     };
