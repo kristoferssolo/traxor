@@ -40,7 +40,7 @@ async fn main() -> Result<()> {
         match tui.events.next()? {
             Event::Tick => app.tick().await?,
             Event::Key(key_event) => {
-                if let Some(action) = get_action(key_event, &mut app) {
+                if let Some(action) = get_action(key_event, &mut app).await? {
                     update(&mut app, action).await?;
                 }
             }

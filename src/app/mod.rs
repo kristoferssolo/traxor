@@ -8,6 +8,8 @@ pub mod utils;
 use crate::config::Config;
 use color_eyre::Result;
 use ratatui::widgets::TableState;
+use std::path::{Path, PathBuf};
+use tokio::fs;
 use types::Selected;
 pub use {tab::Tab, torrent::Torrents};
 
@@ -24,6 +26,8 @@ pub struct App<'a> {
     pub input: String,
     pub cursor_position: usize,
     pub input_mode: bool,
+    pub completions: Vec<String>,
+    pub completion_idx: usize,
 }
 
 impl<'a> App<'a> {
@@ -41,7 +45,20 @@ impl<'a> App<'a> {
             input: String::new(),
             cursor_position: 0,
             input_mode: false,
+            completions: Vec::new(),
+            completion_idx: 0,
         })
+    }
+
+    pub async fn complete_input(&mut self) -> Result<()> {
+        let path = PathBuf::from(&self.input);
+        let (base_path, partial_name) = split_path_components(path);
+        let matches = find_matching_entries(&base_path, &partial_name).await?;
+
+        self.update_completions(matches);
+        self.update_input_with_matches();
+
+        Ok(())
     }
 
     /// Handles the tick event of the terminal.
@@ -196,4 +213,64 @@ impl<'a> App<'a> {
             .collect();
         Selected::List(selected_torrents)
     }
+
+    fn update_completions(&mut self, matches: Vec<String>) {
+        if matches.is_empty() {
+            self.completions.clear();
+            self.completion_idx = 0;
+            return;
+        }
+
+        if matches != self.completions {
+            self.completions = matches;
+            self.completion_idx = 0;
+            return;
+        }
+
+        self.completion_idx = (self.completion_idx + 1) % self.completions.len();
+    }
+
+    fn update_input_with_matches(&mut self) {
+        if let Some(completion) = self.completions.get(self.completion_idx) {
+            self.input = completion.clone();
+            self.cursor_position = self.input.len();
+        }
+    }
+}
+
+fn split_path_components(path: PathBuf) -> (PathBuf, String) {
+    if path.is_dir() {
+        return (path, String::new());
+    }
+
+    let partial = path
+        .file_name()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
+
+    let base = path
+        .parent()
+        .unwrap_or_else(|| Path::new("/"))
+        .to_path_buf();
+
+    (base, partial)
+}
+
+async fn find_matching_entries(base_path: &Path, partial_name: &str) -> Result<Vec<String>> {
+    let mut entries = fs::read_dir(&base_path).await?;
+    let mut matches = Vec::new();
+
+    while let Some(entry) = entries.next_entry().await? {
+        let file_name = entry.file_name().to_string_lossy().to_string();
+
+        if file_name
+            .to_lowercase()
+            .starts_with(&partial_name.to_lowercase())
+        {
+            matches.push(format!("{}/{}", base_path.to_string_lossy(), file_name));
+        }
+    }
+
+    Ok(matches)
 }
