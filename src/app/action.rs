@@ -6,7 +6,7 @@ pub enum Action {
     NextTorrent,
     PrevTorrent,
     SwitchTab(u8),
-    ToggleHelp, // Add this line
+    ToggleHelp,
     ToggleTorrent,
     ToggleAll,
     PauseAll,
@@ -15,4 +15,6 @@ pub enum Action {
     Delete(bool),
     Rename,
     Select,
+    Submit,
+    Cancel,
 }

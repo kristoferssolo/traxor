@@ -13,6 +13,7 @@ delete = "d"
 delete_force = "D"
 select = " "
 toggle_help = "?"
+move = "m"
 
 [colors]
 highlight_background = "magenta"

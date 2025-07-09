@@ -1,6 +1,6 @@
 mod log;
 
-use color_eyre::eyre::Result;
+use color_eyre::Result;
 use log::setup_logger;
 use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io;
@@ -40,7 +40,7 @@ async fn main() -> Result<()> {
         match tui.events.next()? {
             Event::Tick => app.tick().await?,
             Event::Key(key_event) => {
-                if let Some(action) = get_action(key_event, &app) {
+                if let Some(action) = get_action(key_event, &mut app) {
                     update(&mut app, action).await?;
                 }
             }

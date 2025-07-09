@@ -1,4 +1,5 @@
 mod help;
+mod input;
 mod table;
 
 use crate::app::{App, Tab};
@@ -62,5 +63,9 @@ pub fn render(app: &mut App, frame: &mut Frame) {
 
     if app.show_help {
         render_help(frame, app);
+    }
+
+    if app.input_mode {
+        input::render(frame, app);
     }
 }

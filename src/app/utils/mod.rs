@@ -11,11 +11,11 @@ use transmission_rpc::types::{
 
 pub trait Wrapper {
     fn title(&self) -> String {
-        "".to_string()
+        String::new()
     }
 
     fn value(&self, torrent: &Torrent) -> String {
-        format!("{}", torrent.name.as_ref().unwrap_or(&String::from("")))
+        torrent.name.clone().unwrap_or_default()
     }
 
     fn width(&self) -> u16 {
