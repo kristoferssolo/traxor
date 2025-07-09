@@ -78,7 +78,7 @@ pub async fn update(app: &mut App<'_>, action: Action) -> Result<()> {
         Action::ToggleAll => app.torrents.toggle_all().await?,
         Action::PauseAll => app.torrents.stop_all().await?,
         Action::StartAll => app.torrents.start_all().await?,
-        Action::Move => app.input_mode = true,
+        Action::Move => app.prepare_move_action(),
         Action::Delete(x) => app.delete(x).await?,
         Action::Rename => unimplemented!(),
         Action::Select => app.select(),

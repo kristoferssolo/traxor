@@ -151,6 +151,23 @@ impl<'a> App<'a> {
         Ok(())
     }
 
+    pub fn prepare_move_action(&mut self) {
+        if let Selected::Current(current_id) = self.selected(true) {
+            if let Some(torrent) = self
+                .torrents
+                .torrents
+                .iter()
+                .find(|t| t.id == Some(current_id))
+            {
+                if let Some(download_dir) = &torrent.download_dir {
+                    self.input = download_dir.clone();
+                    self.cursor_position = self.input.len();
+                }
+            }
+        }
+        self.input_mode = true;
+    }
+
     pub fn select(&mut self) {
         if let Selected::Current(current_id) = self.selected(true) {
             if self.torrents.selected.contains(&current_id) {
