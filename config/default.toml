@@ -21,3 +21,8 @@ highlight_foreground = "black"
 warning_foreground = "yellow"
 info_foreground = "blue"
 error_foreground = "red"
+
+[log]
+traxor = "info"
+ratatui = "warn"
+transmission_rpc = "warn"

@@ -1,23 +1,37 @@
-use crate::merge::Merge;
-use derive_macro::Merge;
+use merge::Merge;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Merge)]
 pub struct KeybindsConfig {
+    #[merge(strategy = merge::option::overwrite_none)]
     pub quit: Option<String>,
+    #[merge(strategy = merge::option::overwrite_none)]
     pub next_tab: Option<String>,
+    #[merge(strategy = merge::option::overwrite_none)]
     pub prev_tab: Option<String>,
+    #[merge(strategy = merge::option::overwrite_none)]
     pub next_torrent: Option<String>,
+    #[merge(strategy = merge::option::overwrite_none)]
     pub prev_torrent: Option<String>,
+    #[merge(strategy = merge::option::overwrite_none)]
     pub switch_tab_1: Option<String>,
+    #[merge(strategy = merge::option::overwrite_none)]
     pub switch_tab_2: Option<String>,
+    #[merge(strategy = merge::option::overwrite_none)]
     pub switch_tab_3: Option<String>,
+    #[merge(strategy = merge::option::overwrite_none)]
     pub toggle_torrent: Option<String>,
+    #[merge(strategy = merge::option::overwrite_none)]
     pub toggle_all: Option<String>,
+    #[merge(strategy = merge::option::overwrite_none)]
     pub delete: Option<String>,
+    #[merge(strategy = merge::option::overwrite_none)]
     pub delete_force: Option<String>,
+    #[merge(strategy = merge::option::overwrite_none)]
     pub select: Option<String>,
+    #[merge(strategy = merge::option::overwrite_none)]
     pub toggle_help: Option<String>,
+    #[merge(strategy = merge::option::overwrite_none)]
     pub move_torrent: Option<String>,
 }
 
