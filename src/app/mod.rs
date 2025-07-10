@@ -170,7 +170,8 @@ impl<'a> App<'a> {
 
     pub fn prepare_move_action(&mut self) {
         if let Some(download_dir) = self.get_current_downlaod_dir() {
-            self.set_input_from_path(&download_dir);
+            let path_buf = PathBuf::from(download_dir);
+            self.update_cursor(path_buf);
         }
         self.input_mode = true;
     }
@@ -227,25 +228,17 @@ impl<'a> App<'a> {
         }
     }
 
-    fn get_current_downlaod_dir(&self) -> Option<String> {
+    fn get_current_downlaod_dir(&self) -> Option<PathBuf> {
         match self.selected(true) {
             Selected::Current(current_id) => self
                 .torrents
                 .torrents
                 .iter()
                 .find(|&t| t.id == Some(current_id))
-                .and_then(|t| t.download_dir.clone()),
+                .and_then(|t| t.download_dir.as_ref())
+                .map(PathBuf::from),
             _ => None,
         }
-    }
-
-    fn set_input_from_path(&mut self, download_dir: &str) {
-        let mut path_buf = PathBuf::from(download_dir);
-
-        if path_buf.is_dir() && !download_dir.ends_with('/') {
-            path_buf.push("/");
-        }
-        self.update_cursor(path_buf);
     }
 
     fn update_cursor(&mut self, path: PathBuf) {
