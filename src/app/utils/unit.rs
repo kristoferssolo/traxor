@@ -50,10 +50,14 @@ where
 }
 
 impl Unit {
+    #[inline]
+    #[must_use]
     pub const fn from_raw(value: u64) -> Self {
         Self(value)
     }
 
+    #[inline]
+    #[must_use]
     pub const fn value(&self) -> u64 {
         self.0
     }
@@ -66,15 +70,18 @@ pub struct UnitDisplay<'a> {
 }
 
 impl<'a> UnitDisplay<'a> {
-    pub fn new(unit: &'a Unit, units: &'a [&'a str]) -> Self {
+    #[inline]
+    #[must_use]
+    pub const fn new(unit: &'a Unit, units: &'a [&'a str]) -> Self {
         Self { unit, units }
     }
 }
 
-impl<'a> Display for UnitDisplay<'a> {
+impl Display for UnitDisplay<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         const THRESHOLD: f64 = 1024.0;
 
+        #[allow(clippy::cast_precision_loss)]
         let value = self.unit.0 as f64;
 
         if value < THRESHOLD {
@@ -111,7 +118,9 @@ macro_rules! impl_unit_newtype {
         }
 
         impl $wrapper {
-            pub fn unit(&self) -> &Unit {
+            #[inline]
+            #[must_use]
+            pub const fn unit(&self) -> &Unit {
                 &self.0
             }
         }

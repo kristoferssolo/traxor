@@ -30,9 +30,13 @@ pub struct App<'a> {
     pub completion_idx: usize,
 }
 
-impl<'a> App<'a> {
+impl App<'_> {
     /// Constructs a new instance of [`App`].
     /// Returns instance of `Self`.
+    ///
+    /// # Errors
+    ///
+    /// TODO: add error types
     pub fn new(config: Config) -> Result<Self> {
         Ok(Self {
             running: true,
@@ -50,6 +54,9 @@ impl<'a> App<'a> {
         })
     }
 
+    /// # Errors
+    ///
+    /// TODO: add error types
     pub async fn complete_input(&mut self) -> Result<()> {
         let path = PathBuf::from(&self.input);
         let (base_path, partial_name) = split_path_components(path);
@@ -62,13 +69,18 @@ impl<'a> App<'a> {
     }
 
     /// Handles the tick event of the terminal.
+    ///
+    /// # Errors
+    ///
+    /// TODO: add error types
     pub async fn tick(&mut self) -> Result<()> {
         self.torrents.update().await?;
         Ok(())
     }
 
     /// Set running to false to quit the application.
-    pub fn quit(&mut self) {
+    #[inline]
+    pub const fn quit(&mut self) {
         self.running = false;
     }
 
@@ -103,13 +115,15 @@ impl<'a> App<'a> {
     }
 
     /// Switches to the next tab.
-    pub fn next_tab(&mut self) {
+    #[inline]
+    pub const fn next_tab(&mut self) {
         self.close_help();
         self.index = (self.index + 1) % self.tabs.len();
     }
 
     /// Switches to the previous tab.
-    pub fn prev_tab(&mut self) {
+    #[inline]
+    pub const fn prev_tab(&mut self) {
         self.close_help();
         if self.index > 0 {
             self.index -= 1;
@@ -119,33 +133,44 @@ impl<'a> App<'a> {
     }
 
     /// Switches to the tab whose index is `idx`.
-    pub fn switch_tab(&mut self, idx: usize) {
+    #[inline]
+    pub const fn switch_tab(&mut self, idx: usize) {
         self.close_help();
-        self.index = idx
+        self.index = idx;
     }
 
     /// Returns current active [`Tab`] number
-    pub fn index(&self) -> usize {
+    #[inline]
+    #[must_use]
+    pub const fn index(&self) -> usize {
         self.index
     }
 
     /// Returns [`Tab`] slice
-    pub fn tabs(&self) -> &[Tab] {
+    #[inline]
+    #[must_use]
+    pub const fn tabs(&self) -> &[Tab] {
         self.tabs
     }
 
-    pub fn toggle_help(&mut self) {
+    #[inline]
+    pub const fn toggle_help(&mut self) {
         self.show_help = !self.show_help;
     }
 
-    pub fn close_help(&mut self) {
+    #[inline]
+    pub const fn close_help(&mut self) {
         self.show_help = false;
     }
 
-    pub fn open_help(&mut self) {
+    #[inline]
+    pub const fn open_help(&mut self) {
         self.show_help = true;
     }
 
+    /// # Errors
+    ///
+    /// TODO: add error types
     pub async fn toggle_torrents(&mut self) -> Result<()> {
         let ids = self.selected(false);
         self.torrents.toggle(ids).await?;
@@ -153,6 +178,9 @@ impl<'a> App<'a> {
         Ok(())
     }
 
+    /// # Errors
+    ///
+    /// TODO: add error types
     pub async fn delete(&mut self, delete_local_data: bool) -> Result<()> {
         let ids = self.selected(false);
         self.torrents.delete(ids, delete_local_data).await?;
@@ -160,6 +188,9 @@ impl<'a> App<'a> {
         Ok(())
     }
 
+    /// # Errors
+    ///
+    /// TODO: add error types
     pub async fn move_torrent(&mut self) -> Result<()> {
         self.torrents.move_selection(&self.input).await?;
         self.input.clear();
@@ -170,8 +201,7 @@ impl<'a> App<'a> {
 
     pub fn prepare_move_action(&mut self) {
         if let Some(download_dir) = self.get_current_downlaod_dir() {
-            let path_buf = PathBuf::from(download_dir);
-            self.update_cursor(path_buf);
+            self.update_cursor(&download_dir);
         }
         self.input_mode = true;
     }
@@ -237,11 +267,11 @@ impl<'a> App<'a> {
                 .find(|&t| t.id == Some(current_id))
                 .and_then(|t| t.download_dir.as_ref())
                 .map(PathBuf::from),
-            _ => None,
+            Selected::List(_) => None,
         }
     }
 
-    fn update_cursor(&mut self, path: PathBuf) {
+    fn update_cursor(&mut self, path: &Path) {
         self.input = path.to_string_lossy().to_string();
         self.cursor_position = self.input.len();
     }

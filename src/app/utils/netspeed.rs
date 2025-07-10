@@ -7,7 +7,9 @@ pub struct NetSpeed(Unit);
 impl_unit_newtype!(NetSpeed);
 
 impl NetSpeed {
-    pub fn new(bytes_per_second: u64) -> Self {
+    #[inline]
+    #[must_use]
+    pub const fn new(bytes_per_second: u64) -> Self {
         Self(Unit::from_raw(bytes_per_second))
     }
 }

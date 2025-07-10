@@ -68,7 +68,7 @@ impl Wrapper for TorrentGetField {
             Self::Peers => "Peers",
             Self::PeersConnected => "Connected",
             Self::PeersFrom => "Peers From",
-            Self::PeersGettingFromUs => "Peers",
+            Self::PeersGettingFromUs => "Peers Receiving",
             Self::PeersSendingToUs => "Seeds",
             Self::PercentComplete => "Percent Complete",
             Self::PercentDone => "%",
@@ -203,6 +203,7 @@ impl Wrapper for TorrentGetField {
     }
 
     fn width(&self) -> u16 {
+        #![allow(clippy::match_same_arms)]
         match self {
             Self::ActivityDate => 20,
             Self::AddedDate => 20,
@@ -292,8 +293,8 @@ fn format_option_string<T: Display>(value: Option<T>) -> String {
 fn format_eta(value: Option<i64>) -> String {
     match value {
         Some(-2) => "?".into(),
-        None | Some(-1) | Some(..0) => String::new(),
-        Some(v) => format!("{} s", v),
+        None | Some(-1 | ..0) => String::new(),
+        Some(v) => format!("{v} s"),
     }
 }
 
@@ -303,7 +304,7 @@ trait Formatter {
 
 impl Formatter for Option<f32> {
     fn format(&self) -> String {
-        self.map(|v| format!("{:.2}", v)).unwrap_or_default()
+        self.map(|v| format!("{v:.2}")).unwrap_or_default()
     }
 }
 

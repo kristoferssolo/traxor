@@ -18,7 +18,7 @@ move = "m"
 [colors]
 highlight_background = "magenta"
 highlight_foreground = "black"
-warning_foreground = "yellow"
+header_foreground = "yellow"
 info_foreground = "blue"
 error_foreground = "red"
 

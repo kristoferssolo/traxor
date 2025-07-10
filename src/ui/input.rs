@@ -1,5 +1,9 @@
 use crate::app::App;
-use ratatui::{prelude::*, widgets::*};
+use ratatui::{
+    prelude::*,
+    widgets::{Block, Borders, Clear, Paragraph},
+};
+use tracing::warn;
 
 pub fn render(f: &mut Frame, app: &mut App) {
     let size = f.area();
@@ -18,8 +22,17 @@ pub fn render(f: &mut Frame, app: &mut App) {
         }),
     );
 
-    f.set_cursor_position(ratatui::layout::Position::new(
-        input_area.x + app.cursor_position as u16 + 1,
+    let cursor_offset = u16::try_from(app.cursor_position)
+        .map_err(|_| {
+            warn!(
+                "cursor_position {} out of u16 range. Clamping to 0",
+                app.cursor_position
+            );
+        })
+        .unwrap_or_default();
+
+    f.set_cursor_position(Position::new(
+        input_area.x + cursor_offset + 1,
         input_area.y + 1,
     ));
 }
