@@ -1,14 +1,12 @@
-mod log;
-
 use color_eyre::Result;
-use log::setup_logger;
-use ratatui::{backend::CrosstermBackend, Terminal};
+use ratatui::{Terminal, backend::CrosstermBackend};
 use std::io;
 use traxor::{
     app::App,
     config::Config,
     event::{Event, EventHandler},
     handler::{get_action, update},
+    telemetry::setup_logger,
     tui::Tui,
 };
 
@@ -16,11 +14,11 @@ use traxor::{
 async fn main() -> Result<()> {
     color_eyre::install()?;
 
-    // Setup the logger.
-    setup_logger()?;
-
     // Load configuration.
     let config = Config::load()?;
+
+    // Setup the logger.
+    setup_logger(&config)?;
 
     // Create an application.
     let mut app = App::new(config)?;

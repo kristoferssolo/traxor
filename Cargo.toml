@@ -3,9 +3,10 @@ name = "traxor"
 version = "0.1.0"
 authors = ["Kristofers Solo <dev@kristofers.xyz>"]
 license = "GPLv3"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
+derive_macro = { path = "derive_macro" }
 color-eyre = "0.6"
 crossterm = "0.29"
 dirs = "6.0"

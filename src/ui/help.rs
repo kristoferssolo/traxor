@@ -8,63 +8,48 @@ pub fn render_help(frame: &mut Frame, app: &App) {
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded);
 
-    let keybinds = &app.config.keybinds;
+    let keybinds = app.config.keybinds.clone();
 
     let rows = vec![
         Row::new(vec![
-            Cell::from(keybinds.toggle_help.as_deref().unwrap_or("?")),
+            Cell::from(keybinds.toggle_help),
             Cell::from("Show help"),
         ]),
+        Row::new(vec![Cell::from(keybinds.quit), Cell::from("Quit")]),
+        Row::new(vec![Cell::from(keybinds.prev_tab), Cell::from("Left")]),
+        Row::new(vec![Cell::from(keybinds.next_tab), Cell::from("Right")]),
+        Row::new(vec![Cell::from(keybinds.next_torrent), Cell::from("Down")]),
+        Row::new(vec![Cell::from(keybinds.prev_torrent), Cell::from("Up")]),
         Row::new(vec![
-            Cell::from(keybinds.quit.as_deref().unwrap_or("q")),
-            Cell::from("Quit"),
-        ]),
-        Row::new(vec![
-            Cell::from(keybinds.prev_tab.as_deref().unwrap_or("h")),
-            Cell::from("Left"),
-        ]),
-        Row::new(vec![
-            Cell::from(keybinds.next_tab.as_deref().unwrap_or("l")),
-            Cell::from("Right"),
-        ]),
-        Row::new(vec![
-            Cell::from(keybinds.next_torrent.as_deref().unwrap_or("j")),
-            Cell::from("Down"),
-        ]),
-        Row::new(vec![
-            Cell::from(keybinds.prev_torrent.as_deref().unwrap_or("k")),
-            Cell::from("Up"),
-        ]),
-        Row::new(vec![
-            Cell::from(keybinds.switch_tab_1.as_deref().unwrap_or("1")),
+            Cell::from(keybinds.switch_tab_1),
             Cell::from("Switch to All tab"),
         ]),
         Row::new(vec![
-            Cell::from(keybinds.switch_tab_2.as_deref().unwrap_or("2")),
+            Cell::from(keybinds.switch_tab_2),
             Cell::from("Switch to Active tab"),
         ]),
         Row::new(vec![
-            Cell::from(keybinds.switch_tab_3.as_deref().unwrap_or("3")),
+            Cell::from(keybinds.switch_tab_3),
             Cell::from("Switch to Downloading tab"),
         ]),
         Row::new(vec![
-            Cell::from(keybinds.toggle_torrent.as_deref().unwrap_or("t")),
+            Cell::from(keybinds.toggle_torrent),
             Cell::from("Toggle torrent"),
         ]),
         Row::new(vec![
-            Cell::from(keybinds.toggle_all.as_deref().unwrap_or("a")),
+            Cell::from(keybinds.toggle_all),
             Cell::from("Toggle all torrents"),
         ]),
         Row::new(vec![
-            Cell::from(keybinds.delete.as_deref().unwrap_or("d")),
+            Cell::from(keybinds.delete),
             Cell::from("Delete torrent"),
         ]),
         Row::new(vec![
-            Cell::from(keybinds.delete_force.as_deref().unwrap_or("D")),
+            Cell::from(keybinds.delete_force),
             Cell::from("Delete torrent and data"),
         ]),
         Row::new(vec![
-            Cell::from(keybinds.select.as_deref().unwrap_or(" ")),
+            Cell::from(keybinds.select),
             Cell::from("Select torrent"),
         ]),
     ];

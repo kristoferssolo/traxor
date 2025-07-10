@@ -1,4 +1,4 @@
-use crate::app::{utils::Wrapper, App, Tab};
+use crate::app::{App, Tab, utils::Wrapper};
 use ratatui::{
     layout::Constraint,
     style::{Style, Styled},

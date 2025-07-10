@@ -1,28 +1,41 @@
 mod colors;
 mod keybinds;
+mod log;
 
 use color_eyre::Result;
-use colors::ColorsConfig;
-use keybinds::KeybindsConfig;
-use merge::Merge;
+use colors::{ColorsConfig, ColorsConfigFile};
+use keybinds::{KeybindsConfig, KeybindsConfigFile};
+use log::{LogConfig, LogConfigFile};
+use merge::{Merge, option::overwrite_none};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-#[derive(Debug, Default, Deserialize, Serialize, Merge)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize, Merge)]
+pub struct ConfigFile {
+    #[merge(strategy = overwrite_none)]
+    pub keybinds: Option<KeybindsConfigFile>,
+    #[merge(strategy = overwrite_none)]
+    pub colors: Option<ColorsConfigFile>,
+    #[merge(strategy = overwrite_none)]
+    pub log: Option<LogConfigFile>,
+}
+
+#[derive(Debug, Clone)]
 pub struct Config {
     pub keybinds: KeybindsConfig,
     pub colors: ColorsConfig,
+    pub log: LogConfig,
 }
 
 impl Config {
     pub fn load() -> Result<Self> {
-        let mut config = Self::default();
+        let mut config = ConfigFile::default();
 
         // Load system-wide config
         let system_config_path = PathBuf::from("/etc/xdg/traxor/config.toml");
         if system_config_path.exists() {
             let config_str = std::fs::read_to_string(&system_config_path)?;
-            let system_config: Config = toml::from_str(&config_str)?;
+            let system_config = toml::from_str::<ConfigFile>(&config_str)?;
             config.merge(system_config);
         }
 
@@ -30,18 +43,11 @@ impl Config {
         let user_config_path = Self::get_config_path()?;
         if user_config_path.exists() {
             let config_str = std::fs::read_to_string(&user_config_path)?;
-            let user_config: Config = toml::from_str(&config_str)?;
+            let user_config = toml::from_str::<ConfigFile>(&config_str)?;
             config.merge(user_config);
         }
 
-        Ok(config)
-    }
-
-    pub fn save(&self) -> Result<()> {
-        let config_path = Self::get_config_path()?;
-        let config_str = toml::to_string_pretty(self)?;
-        std::fs::write(&config_path, config_str)?;
-        Ok(())
+        Ok(config.into())
     }
 
     fn get_config_path() -> Result<PathBuf> {
@@ -53,5 +59,15 @@ impl Config {
                     .join(".config")
             });
         Ok(config_dir.join("traxor").join("config.toml"))
+    }
+}
+
+impl From<ConfigFile> for Config {
+    fn from(value: ConfigFile) -> Self {
+        Self {
+            keybinds: value.keybinds.into(),
+            colors: value.colors.into(),
+            log: value.log.into(),
+        }
     }
 }
