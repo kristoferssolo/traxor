@@ -1,7 +1,7 @@
-use crate::app::{action::Action, App};
+use crate::app::{App, action::Action};
 use color_eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use tracing::{event, info_span, Level};
+use tracing::{Level, event, info_span};
 
 async fn handle_input(key_event: KeyEvent, app: &mut App<'_>) -> Result<Option<Action>> {
     match key_event.code {
@@ -96,12 +96,8 @@ pub async fn update(app: &mut App<'_>, action: Action) -> Result<()> {
 }
 
 /// Check if a KeyEvent matches a configured keybind string
-fn matches_keybind(event: &KeyEvent, config_key: &Option<String>) -> bool {
-    let Some(key_str) = config_key else {
-        return false;
-    };
-
-    let (modifiers, key_code) = parse_keybind(key_str);
+fn matches_keybind(event: &KeyEvent, config_key: &str) -> bool {
+    let (modifiers, key_code) = parse_keybind(config_key);
     let Some(key_code) = key_code else {
         return false;
     };
