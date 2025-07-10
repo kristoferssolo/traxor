@@ -1,14 +1,18 @@
-use crate::merge::Merge;
-use derive_macro::Merge;
+use merge::Merge;
 use ratatui::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Merge)]
 pub struct ColorsConfig {
+    #[merge(strategy = merge::option::overwrite_none)]
     pub highlight_background: Option<String>,
+    #[merge(strategy = merge::option::overwrite_none)]
     pub highlight_foreground: Option<String>,
+    #[merge(strategy = merge::option::overwrite_none)]
     pub warning_foreground: Option<String>,
+    #[merge(strategy = merge::option::overwrite_none)]
     pub info_foreground: Option<String>,
+    #[merge(strategy = merge::option::overwrite_none)]
     pub error_foreground: Option<String>,
 }
 

@@ -1,11 +1,10 @@
 mod colors;
 mod keybinds;
 
-use crate::merge::Merge;
 use color_eyre::Result;
 use colors::ColorsConfig;
-use derive_macro::Merge;
 use keybinds::KeybindsConfig;
+use merge::Merge;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
