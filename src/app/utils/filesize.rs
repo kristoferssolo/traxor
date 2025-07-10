@@ -7,7 +7,9 @@ pub struct FileSize(Unit);
 impl_unit_newtype!(FileSize);
 
 impl FileSize {
-    pub fn new(bytes: u64) -> Self {
+    #[inline]
+    #[must_use]
+    pub const fn new(bytes: u64) -> Self {
         Self(Unit::from_raw(bytes))
     }
 }

@@ -1,5 +1,10 @@
 use crate::app::App;
-use ratatui::{prelude::*, widgets::*};
+use ratatui::{
+    prelude::*,
+    widgets::{Block, BorderType, Borders, Cell, Clear, Row, Table},
+};
+
+use super::to_color;
 
 pub fn render_help(frame: &mut Frame, app: &App) {
     let block = Block::default()
@@ -59,12 +64,7 @@ pub fn render_help(frame: &mut Frame, app: &App) {
         &[Constraint::Percentage(20), Constraint::Percentage(80)],
     )
     .block(block)
-    .style(
-        Style::default().fg(app
-            .config
-            .colors
-            .get_color(&app.config.colors.info_foreground)),
-    );
+    .style(Style::default().fg(to_color(&app.config.colors.info_foreground)));
 
     let area = frame.area();
     let height = 15; // Desired height for the help menu

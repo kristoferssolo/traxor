@@ -5,6 +5,9 @@ use tracing_appender::rolling;
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
+/// # Errors
+///
+/// TODO: add error types
 pub fn setup_logger(config: &Config) -> Result<()> {
     let log_dir_path = if cfg!(debug_assertions) {
         PathBuf::from(".logs")

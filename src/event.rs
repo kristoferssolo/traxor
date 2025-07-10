@@ -3,9 +3,10 @@ use crossterm::event::{self, Event as CrosstermEvent, KeyEvent, MouseEvent};
 use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, Instant};
+use tracing::error;
 
 /// Terminal events.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Event {
     /// Terminal tick.
     Tick,
@@ -31,6 +32,11 @@ pub struct EventHandler {
 
 impl EventHandler {
     /// Constructs a new instance of [`EventHandler`].
+    ///
+    /// # Panics
+    ///
+    /// TODO: add panic
+    #[must_use]
     pub fn new(tick_rate: u64) -> Self {
         let tick_rate = Duration::from_millis(tick_rate);
         let (sender, receiver) = mpsc::channel();
@@ -49,12 +55,12 @@ impl EventHandler {
                             Ok(CrosstermEvent::Mouse(e)) => sender.send(Event::Mouse(e)),
                             Ok(CrosstermEvent::Resize(w, h)) => sender.send(Event::Resize(w, h)),
                             Err(e) => {
-                                eprintln!("Error reading event: {:?}", e);
+                                error!("Error reading event: {:?}", e);
                                 break;
                             }
                             _ => Ok(()), // Ignore other events
                         }
-                        .expect("failed to send terminal event")
+                        .expect("failed to send terminal event");
                     }
 
                     if last_tick.elapsed() >= tick_rate {
@@ -75,6 +81,10 @@ impl EventHandler {
     ///
     /// This function will always block the current thread if
     /// there is no data available and it's possible for more data to be sent.
+    ///
+    /// # Errors
+    ///
+    /// TODO: add error types
     pub fn next(&self) -> Result<Event> {
         Ok(self.receiver.recv()?)
     }

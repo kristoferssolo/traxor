@@ -1,8 +1,8 @@
-use color_eyre::{eyre::eyre, Result};
+use color_eyre::{Result, eyre::eyre};
 use std::{collections::HashSet, fmt::Debug};
 use transmission_rpc::{
-    types::{Id, Torrent, TorrentGetField},
     TransClient,
+    types::{Id, Torrent, TorrentGetField},
 };
 use url::Url;
 
@@ -17,7 +17,11 @@ pub struct Torrents {
 
 impl Torrents {
     /// Constructs a new instance of [`Torrents`].
-    pub fn new() -> Result<Torrents> {
+    ///
+    /// # Errors
+    ///
+    /// TODO: add error types
+    pub fn new() -> Result<Self> {
         let url = Url::parse("http://localhost:9091/transmission/rpc")?;
         Ok(Self {
             client: TransClient::new(url),
@@ -28,8 +32,17 @@ impl Torrents {
     }
 
     /// Returns the number of [`Torrent`]s in [`Torrents`]
-    pub fn len(&self) -> usize {
+    #[inline]
+    #[must_use]
+    pub const fn len(&self) -> usize {
         self.torrents.len()
+    }
+
+    /// Returns `true` if the `torrents` contains no elements.
+    #[inline]
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
+        self.torrents.is_empty()
     }
 
     /// Sets `self.fields`
@@ -39,12 +52,20 @@ impl Torrents {
     }
 
     /// Sets
+    ///
+    /// # Errors
+    ///
+    /// TODO: add error types
     pub fn url(&mut self, url: &str) -> Result<&mut Self> {
         self.client = TransClient::new(Url::parse(url)?);
         Ok(self)
     }
 
     /// Updates [`Torrent`] values.
+    ///
+    /// # Errors
+    ///
+    /// TODO: add error types
     pub async fn update(&mut self) -> Result<&mut Self> {
         self.torrents = self
             .client
@@ -56,6 +77,9 @@ impl Torrents {
         Ok(self)
     }
 
+    /// # Errors
+    ///
+    /// TODO: add error types
     pub async fn move_selection(&mut self, location: &str) -> Result<()> {
         let ids: Vec<Id> = self.selected.iter().map(|id| Id::Id(*id)).collect();
         self.client
@@ -68,10 +92,10 @@ impl Torrents {
 
 impl Debug for Torrents {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let fields: Vec<String> = match &self.fields {
-            Some(fields) => fields.iter().map(|field| field.to_str()).collect(),
-            None => vec![String::from("None")],
-        };
+        let fields = self.fields.as_ref().map_or_else(
+            || vec!["None".into()],
+            |fields| fields.iter().map(TorrentGetField::to_str).collect(),
+        );
         write!(
             f,
             "fields:

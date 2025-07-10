@@ -27,6 +27,10 @@ async fn handle_input(key_event: KeyEvent, app: &mut App<'_>) -> Result<Option<A
 }
 
 /// Handles the key events of [`App`].
+///
+/// # Errors
+///
+/// TODO: add error types
 #[tracing::instrument(name = "Getting action", skip(app))]
 pub async fn get_action(key_event: KeyEvent, app: &mut App<'_>) -> Result<Option<Action>> {
     if app.input_mode {
@@ -64,6 +68,10 @@ pub async fn get_action(key_event: KeyEvent, app: &mut App<'_>) -> Result<Option
 }
 
 /// Handles the updates of [`App`].
+///
+/// # Errors
+///
+/// TODO: add error types
 #[tracing::instrument(name = "Update", skip(app))]
 pub async fn update(app: &mut App<'_>, action: Action) -> Result<()> {
     info!("updating app with action: {}", action);
@@ -92,7 +100,7 @@ pub async fn update(app: &mut App<'_>, action: Action) -> Result<()> {
     Ok(())
 }
 
-/// Check if a KeyEvent matches a configured keybind string
+/// Check if a [`KeyEvent`] matches a configured keybind string
 fn matches_keybind(event: &KeyEvent, config_key: &str) -> bool {
     let (modifiers, key_code) = parse_keybind(config_key);
     let Some(key_code) = key_code else {

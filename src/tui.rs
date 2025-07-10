@@ -4,10 +4,11 @@ use crate::ui;
 use color_eyre::Result;
 use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
 use crossterm::terminal::{self, EnterAlternateScreen, LeaveAlternateScreen};
-use ratatui::backend::Backend;
 use ratatui::Terminal;
+use ratatui::backend::Backend;
 use std::io;
 use std::panic;
+use tracing::error;
 
 /// Representation of a terminal user interface.
 ///
@@ -23,13 +24,17 @@ pub struct Tui<B: Backend> {
 
 impl<B: Backend> Tui<B> {
     /// Constructs a new instance of [`Tui`].
-    pub fn new(terminal: Terminal<B>, events: EventHandler) -> Self {
+    pub const fn new(terminal: Terminal<B>, events: EventHandler) -> Self {
         Self { terminal, events }
     }
 
     /// Initializes the terminal interface.
     ///
     /// It enables the raw mode and sets terminal properties.
+    ///
+    /// # Errors
+    ///
+    /// TODO: add error types
     pub fn init(&mut self) -> Result<()> {
         terminal::enable_raw_mode()?;
         crossterm::execute!(io::stderr(), EnterAlternateScreen, EnableMouseCapture)?;
@@ -39,7 +44,9 @@ impl<B: Backend> Tui<B> {
         let panic_hook = panic::take_hook();
         panic::set_hook(Box::new(move |panic| {
             if let Err(e) = Self::reset() {
-                eprintln!("Error resetting terminal: {:?}", e);
+                let msg = format!("Error resetting terminal: {e:?}");
+                eprintln!("{msg}");
+                error!(msg);
             }
             panic_hook(panic);
         }));
@@ -53,6 +60,10 @@ impl<B: Backend> Tui<B> {
     ///
     /// [`Draw`]: tui::Terminal::draw
     /// [`rendering`]: crate::ui:render
+    ///
+    /// # Errors
+    ///
+    /// TODO: add error types
     pub fn draw(&mut self, app: &mut App) -> Result<()> {
         self.terminal.draw(|frame| ui::render(app, frame))?;
         Ok(())
@@ -62,6 +73,10 @@ impl<B: Backend> Tui<B> {
     ///
     /// This function is also used for the panic hook to revert
     /// the terminal properties if unexpected errors occur.
+    ///
+    /// # Errors
+    ///
+    /// TODO: add error types
     fn reset() -> Result<()> {
         terminal::disable_raw_mode()?;
         crossterm::execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture)?;
@@ -71,6 +86,10 @@ impl<B: Backend> Tui<B> {
     /// Exits the terminal interface.
     ///
     /// It disables the raw mode and reverts back the terminal properties.
+    ///
+    /// # Errors
+    ///
+    /// TODO: add error types
     pub fn exit(&mut self) -> Result<()> {
         Self::reset()?;
         self.terminal.show_cursor()?;

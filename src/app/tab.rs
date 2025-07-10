@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use transmission_rpc::types::TorrentGetField;
 
 /// Available tabs.
@@ -11,9 +12,10 @@ pub enum Tab {
 
 impl Tab {
     /// Returns slice [`TorrentGetField`] apropriate variants.
-    pub fn fields(&self) -> &[TorrentGetField] {
+    #[must_use]
+    pub const fn fields(&self) -> &[TorrentGetField] {
         match self {
-            Tab::All => &[
+            Self::All => &[
                 TorrentGetField::Status,
                 TorrentGetField::PeersGettingFromUs,
                 TorrentGetField::UploadRatio,
@@ -22,7 +24,7 @@ impl Tab {
                 TorrentGetField::DownloadDir,
                 TorrentGetField::Name,
             ],
-            Tab::Active => &[
+            Self::Active => &[
                 TorrentGetField::TotalSize,
                 TorrentGetField::UploadedEver,
                 TorrentGetField::UploadRatio,
@@ -35,7 +37,7 @@ impl Tab {
                 TorrentGetField::RateUpload,
                 TorrentGetField::Name,
             ],
-            Tab::Downloading => &[
+            Self::Downloading => &[
                 TorrentGetField::TotalSize,
                 TorrentGetField::LeftUntilDone,
                 TorrentGetField::PercentDone,
@@ -48,18 +50,30 @@ impl Tab {
     }
 }
 
-impl AsRef<str> for Tab {
-    fn as_ref(&self) -> &str {
-        match self {
-            Tab::All => "All",
-            Tab::Active => "Active",
-            Tab::Downloading => "Downloading",
+impl From<usize> for Tab {
+    fn from(value: usize) -> Self {
+        #[allow(clippy::match_same_arms)]
+        match value {
+            0 => Self::All,
+            1 => Self::Active,
+            2 => Self::Downloading,
+            _ => Self::All,
         }
     }
 }
 
-impl ToString for Tab {
-    fn to_string(&self) -> String {
-        self.as_ref().into()
+impl AsRef<str> for Tab {
+    fn as_ref(&self) -> &str {
+        match self {
+            Self::All => "All",
+            Self::Active => "Active",
+            Self::Downloading => "Downloading",
+        }
+    }
+}
+
+impl Display for Tab {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_ref())
     }
 }
