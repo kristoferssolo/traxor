@@ -1,8 +1,9 @@
 use crate::app::{App, action::Action};
 use color_eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use tracing::{Level, event, info_span};
+use tracing::{debug, info};
 
+#[tracing::instrument(name = "Handling input", skip(app))]
 async fn handle_input(key_event: KeyEvent, app: &mut App<'_>) -> Result<Option<Action>> {
     match key_event.code {
         KeyCode::Enter => Ok(Some(Action::Submit)),
@@ -26,15 +27,13 @@ async fn handle_input(key_event: KeyEvent, app: &mut App<'_>) -> Result<Option<A
 }
 
 /// Handles the key events of [`App`].
-#[tracing::instrument]
+#[tracing::instrument(name = "Getting action", skip(app))]
 pub async fn get_action(key_event: KeyEvent, app: &mut App<'_>) -> Result<Option<Action>> {
     if app.input_mode {
         return handle_input(key_event, app).await;
     }
 
-    let span = info_span!("get_action");
-    let _enter = span.enter();
-    event!(Level::INFO, "handling key event: {:?}", key_event);
+    debug!("handling key event: {:?}", key_event);
 
     let keybinds = &app.config.keybinds;
 
@@ -65,11 +64,9 @@ pub async fn get_action(key_event: KeyEvent, app: &mut App<'_>) -> Result<Option
 }
 
 /// Handles the updates of [`App`].
-#[tracing::instrument]
+#[tracing::instrument(name = "Update", skip(app))]
 pub async fn update(app: &mut App<'_>, action: Action) -> Result<()> {
-    let span = info_span!("update");
-    let _enter = span.enter();
-    event!(Level::INFO, "updating app with action: {:?}", action);
+    info!("updating app with action: {}", action);
     match action {
         Action::Quit => app.quit(),
         Action::NextTab => app.next_tab(),
