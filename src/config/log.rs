@@ -1,5 +1,5 @@
 use derive_macro::FromFile;
-use merge::{option::overwrite_none, Merge};
+use merge::{Merge, option::overwrite_none};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Deserialize, Serialize, Merge)]
