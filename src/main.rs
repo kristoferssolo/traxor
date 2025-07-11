@@ -1,21 +1,15 @@
-pub mod app;
-pub mod config;
-pub mod event;
-pub mod handler;
-pub mod telemetry;
-pub mod tui;
-pub mod ui;
-
-use app::App;
 use color_eyre::Result;
-use config::Config;
-use event::{Event, EventHandler};
-use handler::{get_action, update};
 use ratatui::{Terminal, backend::CrosstermBackend};
 use std::io;
-use telemetry::setup_logger;
 use tracing::{debug, trace};
-use tui::Tui;
+use traxor::{
+    app::App,
+    config::Config,
+    event::{Event, EventHandler},
+    handler::{get_action, update},
+    telemetry::setup_logger,
+    tui::Tui,
+};
 
 #[tokio::main]
 async fn main() -> Result<()> {

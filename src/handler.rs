@@ -1,6 +1,7 @@
 use crate::app::{App, action::Action};
 use color_eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use thiserror::Error;
 use tracing::{debug, info};
 
 #[tracing::instrument(name = "Handling input", skip(app))]
@@ -102,56 +103,91 @@ pub async fn update(app: &mut App<'_>, action: Action) -> Result<()> {
 
 /// Check if a [`KeyEvent`] matches a configured keybind string
 fn matches_keybind(event: &KeyEvent, config_key: &str) -> bool {
-    let (modifiers, key_code) = parse_keybind(config_key);
-    let Some(key_code) = key_code else {
-        return false;
-    };
-
-    event.code == key_code && event.modifiers == modifiers
+    parse_keybind(config_key)
+        .map(|parsed_ev| parsed_ev == *event)
+        .unwrap_or(false)
 }
 
-fn parse_keybind(key_str: &str) -> (KeyModifiers, Option<KeyCode>) {
+#[derive(Debug, Error)]
+pub enum ParseKeybingError {
+    /// No “main” key was found (e.g. the user only wrote modifiers).
+    #[error("no main key was found in input")]
+    NoKeyCode,
+    /// An unrecognized token was encountered.
+    #[error("unrecognized token `{0}`")]
+    UnknownPart(String),
+}
+
+fn parse_keybind(key_str: &str) -> Result<KeyEvent, ParseKeybingError> {
     let mut modifiers = KeyModifiers::NONE;
     let mut key_code = None;
 
-    for part in key_str.split('+') {
-        match part.trim().to_lowercase().as_str() {
-            "ctrl" => modifiers.insert(KeyModifiers::CONTROL),
-            "alt" => modifiers.insert(KeyModifiers::ALT),
-            "shift" => modifiers.insert(KeyModifiers::SHIFT),
-            key @ ("esc" | "enter" | "left" | "right" | "up" | "down" | "tab" | "backspace"
-            | "delete" | "home" | "end" | "pageup" | "pagedown" | "null" | "insert") => {
-                key_code = Some(match key {
-                    "esc" => KeyCode::Esc,
-                    "enter" => KeyCode::Enter,
-                    "left" => KeyCode::Left,
-                    "right" => KeyCode::Right,
-                    "up" => KeyCode::Up,
-                    "down" => KeyCode::Down,
-                    "tab" => KeyCode::Tab,
-                    "backspace" => KeyCode::Backspace,
-                    "delete" => KeyCode::Delete,
-                    "home" => KeyCode::Home,
-                    "end" => KeyCode::End,
-                    "pageup" => KeyCode::PageUp,
-                    "pagedown" => KeyCode::PageDown,
-                    "null" => KeyCode::Null,
-                    "insert" => KeyCode::Insert,
-                    _ => unreachable!(),
-                });
-            }
-            f_key if f_key.starts_with('f') => {
-                if let Ok(num) = f_key[1..].parse::<u8>() {
-                    key_code = Some(KeyCode::F(num));
+    for raw in key_str.split('+') {
+        let part = raw.trim();
+        if part.is_empty() {
+            continue;
+        }
+        let low = part.to_lowercase();
+        match low.as_str() {
+            // modifiers
+            "ctrl" | "control" => modifiers |= KeyModifiers::CONTROL,
+            "shift" => modifiers |= KeyModifiers::SHIFT,
+            "alt" | "option" => modifiers |= KeyModifiers::ALT,
+
+            // named keys
+            "enter" => key_code = Some(KeyCode::Enter),
+            "tab" => key_code = Some(KeyCode::Tab),
+            "backspace" => key_code = Some(KeyCode::Backspace),
+            "delete" => key_code = Some(KeyCode::Delete),
+            "insert" => key_code = Some(KeyCode::Insert),
+            "home" => key_code = Some(KeyCode::Home),
+            "end" => key_code = Some(KeyCode::End),
+            "pageup" | "page_up" => key_code = Some(KeyCode::PageUp),
+            "pagedown" | "page_down" => key_code = Some(KeyCode::PageDown),
+            "up" => key_code = Some(KeyCode::Up),
+            "down" => key_code = Some(KeyCode::Down),
+            "left" => key_code = Some(KeyCode::Left),
+            "right" => key_code = Some(KeyCode::Right),
+            "esc" | "escape" => key_code = Some(KeyCode::Esc),
+            "space" => key_code = Some(KeyCode::Char(' ')),
+            "null" => key_code = Some(KeyCode::Null),
+
+            // symbol names
+            "plus" => key_code = Some(KeyCode::Char('+')),
+            "minus" => key_code = Some(KeyCode::Char('-')),
+            "equals" | "equal" => key_code = Some(KeyCode::Char('=')),
+            "comma" => key_code = Some(KeyCode::Char(',')),
+            "dot" | "period" => key_code = Some(KeyCode::Char('.')),
+            "semicolon" => key_code = Some(KeyCode::Char(';')),
+            "slash" | "forward_slash" => key_code = Some(KeyCode::Char('/')),
+            "backslash" => key_code = Some(KeyCode::Char('\\')),
+            "tilde" => key_code = Some(KeyCode::Char('~')),
+            "grave" | "backtick" => key_code = Some(KeyCode::Char('`')),
+            "quote" => key_code = Some(KeyCode::Char('"')),
+            "apostrophe" => key_code = Some(KeyCode::Char('\'')),
+
+            // function keys F1...F<N>
+            f if f.starts_with('f') && f.len() > 1 => {
+                let num_str = &f[1..];
+                match num_str.parse::<u8>() {
+                    Ok(n) => key_code = Some(KeyCode::F(n)),
+                    Err(_) => return Err(ParseKeybingError::UnknownPart(part.to_owned())),
                 }
             }
-            single_char if single_char.len() == 1 => {
-                if let Some(c) = single_char.chars().next() {
-                    key_code = Some(KeyCode::Char(c));
+
+            // single‐character fallback
+            _ if low.len() == 1 => {
+                if let Some(ch) = low.trim().chars().next() {
+                    key_code = Some(KeyCode::Char(ch));
                 }
             }
-            _ => return (modifiers, None),
+
+            // unknown token
+            other => return Err(ParseKeybingError::UnknownPart(other.to_owned())),
         }
     }
-    (modifiers, key_code)
+
+    key_code
+        .map(|kc| KeyEvent::new(kc, modifiers))
+        .ok_or(ParseKeybingError::NoKeyCode)
 }
