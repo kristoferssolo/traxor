@@ -20,3 +20,27 @@ impl Display for FileSize {
         write!(f, "{}", UnitDisplay::new(&self.0, UNITS))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new() {
+        let file_size = FileSize::new(1024);
+        assert_eq!(file_size.0.as_raw(), 1024);
+    }
+
+    #[test]
+    fn test_display() {
+        let file_size = FileSize::new(1024);
+        assert_eq!(file_size.to_string(), "1.00 KB");
+
+        let file_size = FileSize::new(1024 * 1024);
+        assert_eq!(file_size.to_string(), "1.00 MB");
+
+        let file_size = FileSize::new(1024 * 1024 * 1024);
+        assert_eq!(file_size.to_string(), "1.00 GB");
+    }
+}
+

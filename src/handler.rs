@@ -125,6 +125,9 @@ fn parse_keybind(key_str: &str) -> Result<KeyEvent, ParseKeybingError> {
     for raw in key_str.split('+') {
         let part = raw.trim();
         if part.is_empty() {
+            if raw.contains(' ') {
+                key_code = Some(KeyCode::Char(' '));
+            }
             continue;
         }
         let low = part.to_lowercase();
@@ -176,8 +179,8 @@ fn parse_keybind(key_str: &str) -> Result<KeyEvent, ParseKeybingError> {
             }
 
             // single‐character fallback
-            _ if low.len() == 1 => {
-                if let Some(ch) = low.trim().chars().next() {
+            _ if part.len() == 1 => {
+                if let Some(ch) = part.chars().next() {
                     key_code = Some(KeyCode::Char(ch));
                 }
             }
