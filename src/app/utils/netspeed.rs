@@ -20,3 +20,27 @@ impl Display for NetSpeed {
         write!(f, "{}", UnitDisplay::new(&self.0, UNITS))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new() {
+        let net_speed = NetSpeed::new(1024);
+        assert_eq!(net_speed.0.as_raw(), 1024);
+    }
+
+    #[test]
+    fn test_display() {
+        let net_speed = NetSpeed::new(1024);
+        assert_eq!(net_speed.to_string(), "1.00 KB/s");
+
+        let net_speed = NetSpeed::new(1024 * 1024);
+        assert_eq!(net_speed.to_string(), "1.00 MB/s");
+
+        let net_speed = NetSpeed::new(1024 * 1024 * 1024);
+        assert_eq!(net_speed.to_string(), "1.00 GB/s");
+    }
+}
+

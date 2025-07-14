@@ -58,7 +58,7 @@ impl Unit {
 
     #[inline]
     #[must_use]
-    pub const fn value(&self) -> u64 {
+    pub const fn as_raw(&self) -> u64 {
         self.0
     }
 }
@@ -125,4 +125,36 @@ macro_rules! impl_unit_newtype {
             }
         }
     };
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_unit_from_u64() {
+        let unit = Unit::from(1024u64);
+        assert_eq!(unit.as_raw(), 1024);
+    }
+
+    #[test]
+    fn test_unit_from_raw() {
+        let unit = Unit::from_raw(1024);
+        assert_eq!(unit.as_raw(), 1024);
+    }
+
+    #[test]
+    fn test_unit_display() {
+        let unit = Unit::from_raw(1024);
+        let display = UnitDisplay::new(&unit, &["B", "KB", "MB"]);
+        assert_eq!(display.to_string(), "1.00 KB");
+
+        let unit = Unit::from_raw(1024 * 1024);
+        let display = UnitDisplay::new(&unit, &["B", "KB", "MB"]);
+        assert_eq!(display.to_string(), "1.00 MB");
+
+        let unit = Unit::from_raw(512);
+        let display = UnitDisplay::new(&unit, &["B", "KB", "MB"]);
+        assert_eq!(display.to_string(), "512 B");
+    }
 }
