@@ -1,78 +1,35 @@
-use derive_macro::FromFile;
-use merge::{Merge, option::overwrite_none};
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Clone, Deserialize, Serialize, Merge)]
-pub struct KeybindsConfigFile {
-    #[merge(strategy = overwrite_none)]
-    pub quit: Option<String>,
-    #[merge(strategy = overwrite_none)]
-    pub next_tab: Option<String>,
-    #[merge(strategy = overwrite_none)]
-    pub prev_tab: Option<String>,
-    #[merge(strategy = overwrite_none)]
-    pub next_torrent: Option<String>,
-    #[merge(strategy = overwrite_none)]
-    pub prev_torrent: Option<String>,
-    #[merge(strategy = overwrite_none)]
-    pub switch_tab_1: Option<String>,
-    #[merge(strategy = overwrite_none)]
-    pub switch_tab_2: Option<String>,
-    #[merge(strategy = overwrite_none)]
-    pub switch_tab_3: Option<String>,
-    #[merge(strategy = overwrite_none)]
-    pub toggle_torrent: Option<String>,
-    #[merge(strategy = overwrite_none)]
-    pub toggle_all: Option<String>,
-    #[merge(strategy = overwrite_none)]
-    pub delete: Option<String>,
-    #[merge(strategy = overwrite_none)]
-    pub delete_force: Option<String>,
-    #[merge(strategy = overwrite_none)]
-    pub select: Option<String>,
-    #[merge(strategy = overwrite_none)]
-    pub toggle_help: Option<String>,
-    #[merge(strategy = overwrite_none)]
-    pub move_torrent: Option<String>,
-}
+use filecaster::FromFile;
 
 #[derive(Debug, Clone, FromFile)]
 pub struct KeybindsConfig {
+    #[from_file(default = "q")]
     pub quit: String,
+    #[from_file(default = "l")]
     pub next_tab: String,
+    #[from_file(default = "h")]
     pub prev_tab: String,
+    #[from_file(default = "j")]
     pub next_torrent: String,
+    #[from_file(default = "k")]
     pub prev_torrent: String,
+    #[from_file(default = "1")]
     pub switch_tab_1: String,
+    #[from_file(default = "2")]
     pub switch_tab_2: String,
+    #[from_file(default = "3")]
     pub switch_tab_3: String,
+    #[from_file(default = "enter")]
     pub toggle_torrent: String,
+    #[from_file(default = "a")]
     pub toggle_all: String,
+    #[from_file(default = "d")]
     pub delete: String,
+    #[from_file(default = "D")]
     pub delete_force: String,
+    #[from_file(default = " ")]
     pub select: String,
+    #[from_file(default = "?")]
     pub toggle_help: String,
+    #[from_file(default = "m")]
     pub move_torrent: String,
-}
-
-impl Default for KeybindsConfigFile {
-    fn default() -> Self {
-        Self {
-            quit: Some("q".to_string()),
-            next_tab: Some("l".to_string()),
-            prev_tab: Some("h".to_string()),
-            next_torrent: Some("j".to_string()),
-            prev_torrent: Some("k".to_string()),
-            switch_tab_1: Some("1".to_string()),
-            switch_tab_2: Some("2".to_string()),
-            switch_tab_3: Some("3".to_string()),
-            toggle_torrent: Some("enter".to_string()),
-            toggle_all: Some("a".to_string()),
-            delete: Some("d".to_string()),
-            delete_force: Some("D".to_string()),
-            select: Some(" ".to_string()),
-            toggle_help: Some("?".to_string()),
-            move_torrent: Some("m".to_string()),
-        }
-    }
 }

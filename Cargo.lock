@@ -315,15 +315,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "derive_macro"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "derive_more"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -436,6 +427,27 @@ checksum = "7cd915d99f24784cdc19fd37ef22b97e3ff0ae756c7e492e9fbfe897d61e2aec"
 dependencies = [
  "indenter",
  "once_cell",
+]
+
+[[package]]
+name = "filecaster"
+version = "0.2.3"
+dependencies = [
+ "filecaster-derive",
+ "merge",
+ "serde",
+]
+
+[[package]]
+name = "filecaster-derive"
+version = "0.2.3"
+dependencies = [
+ "merge",
+ "proc-macro-error2",
+ "proc-macro2",
+ "quote",
+ "serde",
+ "syn",
 ]
 
 [[package]]
@@ -2045,9 +2057,9 @@ version = "0.1.0"
 dependencies = [
  "color-eyre",
  "crossterm 0.29.0",
- "derive_macro",
  "derive_more",
  "dirs",
+ "filecaster",
  "merge",
  "ratatui",
  "serde",

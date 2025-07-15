@@ -120,3 +120,34 @@ async fn test_get_action_unhandled() {
         None
     );
 }
+
+#[tokio::test]
+async fn test_get_action_toggle_help() {
+    let config = Config::load().unwrap();
+    let mut app = App::new(config).unwrap();
+    assert_eq!(
+        get_action(KeyEvent::from(KeyCode::Char('?')), &mut app)
+            .await
+            .unwrap(),
+        Some(Action::ToggleHelp)
+    );
+}
+
+#[tokio::test]
+async fn test_get_action_input_mode() {
+    let config = Config::load().unwrap();
+    let mut app = App::new(config).unwrap();
+    app.input_mode = true;
+    assert_eq!(
+        get_action(KeyEvent::from(KeyCode::Enter), &mut app)
+            .await
+            .unwrap(),
+        Some(Action::Submit)
+    );
+    assert_eq!(
+        get_action(KeyEvent::from(KeyCode::Esc), &mut app)
+            .await
+            .unwrap(),
+        Some(Action::Cancel)
+    );
+}
