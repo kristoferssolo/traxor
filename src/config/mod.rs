@@ -2,32 +2,22 @@ pub mod color;
 pub mod keybinds;
 pub mod log;
 
-use color::{ColorConfig, ColorConfigFile};
+use color::ColorConfig;
 use color_eyre::{
     Result,
     eyre::{Context, ContextCompat, Ok},
 };
-use keybinds::{KeybindsConfig, KeybindsConfigFile};
-use log::{LogConfig, LogConfigFile};
-use merge::{Merge, option::overwrite_none};
-use serde::{Deserialize, Serialize};
+use filecaster::FromFile;
+use keybinds::KeybindsConfig;
+use log::LogConfig;
+use merge::Merge;
 use std::{
     fs::read_to_string,
     path::{Path, PathBuf},
 };
 use tracing::{debug, info, warn};
 
-#[derive(Debug, Clone, Default, Deserialize, Serialize, Merge)]
-pub struct ConfigFile {
-    #[merge(strategy = overwrite_none)]
-    pub keybinds: Option<KeybindsConfigFile>,
-    #[merge(strategy = overwrite_none)]
-    pub colors: Option<ColorConfigFile>,
-    #[merge(strategy = overwrite_none)]
-    pub log: Option<LogConfigFile>,
-}
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, FromFile)]
 pub struct Config {
     pub keybinds: KeybindsConfig,
     pub colors: ColorConfig,
@@ -53,16 +43,6 @@ impl Config {
 
         debug!("Configuration loaded successfully.");
         Ok(cfg_file.into())
-    }
-}
-
-impl From<ConfigFile> for Config {
-    fn from(value: ConfigFile) -> Self {
-        Self {
-            keybinds: value.keybinds.into(),
-            colors: value.colors.into(),
-            log: value.log.into(),
-        }
     }
 }
 

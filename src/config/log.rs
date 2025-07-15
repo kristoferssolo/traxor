@@ -1,30 +1,11 @@
-use derive_macro::FromFile;
-use merge::{Merge, option::overwrite_none};
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Clone, Deserialize, Serialize, Merge)]
-pub struct LogConfigFile {
-    #[merge(strategy = overwrite_none)]
-    pub traxor: Option<String>,
-    #[merge(strategy = overwrite_none)]
-    pub ratatui: Option<String>,
-    #[merge(strategy = overwrite_none)]
-    pub transmission_rpc: Option<String>,
-}
+use filecaster::FromFile;
 
 #[derive(Debug, Clone, FromFile)]
 pub struct LogConfig {
+    #[from_file(default = "warn")]
     pub traxor: String,
+    #[from_file(default = "warn")]
     pub ratatui: String,
+    #[from_file(default = "warn")]
     pub transmission_rpc: String,
-}
-
-impl Default for LogConfigFile {
-    fn default() -> Self {
-        Self {
-            traxor: Some("warn".to_string()),
-            ratatui: Some("warn".to_string()),
-            transmission_rpc: Some("warn".to_string()),
-        }
-    }
 }
