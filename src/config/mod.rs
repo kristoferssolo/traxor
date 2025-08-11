@@ -17,6 +17,8 @@ use std::{
 };
 use tracing::{debug, info, warn};
 
+const DEFAULT_CONFIG_STR: &str = include_str!("../../config/default.toml");
+
 #[derive(Debug, Clone, FromFile)]
 pub struct Config {
     pub keybinds: KeybindsConfig,
@@ -25,12 +27,23 @@ pub struct Config {
 }
 
 impl Config {
+    /// Load configuration with fallback to embedded defaults.
+    ///
+    /// Merge order:
+    /// 1. Embedded defaults
+    /// 2. System-wide config (`/etc/xdg/traxor/config.toml`)
+    /// 3. User config (`~/.config/traxor/config.toml`)
+    ///
     /// # Errors
     ///
-    /// TODO: add error types
+    /// Returns an error if:
+    /// - The embedded default config cannot be parsed (should never happen unless corrupted at build time).
+    /// - The system-wide or user config file cannot be read due to I/O errors.
+    /// - The TOML in any config file is invalid and cannot be parsed.
     #[tracing::instrument(name = "Loading configuration")]
     pub fn load() -> Result<Self> {
-        let mut cfg_file = ConfigFile::default();
+        let mut cfg_file = toml::from_str::<ConfigFile>(DEFAULT_CONFIG_STR)
+            .context("Failed to parse embedded default config")?;
 
         let candidates = [
             ("system-wide", PathBuf::from("/etc/xdg/traxor/config.toml")),
