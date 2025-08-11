@@ -1,7 +1,11 @@
 use color_eyre::Result;
 use ratatui::{Terminal, backend::CrosstermBackend};
-use std::io;
-use tracing::{debug, trace};
+use std::{io, sync::Arc};
+use tokio::{
+    sync::Mutex,
+    time::{self, Duration},
+};
+use tracing::{trace, warn};
 use traxor::{
     app::App,
     config::Config,
@@ -15,38 +19,54 @@ use traxor::{
 async fn main() -> Result<()> {
     color_eyre::install()?;
 
-    debug!("Loading configuration...");
     let config = Config::load()?;
-    debug!("Configuration loaded.");
-
-    // Setup the logger.
     setup_logger(&config)?;
 
-    // Create an application.
-    let mut app = App::new(config)?;
+    // Wrap App in Arc<Mutex<>> so we can share it between UI and updater
+    let app = Arc::new(Mutex::new(App::new(config)?));
 
-    // Initialize the terminal user interface.
+    // Clone for updater task
+    let app_clone = app.clone();
+
+    tokio::spawn(async move {
+        let mut interval = time::interval(Duration::from_secs(2));
+        loop {
+            interval.tick().await;
+
+            let mut app = app_clone.lock().await;
+            if let Err(e) = app.torrents.update().await {
+                warn!("Failed to update torrents: {e}");
+            }
+        }
+    });
+
+    // TUI setup
     let backend = CrosstermBackend::new(io::stderr());
     let terminal = Terminal::new(backend)?;
     let events = EventHandler::new(250); // Update time in ms
     let mut tui = Tui::new(terminal, events);
     tui.init()?;
 
-    // Start the main loop.
-    while app.running {
-        // Render the user interface.
-        tui.draw(&mut app)?;
-        // Handle events.
-        match tui.events.next()? {
-            Event::Tick => {
-                trace!(target: "app", "Event::Tick");
-                app.tick().await?;
+    // Main loop
+    loop {
+        {
+            let app_guard = app.lock().await;
+            if !app_guard.running {
+                break;
             }
+        }
+
+        {
+            let mut app_guard = app.lock().await;
+            tui.draw(&mut app_guard)?;
+        }
+
+        match tui.events.next()? {
+            Event::Tick => {}
             Event::Key(key_event) => {
-                trace!(target: "app", "Event::Key: {:?}", key_event);
-                if let Some(action) = get_action(key_event, &mut app).await? {
-                    trace!(target: "app", "Action: {:?}", action);
-                    update(&mut app, action).await?;
+                let mut app_guard = app.lock().await;
+                if let Some(action) = get_action(key_event, &mut app_guard).await? {
+                    update(&mut app_guard, action).await?;
                 }
             }
             Event::Mouse(mouse_event) => {
@@ -58,7 +78,6 @@ async fn main() -> Result<()> {
         }
     }
 
-    // Exit the user interface.
     tui.exit()?;
     Ok(())
 }

@@ -67,10 +67,10 @@ fn make_row<'a>(
     highlight: Style,
 ) -> Row<'a> {
     let cells = fields.iter().map(|&field| {
-        if let Some(id) = torrent.id {
-            if selected.contains(&id) {
-                return field.value(torrent).set_style(highlight);
-            }
+        if let Some(id) = torrent.id
+            && selected.contains(&id)
+        {
+            return field.value(torrent).set_style(highlight);
         }
         field.value(torrent).into()
     });
