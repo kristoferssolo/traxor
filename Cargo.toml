@@ -7,6 +7,7 @@ edition = "2024"
 
 [dependencies]
 filecaster = { version = "0.2", features = [
+  "derive",
   "merge",
 ], path = "../filecaster/filecaster/" }
 color-eyre = "0.6"
