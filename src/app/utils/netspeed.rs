@@ -43,4 +43,3 @@ mod tests {
         assert_eq!(net_speed.to_string(), "1.00 GB/s");
     }
 }
-
