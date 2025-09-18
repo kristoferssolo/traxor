@@ -6,10 +6,7 @@ license = "GPLv3"
 edition = "2024"
 
 [dependencies]
-filecaster = { version = "0.2", features = [
-  "derive",
-  "merge",
-], path = "../filecaster/filecaster/" }
+filecaster = { version = "0.2", features = ["derive", "merge"] }
 color-eyre = "0.6"
 crossterm = "0.29"
 derive_more = { version = "2.0", features = ["display"] }

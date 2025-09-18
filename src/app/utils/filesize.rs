@@ -43,4 +43,3 @@ mod tests {
         assert_eq!(file_size.to_string(), "1.00 GB");
     }
 }
-
