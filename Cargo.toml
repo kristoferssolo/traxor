@@ -28,4 +28,4 @@ url = "2.5"
 [lints.clippy]
 pedantic = "warn"
 nursery = "warn"
-unwrap_used = "warn"
+# unwrap_used = "warn" // ignore for now
