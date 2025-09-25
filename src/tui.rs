@@ -58,8 +58,8 @@ impl<B: Backend> Tui<B> {
 
     /// [`Draw`] the terminal interface by [`rendering`] the widgets.
     ///
-    /// [`Draw`]: tui::Terminal::draw
-    /// [`rendering`]: crate::ui:render
+    /// [`Draw`]: crate::tui::Terminal::draw
+    /// [`rendering`]: crate::ui::render
     ///
     /// # Errors
     ///
