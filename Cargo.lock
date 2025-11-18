@@ -2073,7 +2073,6 @@ dependencies = [
  "tracing",
  "tracing-appender",
  "tracing-bunyan-formatter",
- "tracing-log 0.2.0",
  "tracing-subscriber",
  "transmission-rpc",
  "url",
