@@ -20,7 +20,6 @@ toml = "0.9"
 tracing = "0.1"
 tracing-appender = "0.2"
 tracing-bunyan-formatter = { version = "0.3", default-features = false }
-tracing-log = "0.2.0"
 tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"] }
 transmission-rpc = "0.5"
 url = "2.5"
