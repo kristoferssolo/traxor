@@ -3,11 +3,15 @@ use ratatui::{Terminal, backend::CrosstermBackend};
 use std::{io, sync::Arc};
 use tokio::{
     sync::Mutex,
+    task::JoinHandle,
     time::{self, Duration},
 };
-use tracing::{trace, warn};
+use tracing::warn;
 use traxor::{
-    app::App,
+    app::{
+        App,
+        constants::{DEFAULT_TICK_RATE_MS, TORRENT_UPDATE_INTERVAL_SECS},
+    },
     config::Config,
     event::{Event, EventHandler},
     handler::{get_action, update},
@@ -18,36 +22,19 @@ use traxor::{
 #[tokio::main]
 async fn main() -> Result<()> {
     color_eyre::install()?;
-
     let config = Config::load()?;
     setup_logger(&config)?;
 
-    // Wrap App in Arc<Mutex<>> so we can share it between UI and updater
     let app = Arc::new(Mutex::new(App::new(config)?));
 
-    // Clone for updater task
-    let app_clone = app.clone();
+    spawn_torrent_updater(app.clone());
 
-    tokio::spawn(async move {
-        let mut interval = time::interval(Duration::from_secs(2));
-        loop {
-            interval.tick().await;
-
-            let mut app = app_clone.lock().await;
-            if let Err(e) = app.torrents.update().await {
-                warn!("Failed to update torrents: {e}");
-            }
-        }
-    });
-
-    // TUI setup
     let backend = CrosstermBackend::new(io::stderr());
     let terminal = Terminal::new(backend)?;
-    let events = EventHandler::new(250); // Update time in ms
+    let events = EventHandler::new(DEFAULT_TICK_RATE_MS);
     let mut tui = Tui::new(terminal, events);
     tui.init()?;
 
-    // Main loop
     loop {
         {
             let app_guard = app.lock().await;
@@ -62,22 +49,29 @@ async fn main() -> Result<()> {
         }
 
         match tui.events.next()? {
-            Event::Tick => {}
             Event::Key(key_event) => {
                 let mut app_guard = app.lock().await;
                 if let Some(action) = get_action(key_event, &mut app_guard).await? {
                     update(&mut app_guard, action).await?;
                 }
             }
-            Event::Mouse(mouse_event) => {
-                trace!(target: "app", "Event::Mouse: {:?}", mouse_event);
-            }
-            Event::Resize(x, y) => {
-                trace!(target: "app", "Event::Resize: ({}, {})", x, y);
-            }
+            Event::Mouse(_) | Event::Resize(_, _) | Event::Tick => {}
         }
     }
 
     tui.exit()?;
     Ok(())
+}
+
+fn spawn_torrent_updater(app: Arc<Mutex<App>>) -> JoinHandle<()> {
+    tokio::spawn(async move {
+        let mut interval = time::interval(Duration::from_secs(TORRENT_UPDATE_INTERVAL_SECS));
+        loop {
+            interval.tick().await;
+            let mut app = app.lock().await;
+            if let Err(e) = app.torrents.update().await {
+                warn!("Failed to update torrents: {e}");
+            }
+        }
+    })
 }

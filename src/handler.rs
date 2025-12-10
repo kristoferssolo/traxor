@@ -1,25 +1,23 @@
 use crate::app::{App, action::Action};
-use color_eyre::Result;
+use crate::error::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use thiserror::Error;
 use tracing::{debug, info};
 
 #[tracing::instrument(name = "Handling input", skip(app))]
-async fn handle_input(key_event: KeyEvent, app: &mut App<'_>) -> Result<Option<Action>> {
+async fn handle_input(key_event: KeyEvent, app: &mut App) -> Result<Option<Action>> {
     match key_event.code {
         KeyCode::Enter => Ok(Some(Action::Submit)),
         KeyCode::Tab => {
             app.complete_input().await?;
             Ok(None)
         }
-        KeyCode::Char(c) => {
-            app.input.push(c);
-            app.cursor_position = app.input.len();
+        KeyCode::Char(ch) => {
+            app.input_handler.insert_char(ch);
             Ok(None)
         }
         KeyCode::Backspace => {
-            app.input.pop();
-            app.cursor_position = app.input.len();
+            app.input_handler.delete_char();
             Ok(None)
         }
         KeyCode::Esc => Ok(Some(Action::Cancel)),
@@ -33,7 +31,7 @@ async fn handle_input(key_event: KeyEvent, app: &mut App<'_>) -> Result<Option<A
 ///
 /// TODO: add error types
 #[tracing::instrument(name = "Getting action", skip(app))]
-pub async fn get_action(key_event: KeyEvent, app: &mut App<'_>) -> Result<Option<Action>> {
+pub async fn get_action(key_event: KeyEvent, app: &mut App) -> Result<Option<Action>> {
     if app.input_mode {
         return handle_input(key_event, app).await;
     }
@@ -74,7 +72,7 @@ pub async fn get_action(key_event: KeyEvent, app: &mut App<'_>) -> Result<Option
 ///
 /// TODO: add error types
 #[tracing::instrument(name = "Update", skip(app))]
-pub async fn update(app: &mut App<'_>, action: Action) -> Result<()> {
+pub async fn update(app: &mut App, action: Action) -> Result<()> {
     info!("updating app with action: {}", action);
     match action {
         Action::Quit => app.quit(),
@@ -94,7 +92,7 @@ pub async fn update(app: &mut App<'_>, action: Action) -> Result<()> {
         Action::Select => app.select(),
         Action::Submit => app.move_torrent().await?,
         Action::Cancel => {
-            app.input.clear();
+            app.input_handler.clear();
             app.input_mode = false;
         }
     }
@@ -118,7 +116,7 @@ pub enum ParseKeybingError {
     UnknownPart(String),
 }
 
-fn parse_keybind(key_str: &str) -> Result<KeyEvent, ParseKeybingError> {
+fn parse_keybind(key_str: &str) -> std::result::Result<KeyEvent, ParseKeybingError> {
     let mut modifiers = KeyModifiers::NONE;
     let mut key_code = None;
 
