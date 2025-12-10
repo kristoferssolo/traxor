@@ -5,7 +5,7 @@ use ratatui::{
 };
 use tracing::warn;
 
-pub fn render(f: &mut Frame, app: &mut App) {
+pub fn render(f: &mut Frame, app: &App) {
     let size = f.area();
     let input_area = Rect::new(size.width / 4, size.height / 2 - 1, size.width / 2, 3);
 
@@ -13,7 +13,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
     f.render_widget(Clear, input_area);
     f.render_widget(block, input_area);
 
-    let input = Paragraph::new(app.input.as_str()).block(Block::default());
+    let input = Paragraph::new(app.input_handler.text.as_str()).block(Block::default());
     f.render_widget(
         input,
         input_area.inner(Margin {
@@ -22,14 +22,10 @@ pub fn render(f: &mut Frame, app: &mut App) {
         }),
     );
 
-    let cursor_offset = u16::try_from(app.cursor_position)
-        .map_err(|_| {
-            warn!(
-                "cursor_position {} out of u16 range. Clamping to 0",
-                app.cursor_position
-            );
-        })
-        .unwrap_or_default();
+    let cursor_offset = u16::try_from(app.input_handler.cursor_position).unwrap_or_else(|_| {
+        warn!("cursor_position out of range, clamping");
+        0
+    });
 
     f.set_cursor_position(Position::new(
         input_area.x + cursor_offset + 1,

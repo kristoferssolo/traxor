@@ -2,7 +2,7 @@ use std::fmt::Display;
 use transmission_rpc::types::TorrentGetField;
 
 /// Available tabs.
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub enum Tab {
     #[default]
     All,

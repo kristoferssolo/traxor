@@ -1,36 +1,34 @@
 pub mod action;
 mod command;
+pub mod constants;
+mod input;
 mod tab;
 mod torrent;
 pub mod types;
 pub mod utils;
 
-use crate::config::Config;
-use color_eyre::Result;
+use crate::error::Result;
+use crate::{app::input::InputHandler, config::Config};
 use ratatui::widgets::TableState;
-use std::path::{Path, PathBuf};
-use tokio::fs;
+use std::path::PathBuf;
 use types::Selected;
 pub use {tab::Tab, torrent::Torrents};
 
 /// Main Application.
 #[derive(Debug)]
-pub struct App<'a> {
+pub struct App {
     pub running: bool,
     index: usize,
-    tabs: &'a [Tab],
+    tabs: Vec<Tab>,
     pub state: TableState,
     pub torrents: Torrents,
     pub show_help: bool,
     pub config: Config,
-    pub input: String,
-    pub cursor_position: usize,
+    pub input_handler: InputHandler,
     pub input_mode: bool,
-    pub completions: Vec<String>,
-    pub completion_idx: usize,
 }
 
-impl App<'_> {
+impl App {
     /// Constructs a new instance of [`App`].
     /// Returns instance of `Self`.
     ///
@@ -40,17 +38,14 @@ impl App<'_> {
     pub fn new(config: Config) -> Result<Self> {
         Ok(Self {
             running: true,
-            tabs: &[Tab::All, Tab::Active, Tab::Downloading],
+            tabs: vec![Tab::All, Tab::Active, Tab::Downloading],
             index: 0,
             state: TableState::default(),
             torrents: Torrents::new()?, // Handle the Result here
             show_help: false,
             config,
-            input: String::new(),
-            cursor_position: 0,
+            input_handler: InputHandler::new(),
             input_mode: false,
-            completions: Vec::new(),
-            completion_idx: 0,
         })
     }
 
@@ -58,14 +53,7 @@ impl App<'_> {
     ///
     /// TODO: add error types
     pub async fn complete_input(&mut self) -> Result<()> {
-        let path = PathBuf::from(&self.input);
-        let (base_path, partial_name) = split_path_components(path);
-        let matches = find_matching_entries(&base_path, &partial_name).await?;
-
-        self.update_completions(matches);
-        self.update_input_with_matches();
-
-        Ok(())
+        self.input_handler.complete().await
     }
 
     /// Handles the tick event of the terminal.
@@ -149,8 +137,8 @@ impl App<'_> {
     /// Returns [`Tab`] slice
     #[inline]
     #[must_use]
-    pub const fn tabs(&self) -> &[Tab] {
-        self.tabs
+    pub fn tabs(&self) -> &[Tab] {
+        &self.tabs
     }
 
     #[inline]
@@ -192,16 +180,18 @@ impl App<'_> {
     ///
     /// TODO: add error types
     pub async fn move_torrent(&mut self) -> Result<()> {
-        self.torrents.move_selection(&self.input).await?;
-        self.input.clear();
-        self.cursor_position = 0;
+        self.torrents
+            .move_selection(&self.input_handler.text)
+            .await?;
+        self.input_handler.clear();
         self.input_mode = false;
         Ok(())
     }
 
     pub fn prepare_move_action(&mut self) {
         if let Some(download_dir) = self.get_current_downlaod_dir() {
-            self.update_cursor(&download_dir);
+            self.input_handler
+                .set_text(download_dir.to_string_lossy().to_string());
         }
         self.input_mode = true;
     }
@@ -235,29 +225,6 @@ impl App<'_> {
         Selected::List(selected_torrents)
     }
 
-    fn update_completions(&mut self, matches: Vec<String>) {
-        if matches.is_empty() {
-            self.completions.clear();
-            self.completion_idx = 0;
-            return;
-        }
-
-        if matches != self.completions {
-            self.completions = matches;
-            self.completion_idx = 0;
-            return;
-        }
-
-        self.completion_idx = (self.completion_idx + 1) % self.completions.len();
-    }
-
-    fn update_input_with_matches(&mut self) {
-        if let Some(completion) = self.completions.get(self.completion_idx) {
-            self.input = completion.clone();
-            self.cursor_position = self.input.len();
-        }
-    }
-
     fn get_current_downlaod_dir(&self) -> Option<PathBuf> {
         match self.selected(true) {
             Selected::Current(current_id) => self
@@ -270,46 +237,4 @@ impl App<'_> {
             Selected::List(_) => None,
         }
     }
-
-    fn update_cursor(&mut self, path: &Path) {
-        self.input = path.to_string_lossy().to_string();
-        self.cursor_position = self.input.len();
-    }
-}
-
-fn split_path_components(path: PathBuf) -> (PathBuf, String) {
-    if path.is_dir() {
-        return (path, String::new());
-    }
-
-    let partial = path
-        .file_name()
-        .unwrap_or_default()
-        .to_string_lossy()
-        .to_string();
-
-    let base = path
-        .parent()
-        .unwrap_or_else(|| Path::new("/"))
-        .to_path_buf();
-
-    (base, partial)
-}
-
-async fn find_matching_entries(base_path: &Path, partial_name: &str) -> Result<Vec<String>> {
-    let mut entries = fs::read_dir(&base_path).await?;
-    let mut matches = Vec::new();
-
-    while let Some(entry) = entries.next_entry().await? {
-        let file_name = entry.file_name().to_string_lossy().to_string();
-
-        if file_name
-            .to_lowercase()
-            .starts_with(&partial_name.to_lowercase())
-        {
-            matches.push(format!("{}/{}", base_path.to_string_lossy(), file_name));
-        }
-    }
-
-    Ok(matches)
 }
