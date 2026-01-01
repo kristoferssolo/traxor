@@ -1,11 +1,8 @@
-use filecaster::FromFile;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, FromFile)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct LogConfig {
-    #[from_file(default = "warn")]
     pub traxor: String,
-    #[from_file(default = "warn")]
     pub ratatui: String,
-    #[from_file(default = "warn")]
     pub transmission_rpc: String,
 }

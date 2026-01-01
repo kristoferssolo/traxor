@@ -6,13 +6,11 @@ license = "GPLv3"
 edition = "2024"
 
 [dependencies]
-filecaster = { version = "0.2", features = ["derive", "merge"] }
 color-eyre = "0.6"
 crossterm = "0.29"
 derive_more = { version = "2.1", features = ["display"] }
 dirs = "6.0"
-merge = "0.2"
-ratatui = { version = "0.30" }
+ratatui = "0.30"
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "2.0"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "fs"] }

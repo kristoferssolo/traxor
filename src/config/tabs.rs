@@ -16,7 +16,6 @@ impl TabConfig {
 }
 
 fn parse_field(s: &str) -> Option<TorrentGetField> {
-    // Match against known field names (case-insensitive)
     Some(match s.to_lowercase().as_str() {
         "name" => TorrentGetField::Name,
         "status" => TorrentGetField::Status,
@@ -48,51 +47,4 @@ fn parse_field(s: &str) -> Option<TorrentGetField> {
         "activity" | "activitydate" | "activity_date" => TorrentGetField::ActivityDate,
         _ => return None,
     })
-}
-
-/// Default tabs matching original hardcoded behavior.
-#[must_use]
-pub fn default_tabs() -> Vec<TabConfig> {
-    vec![
-        TabConfig {
-            name: "All".into(),
-            columns: vec![
-                "status".into(),
-                "peers_getting".into(),
-                "ratio".into(),
-                "size".into(),
-                "uploaded".into(),
-                "path".into(),
-                "name".into(),
-            ],
-        },
-        TabConfig {
-            name: "Active".into(),
-            columns: vec![
-                "size".into(),
-                "uploaded".into(),
-                "ratio".into(),
-                "peers_getting".into(),
-                "seeds".into(),
-                "status".into(),
-                "eta".into(),
-                "progress".into(),
-                "downspeed".into(),
-                "upspeed".into(),
-                "name".into(),
-            ],
-        },
-        TabConfig {
-            name: "Downloading".into(),
-            columns: vec![
-                "size".into(),
-                "left".into(),
-                "progress".into(),
-                "downspeed".into(),
-                "eta".into(),
-                "path".into(),
-                "name".into(),
-            ],
-        },
-    ]
 }
