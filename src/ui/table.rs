@@ -2,7 +2,7 @@ use super::to_color;
 use crate::{app::utils::Wrapper, config::color::ColorConfig};
 use ratatui::{
     layout::Constraint,
-    style::{Style, Styled},
+    style::{Color, Modifier, Style, Styled},
     widgets::{Block, BorderType, Borders, Row, Table},
 };
 use std::collections::HashSet;
@@ -14,13 +14,13 @@ pub fn build_table(
     colors: &ColorConfig,
     fields: &[TorrentGetField],
 ) -> Table<'static> {
-    let row_style = row_style(colors);
+    let select_style = select_style(colors);
     let header_style = header_style(colors);
-    let highlight_row_style = hightlighted_row_style(colors);
+    let highlight_row_style = highlighted_row_style(colors);
 
     let rows = torrents
         .iter()
-        .map(|t| make_row(t, fields, selected, row_style, colors))
+        .map(|t| make_row(t, fields, selected, select_style, colors))
         .collect::<Vec<_>>();
 
     let widths = fields
@@ -28,12 +28,15 @@ pub fn build_table(
         .map(|&f| Constraint::Length(f.width()))
         .collect::<Vec<_>>();
 
-    let header = Row::new(fields.iter().map(|&field| field.title())).style(header_style);
+    let header = Row::new(fields.iter().map(|&field| field.title()))
+        .style(header_style)
+        .bottom_margin(1);
 
     Table::new(rows, widths)
         .block(default_block())
         .header(header)
         .row_highlight_style(highlight_row_style)
+        .highlight_symbol("▶ ")
         .column_spacing(1)
 }
 
@@ -41,23 +44,26 @@ fn default_block() -> Block<'static> {
     Block::default()
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
+        .border_style(Style::default().fg(Color::DarkGray))
 }
 
-fn row_style(cfg: &ColorConfig) -> Style {
+fn select_style(cfg: &ColorConfig) -> Style {
     let fg = to_color(&cfg.highlight_foreground);
-    let bg = to_color(&cfg.info_foreground);
-    Style::default().bg(bg).fg(fg)
+    let bg = to_color(&cfg.highlight_background);
+    Style::default().fg(fg).bg(bg).add_modifier(Modifier::BOLD)
 }
 
 fn header_style(cfg: &ColorConfig) -> Style {
     let fg = to_color(&cfg.header_foreground);
-    Style::default().fg(fg)
+    Style::default()
+        .fg(fg)
+        .add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
 }
 
-fn hightlighted_row_style(cfg: &ColorConfig) -> Style {
-    let fg = to_color(&cfg.info_foreground);
-    let bg = to_color(&cfg.highlight_foreground);
-    Style::default().bg(bg).fg(fg)
+fn highlighted_row_style(cfg: &ColorConfig) -> Style {
+    let fg = to_color(&cfg.highlight_foreground);
+    let bg = to_color(&cfg.highlight_background);
+    Style::default().fg(fg).bg(bg).add_modifier(Modifier::BOLD)
 }
 
 fn make_row(

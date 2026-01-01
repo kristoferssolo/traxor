@@ -10,6 +10,7 @@ use crate::{
 use help::render_help;
 use ratatui::{
     prelude::*,
+    style::Modifier,
     widgets::{Block, BorderType, Borders, Tabs},
 };
 use std::str::FromStr;
@@ -82,7 +83,9 @@ fn tab_style(cfg: &ColorConfig) -> Style {
 
 fn highlighted_tab_style(cfg: &ColorConfig) -> Style {
     let fg = to_color(&cfg.header_foreground);
-    Style::default().fg(fg)
+    Style::default()
+        .fg(fg)
+        .add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
 }
 
 fn default_block() -> Block<'static> {
@@ -90,4 +93,5 @@ fn default_block() -> Block<'static> {
         .title_alignment(Alignment::Center)
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
+        .border_style(Style::default().fg(Color::DarkGray))
 }

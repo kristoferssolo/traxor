@@ -48,8 +48,8 @@ quit = "q"
 # ============================================================================
 [colors]
 # UI colors
-highlight_background = "magenta"
-highlight_foreground = "black"
+highlight_background = "#3a3a5a"
+highlight_foreground = "white"
 header_foreground = "yellow"
 info_foreground = "blue"
 
