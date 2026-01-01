@@ -2,8 +2,12 @@
 name = "traxor"
 version = "0.1.0"
 authors = ["Kristofers Solo <dev@kristofers.xyz>"]
-license = "GPLv3"
+description = "A terminal UI for managing Transmission torrents"
+repository = "https://github.com/kristoferssolo/traxor"
+license = "GPL-3.0"
 edition = "2024"
+keywords = ["torrent", "transmission", "tui", "terminal"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 color-eyre = "0.6"
@@ -23,7 +27,10 @@ tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"] }
 transmission-rpc = "0.5"
 url = "2.5"
 
+[dev-dependencies]
+claims = "0.8"
+
 [lints.clippy]
 pedantic = "warn"
 nursery = "warn"
-# unwrap_used = "warn" // ignore for now
+unwrap_used = "warn"

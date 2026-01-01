@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used)]
 use crossterm::event::{KeyCode, KeyEvent};
 use traxor::{app::App, app::InputMode, app::action::Action, config::Config, handler::get_action};
 

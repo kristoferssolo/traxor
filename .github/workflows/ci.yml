@@ -32,7 +32,7 @@ jobs:
         run: cargo fmt --all --check
       - name: Run Tests
         run: |
-          cargo nextest run --all-features --all-targets
+          cargo nextest run --locked --all-features --all-targets
           cargo test --locked --workspace --all-features --doc
       - name: Check Documentation
         run: cargo doc --locked --workspace --all-features --document-private-items --no-deps

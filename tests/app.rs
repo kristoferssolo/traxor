@@ -1,24 +1,25 @@
+use claims::assert_ok;
 use traxor::{app::App, config::Config};
 
 #[test]
 fn test_app_creation() {
-    let config = Config::load().unwrap();
-    let app = App::new(config).unwrap();
+    let config = assert_ok!(Config::load());
+    let app = assert_ok!(App::new(config));
     assert_eq!(app.tabs().len(), 5);
 }
 
 #[test]
 fn test_app_quit() {
-    let config = Config::load().unwrap();
-    let mut app = App::new(config).unwrap();
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
     app.quit();
     assert!(!app.running);
 }
 
 #[test]
 fn test_app_next_tab() {
-    let config = Config::load().unwrap();
-    let mut app = App::new(config).unwrap();
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
     assert_eq!(app.index(), 0);
     app.next_tab();
     assert_eq!(app.index(), 1);
@@ -34,8 +35,8 @@ fn test_app_next_tab() {
 
 #[test]
 fn test_app_prev_tab() {
-    let config = Config::load().unwrap();
-    let mut app = App::new(config).unwrap();
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
     assert_eq!(app.index(), 0);
     app.prev_tab();
     assert_eq!(app.index(), 4); // Wraps around
@@ -45,8 +46,8 @@ fn test_app_prev_tab() {
 
 #[test]
 fn test_app_switch_tab() {
-    let config = Config::load().unwrap();
-    let mut app = App::new(config).unwrap();
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
     assert_eq!(app.index(), 0);
     app.switch_tab(2);
     assert_eq!(app.index(), 2);
@@ -56,8 +57,8 @@ fn test_app_switch_tab() {
 
 #[test]
 fn test_app_toggle_popup() {
-    let config = Config::load().unwrap();
-    let mut app = App::new(config).unwrap();
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
     assert!(!app.show_help);
     app.toggle_help();
     assert!(app.show_help);
@@ -67,8 +68,8 @@ fn test_app_toggle_popup() {
 
 #[test]
 fn test_app_open_close_popup() {
-    let config = Config::load().unwrap();
-    let mut app = App::new(config).unwrap();
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
     assert!(!app.show_help);
     app.open_help();
     assert!(app.show_help);
