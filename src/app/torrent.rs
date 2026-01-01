@@ -2,7 +2,7 @@ use crate::{app::constants::DEFAULT_RPC_URL, error::Result};
 use std::{collections::HashSet, fmt::Debug};
 use transmission_rpc::{
     TransClient,
-    types::{Id, Torrent, TorrentGetField},
+    types::{Torrent, TorrentGetField},
 };
 use url::Url;
 
@@ -76,16 +76,6 @@ impl Torrents {
         Ok(self)
     }
 
-    /// # Errors
-    ///
-    /// TODO: add error types
-    pub async fn move_selection(&mut self, location: &str) -> Result<()> {
-        let ids: Vec<Id> = self.selected.iter().map(|id| Id::Id(*id)).collect();
-        self.client
-            .torrent_set_location(ids, location.to_string(), Some(true))
-            .await?;
-        Ok(())
-    }
 }
 
 impl Debug for Torrents {

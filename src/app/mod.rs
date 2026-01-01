@@ -168,15 +168,19 @@ impl App {
         Ok(())
     }
 
+    /// Move selected or highlighted torrent(s) to a new location.
+    ///
     /// # Errors
     ///
-    /// TODO: add error types
+    /// Returns an error if the RPC call fails.
     pub async fn move_torrent(&mut self) -> Result<()> {
+        let ids = self.selected(false);
         self.torrents
-            .move_selection(&self.input_handler.text)
+            .move_torrents(ids, &self.input_handler.text)
             .await?;
         self.input_handler.clear();
         self.input_mode = false;
+        self.close_help();
         Ok(())
     }
 
