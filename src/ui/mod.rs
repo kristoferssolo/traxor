@@ -1,5 +1,6 @@
 mod help;
 mod input;
+mod status;
 mod table;
 
 use crate::{
@@ -27,7 +28,11 @@ pub fn render(app: &mut App, frame: &mut Frame) {
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(3), Constraint::Min(0)].as_ref())
+        .constraints([
+            Constraint::Length(3),
+            Constraint::Min(0),
+            Constraint::Length(3),
+        ])
         .split(size);
 
     let titles = app
@@ -53,6 +58,8 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     let table = build_table(torrents, selected, colors, Tab::from(app.index()).fields());
 
     frame.render_stateful_widget(table, chunks[1], &mut app.state);
+
+    status::render(frame, app, chunks[2]);
 
     if app.show_help {
         render_help(frame, app);
