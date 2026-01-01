@@ -1,49 +1,93 @@
+# ============================================================================
+#                            TRAXOR CONFIGURATION
+# ============================================================================
+# This file defines all default settings. User config (~/.config/traxor/config.toml)
+# overrides these values. Only specify what you want to change in your user config.
+
+# ============================================================================
+#                                 KEYBINDS
+# ============================================================================
 [keybinds]
-quit = "q"
-next_tab = "l"
-prev_tab = "h"
-next_torrent = "j"
+# Navigation
 prev_torrent = "k"
+next_torrent = "j"
+prev_tab = "h"
+next_tab = "l"
+
+# Tab switching
 switch_tab_1 = "1"
 switch_tab_2 = "2"
 switch_tab_3 = "3"
+
+# Torrent actions
 toggle_torrent = "enter"
 toggle_all = "a"
+select = " "
+move_torrent = "m"
+rename_torrent = "r"
 delete = "d"
 delete_force = "D"
-select = " "
-toggle_help = "?"
-move = "m"
 
+# General
+toggle_help = "?"
+quit = "q"
+
+# ============================================================================
+#                                  COLORS
+# ============================================================================
 [colors]
+# UI colors
 highlight_background = "magenta"
 highlight_foreground = "black"
 header_foreground = "yellow"
 info_foreground = "blue"
-error_foreground = "red"
 
+# Status colors (torrent state)
+status_downloading = "cyan"
+status_seeding = "white"
+status_stopped = "dark_gray"
+status_verifying = "yellow"
+status_queued = "light_blue"
+
+# ============================================================================
+#                                 LOGGING
+# ============================================================================
 [log]
 traxor = "info"
 ratatui = "warn"
 transmission_rpc = "warn"
 
-# Custom tabs configuration
-# Each [[tabs]] entry defines a tab with a name and list of columns.
+# ============================================================================
+#                                   TABS
+# ============================================================================
+# Define custom tabs with specific columns. Each tab needs a name and columns list.
+#
 # Available columns:
 #   name, status, size, downloaded, uploaded, ratio, progress, eta,
 #   peers, seeds, leeches, downspeed, upspeed, path, added, done,
 #   left, queue, error, labels, tracker, hash, private, stalled,
 #   finished, files, activity
-#
-# Example:
-# [[tabs]]
-# name = "All"
-# columns = ["status", "ratio", "size", "uploaded", "path", "name"]
-#
-# [[tabs]]
-# name = "Active"
-# columns = ["progress", "downspeed", "upspeed", "eta", "name"]
-#
-# [[tabs]]
-# name = "Downloading"
-# columns = ["size", "left", "progress", "downspeed", "eta", "name"]
+
+[[tabs]]
+name = "All"
+columns = ["status", "leeches", "ratio", "size", "uploaded", "path", "name"]
+
+[[tabs]]
+name = "Active"
+columns = [
+  "size",
+  "uploaded",
+  "ratio",
+  "leeches",
+  "seeds",
+  "status",
+  "eta",
+  "progress",
+  "downspeed",
+  "upspeed",
+  "name",
+]
+
+[[tabs]]
+name = "Downloading"
+columns = ["size", "left", "progress", "downspeed", "eta", "path", "name"]
