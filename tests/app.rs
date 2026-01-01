@@ -4,7 +4,7 @@ use traxor::{app::App, config::Config};
 fn test_app_creation() {
     let config = Config::load().unwrap();
     let app = App::new(config).unwrap();
-    assert_eq!(app.tabs().len(), 3);
+    assert_eq!(app.tabs().len(), 5);
 }
 
 #[test]
@@ -25,6 +25,10 @@ fn test_app_next_tab() {
     app.next_tab();
     assert_eq!(app.index(), 2);
     app.next_tab();
+    assert_eq!(app.index(), 3);
+    app.next_tab();
+    assert_eq!(app.index(), 4);
+    app.next_tab();
     assert_eq!(app.index(), 0); // Wraps around
 }
 
@@ -34,9 +38,9 @@ fn test_app_prev_tab() {
     let mut app = App::new(config).unwrap();
     assert_eq!(app.index(), 0);
     app.prev_tab();
-    assert_eq!(app.index(), 2); // Wraps around
+    assert_eq!(app.index(), 4); // Wraps around
     app.prev_tab();
-    assert_eq!(app.index(), 1);
+    assert_eq!(app.index(), 3);
 }
 
 #[test]

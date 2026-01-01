@@ -58,6 +58,8 @@ pub async fn get_action(key_event: KeyEvent, app: &mut App) -> Result<Option<Act
         (Action::SwitchTab(0), &keybinds.switch_tab_1),
         (Action::SwitchTab(1), &keybinds.switch_tab_2),
         (Action::SwitchTab(2), &keybinds.switch_tab_3),
+        (Action::SwitchTab(3), &keybinds.switch_tab_4),
+        (Action::SwitchTab(4), &keybinds.switch_tab_5),
         (Action::ToggleTorrent, &keybinds.toggle_torrent),
         (Action::ToggleAll, &keybinds.toggle_all),
         (Action::Delete(false), &keybinds.delete),

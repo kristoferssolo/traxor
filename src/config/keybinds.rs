@@ -10,6 +10,8 @@ pub struct KeybindsConfig {
     pub switch_tab_1: String,
     pub switch_tab_2: String,
     pub switch_tab_3: String,
+    pub switch_tab_4: String,
+    pub switch_tab_5: String,
     pub toggle_torrent: String,
     pub toggle_all: String,
     pub delete: String,
