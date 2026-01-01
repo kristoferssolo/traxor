@@ -11,6 +11,23 @@ pub enum Selected {
     List(HashSet<i64>),
 }
 
+impl Selected {
+    #[inline]
+    #[must_use]
+    pub fn len(&self) -> usize {
+        match self {
+            Self::Current(_) => 1,
+            Self::List(set) => set.len(),
+        }
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        matches!(self, Self::List(set) if set.is_empty())
+    }
+}
+
 #[derive(Debug)]
 pub enum SelectedIntoIter {
     One(Once<i64>),
@@ -20,18 +37,30 @@ pub enum SelectedIntoIter {
 impl Iterator for SelectedIntoIter {
     type Item = i64;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         match self {
             Self::One(it) => it.next(),
             Self::Many(it) => it.next(),
         }
     }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        match self {
+            Self::One(it) => it.size_hint(),
+            Self::Many(it) => it.size_hint(),
+        }
+    }
 }
+
+impl ExactSizeIterator for SelectedIntoIter {}
 
 impl IntoIterator for Selected {
     type Item = i64;
     type IntoIter = SelectedIntoIter;
 
+    #[inline]
     fn into_iter(self) -> Self::IntoIter {
         match self {
             Self::Current(id) => SelectedIntoIter::One(std::iter::once(id)),
@@ -54,6 +83,7 @@ impl From<Selected> for Vec<i64> {
         value.into_iter().collect()
     }
 }
+
 impl From<Selected> for Vec<Id> {
     fn from(value: Selected) -> Self {
         value.into_iter().map(Id::Id).collect()

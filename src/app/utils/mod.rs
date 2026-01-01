@@ -109,83 +109,81 @@ impl Wrapper for TorrentGetField {
 
     fn value(&self, torrent: &Torrent) -> String {
         match self {
-            Self::ActivityDate => format_option_string(torrent.activity_date),
-            Self::AddedDate => format_option_string(torrent.added_date),
-            Self::Availability => "N/A".to_string(),
+            Self::ActivityDate => format_option(torrent.activity_date),
+            Self::AddedDate => format_option(torrent.added_date),
+            Self::Availability => "N/A".into(),
             Self::BandwidthPriority => torrent.bandwidth_priority.format(),
             Self::Comment => torrent.comment.clone().unwrap_or_default(),
             Self::CorruptEver => FileSize::from(torrent.corrupt_ever).to_string(),
             Self::Creator => torrent.creator.clone().unwrap_or_default(),
-            Self::DateCreated => format_option_string(torrent.date_created),
+            Self::DateCreated => format_option(torrent.date_created),
             Self::DesiredAvailable => FileSize::from(torrent.desired_available).to_string(),
-            Self::DoneDate => format_option_string(torrent.done_date),
+            Self::DoneDate => format_option(torrent.done_date),
             Self::DownloadDir => torrent.download_dir.clone().unwrap_or_default(),
             Self::DownloadLimit => NetSpeed::from(torrent.download_limit).to_string(),
-            Self::DownloadLimited => format_option_string(torrent.download_limited),
+            Self::DownloadLimited => format_option(torrent.download_limited),
             Self::DownloadedEver => FileSize::from(torrent.downloaded_ever).to_string(),
-            Self::EditDate => format_option_string(torrent.edit_date),
+            Self::EditDate => format_option(torrent.edit_date),
             Self::Error => torrent.error.format(),
             Self::ErrorString => torrent.error_string.clone().unwrap_or_default(),
             Self::Eta => format_eta(torrent.eta),
-            Self::EtaIdle => format_option_string(torrent.eta_idle),
-            Self::FileCount => format_option_string(torrent.file_count),
+            Self::EtaIdle => format_option(torrent.eta_idle),
+            Self::FileCount => format_option(torrent.file_count),
             Self::FileStats => torrent.file_stats.format(),
             Self::Files => torrent.files.format(),
             Self::Group => torrent.group.clone().unwrap_or_default(),
             Self::HashString => torrent.hash_string.clone().unwrap_or_default(),
             Self::HaveUnchecked => FileSize::from(torrent.have_unchecked).to_string(),
             Self::HaveValid => FileSize::from(torrent.have_valid).to_string(),
-            Self::HonorsSessionLimits => format_option_string(torrent.honors_session_limits),
-            Self::Id => format_option_string(torrent.id),
-            Self::IsFinished => format_option_string(torrent.is_finished),
-            Self::IsPrivate => format_option_string(torrent.is_private),
-            Self::IsStalled => format_option_string(torrent.is_stalled),
-            Self::Labels => torrent.labels.clone().unwrap_or_default().join(", "),
+            Self::HonorsSessionLimits => format_option(torrent.honors_session_limits),
+            Self::Id => format_option(torrent.id),
+            Self::IsFinished => format_option(torrent.is_finished),
+            Self::IsPrivate => format_option(torrent.is_private),
+            Self::IsStalled => format_option(torrent.is_stalled),
+            Self::Labels => torrent
+                .labels
+                .as_deref()
+                .map_or_else(String::new, |l| l.join(", ")),
             Self::LeftUntilDone => FileSize::from(torrent.left_until_done).to_string(),
             Self::MagnetLink => torrent.magnet_link.clone().unwrap_or_default(),
-            Self::ManualAnnounceTime => format_option_string(torrent.manual_announce_time),
-            Self::MaxConnectedPeers => format_option_string(torrent.max_connected_peers),
+            Self::ManualAnnounceTime => format_option(torrent.manual_announce_time),
+            Self::MaxConnectedPeers => format_option(torrent.max_connected_peers),
             Self::MetadataPercentComplete => torrent.metadata_percent_complete.format(),
             Self::Name => torrent.name.clone().unwrap_or_default(),
-            Self::PeerLimit => format_option_string(torrent.peer_limit),
+            Self::PeerLimit => format_option(torrent.peer_limit),
             Self::Peers => torrent.peers.format(),
-            Self::PeersConnected => format_option_string(torrent.peers_connected),
-            Self::PeersFrom => torrent
-                .peers_from
-                .as_ref()
-                .map(|p| {
-                    format!(
-                        "d:{} u:{} i:{} t:{}",
-                        p.from_dht, p.from_incoming, p.from_lpd, p.from_tracker
-                    )
-                })
-                .unwrap_or_default(),
-            Self::PeersGettingFromUs => format_option_string(torrent.peers_getting_from_us),
-            Self::PeersSendingToUs => format_option_string(torrent.peers_sending_to_us),
+            Self::PeersConnected => format_option(torrent.peers_connected),
+            Self::PeersFrom => torrent.peers_from.as_ref().map_or_else(String::new, |p| {
+                format!(
+                    "d:{} u:{} i:{} t:{}",
+                    p.from_dht, p.from_incoming, p.from_lpd, p.from_tracker
+                )
+            }),
+            Self::PeersGettingFromUs => format_option(torrent.peers_getting_from_us),
+            Self::PeersSendingToUs => format_option(torrent.peers_sending_to_us),
             Self::PercentComplete => torrent.percent_complete.format(),
             Self::PercentDone => torrent.percent_done.format(),
-            Self::PieceCount => format_option_string(torrent.piece_count),
+            Self::PieceCount => format_option(torrent.piece_count),
             Self::PieceSize => FileSize::from(torrent.piece_size).to_string(),
             Self::Pieces => torrent
                 .pieces
                 .as_ref()
-                .map(|p| format!("{} bytes", p.len()))
-                .unwrap_or_default(),
+                .map_or_else(String::new, |p| format!("{} bytes", p.len())),
             Self::PrimaryMimeType => torrent.primary_mime_type.clone().unwrap_or_default(),
             Self::Priorities => torrent.priorities.format(),
-            Self::QueuePosition => format_option_string(torrent.queue_position),
+            Self::QueuePosition => format_option(torrent.queue_position),
             Self::RateDownload => NetSpeed::from(torrent.rate_download).to_string(),
             Self::RateUpload => NetSpeed::from(torrent.rate_upload).to_string(),
             Self::RecheckProgress => torrent.recheck_progress.format(),
-            Self::SecondsDownloading => format_option_string(torrent.seconds_downloading),
-            Self::SecondsSeeding => format_option_string(torrent.seconds_seeding),
-            Self::SeedIdleLimit => format_option_string(torrent.seed_idle_limit),
+            Self::SecondsDownloading => format_option(torrent.seconds_downloading),
+            Self::SecondsSeeding => format_option(torrent.seconds_seeding),
+            Self::SeedIdleLimit => format_option(torrent.seed_idle_limit),
             Self::SeedIdleMode => torrent.seed_idle_mode.format(),
             Self::SeedRatioLimit => torrent.seed_ratio_limit.format(),
             Self::SeedRatioMode => torrent.seed_ratio_mode.format(),
-            Self::SequentialDownload => format_option_string(torrent.sequential_download),
+            Self::SequentialDownload => format_option(torrent.sequential_download),
             Self::SizeWhenDone => FileSize::from(torrent.size_when_done).to_string(),
-            Self::StartDate => format_option_string(torrent.start_date),
+            Self::StartDate => format_option(torrent.start_date),
             Self::Status => torrent.status.format(),
             Self::TorrentFile => torrent.torrent_file.clone().unwrap_or_default(),
             Self::TotalSize => FileSize::from(torrent.total_size).to_string(),
@@ -193,12 +191,15 @@ impl Wrapper for TorrentGetField {
             Self::TrackerStats => torrent.tracker_stats.format(),
             Self::Trackers => torrent.trackers.format(),
             Self::UploadLimit => NetSpeed::from(torrent.upload_limit).to_string(),
-            Self::UploadLimited => format_option_string(torrent.upload_limited),
+            Self::UploadLimited => format_option(torrent.upload_limited),
             Self::UploadRatio => torrent.upload_ratio.format(),
             Self::UploadedEver => FileSize::from(torrent.uploaded_ever).to_string(),
             Self::Wanted => torrent.wanted.format(),
-            Self::Webseeds => torrent.webseeds.clone().unwrap_or_default().join(", "),
-            Self::WebseedsSendingToUs => format_option_string(torrent.webseeds_sending_to_us),
+            Self::Webseeds => torrent
+                .webseeds
+                .as_deref()
+                .map_or_else(String::new, |w| w.join(", ")),
+            Self::WebseedsSendingToUs => format_option(torrent.webseeds_sending_to_us),
         }
     }
 
@@ -286,15 +287,15 @@ impl Wrapper for TorrentGetField {
     }
 }
 
-fn format_option_string<T: Display>(value: Option<T>) -> String {
-    value.map(|v| v.to_string()).unwrap_or_default()
+fn format_option<T: Display>(value: Option<T>) -> String {
+    value.map_or_else(String::new, |v| v.to_string())
 }
 
 fn format_eta(value: Option<i64>) -> String {
     match value {
         Some(-2) => "?".into(),
-        None | Some(-1 | ..0) => String::new(),
-        Some(v) => format!("{v} s"),
+        Some(v) if v > 0 => format!("{v} s"),
+        _ => String::new(),
     }
 }
 
@@ -304,15 +305,14 @@ trait Formatter {
 
 impl Formatter for Option<f32> {
     fn format(&self) -> String {
-        self.map(|v| format!("{v:.2}")).unwrap_or_default()
+        self.map_or_else(String::new, |v| format!("{v:.2}"))
     }
 }
 
 impl<T> Formatter for Option<Vec<T>> {
     fn format(&self) -> String {
         self.as_ref()
-            .map(|v| v.len().to_string())
-            .unwrap_or_default()
+            .map_or_else(String::new, |v| v.len().to_string())
     }
 }
 

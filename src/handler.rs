@@ -40,7 +40,7 @@ pub async fn get_action(key_event: KeyEvent, app: &mut App) -> Result<Option<Act
 
     let keybinds = &app.config.keybinds;
 
-    let actions = [
+    Ok([
         (Action::Quit, &keybinds.quit),
         (Action::NextTab, &keybinds.next_tab),
         (Action::PrevTab, &keybinds.prev_tab),
@@ -56,14 +56,9 @@ pub async fn get_action(key_event: KeyEvent, app: &mut App) -> Result<Option<Act
         (Action::Select, &keybinds.select),
         (Action::ToggleHelp, &keybinds.toggle_help),
         (Action::Move, &keybinds.move_torrent),
-    ];
-
-    for (action, keybind) in actions {
-        if matches_keybind(&key_event, keybind) {
-            return Ok(Some(action));
-        }
-    }
-    Ok(None)
+    ]
+    .into_iter()
+    .find_map(|(action, keybind)| matches_keybind(&key_event, keybind).then_some(action)))
 }
 
 /// Handles the updates of [`App`].
@@ -101,14 +96,12 @@ pub async fn update(app: &mut App, action: Action) -> Result<()> {
 
 /// Check if a [`KeyEvent`] matches a configured keybind string
 fn matches_keybind(event: &KeyEvent, config_key: &str) -> bool {
-    parse_keybind(config_key)
-        .map(|parsed_ev| parsed_ev == *event)
-        .unwrap_or(false)
+    parse_keybind(config_key).is_ok_and(|parsed| parsed == *event)
 }
 
 #[derive(Debug, Error)]
-pub enum ParseKeybingError {
-    /// No “main” key was found (e.g. the user only wrote modifiers).
+pub enum ParseKeybindError {
+    /// No "main" key was found (e.g. the user only wrote modifiers).
     #[error("no main key was found in input")]
     NoKeyCode,
     /// An unrecognized token was encountered.
@@ -116,7 +109,7 @@ pub enum ParseKeybingError {
     UnknownPart(String),
 }
 
-fn parse_keybind(key_str: &str) -> std::result::Result<KeyEvent, ParseKeybingError> {
+fn parse_keybind(key_str: &str) -> std::result::Result<KeyEvent, ParseKeybindError> {
     let mut modifiers = KeyModifiers::NONE;
     let mut key_code = None;
 
@@ -128,8 +121,8 @@ fn parse_keybind(key_str: &str) -> std::result::Result<KeyEvent, ParseKeybingErr
             }
             continue;
         }
-        let low = part.to_lowercase();
-        match low.as_str() {
+
+        match part.to_ascii_lowercase().as_str() {
             // modifiers
             "ctrl" | "control" => modifiers |= KeyModifiers::CONTROL,
             "shift" => modifiers |= KeyModifiers::SHIFT,
@@ -168,27 +161,25 @@ fn parse_keybind(key_str: &str) -> std::result::Result<KeyEvent, ParseKeybingErr
             "apostrophe" => key_code = Some(KeyCode::Char('\'')),
 
             // function keys F1...F<N>
-            f if f.starts_with('f') && f.len() > 1 => {
-                let num_str = &f[1..];
-                match num_str.parse::<u8>() {
-                    Ok(n) => key_code = Some(KeyCode::F(n)),
-                    Err(_) => return Err(ParseKeybingError::UnknownPart(part.to_owned())),
-                }
+            f if f.starts_with('f') => {
+                key_code = Some(KeyCode::F(
+                    f[1..]
+                        .parse()
+                        .map_err(|_| ParseKeybindError::UnknownPart(part.to_owned()))?,
+                ));
             }
 
-            // single‐character fallback
+            // single-character fallback
             _ if part.len() == 1 => {
-                if let Some(ch) = part.chars().next() {
-                    key_code = Some(KeyCode::Char(ch));
-                }
+                key_code = part.chars().next().map(KeyCode::Char);
             }
 
             // unknown token
-            other => return Err(ParseKeybingError::UnknownPart(other.to_owned())),
+            other => return Err(ParseKeybindError::UnknownPart(other.to_owned())),
         }
     }
 
     key_code
         .map(|kc| KeyEvent::new(kc, modifiers))
-        .ok_or(ParseKeybingError::NoKeyCode)
+        .ok_or(ParseKeybindError::NoKeyCode)
 }

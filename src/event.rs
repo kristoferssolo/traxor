@@ -1,8 +1,10 @@
 use color_eyre::Result;
 use crossterm::event::{self, Event as CrosstermEvent, KeyEvent, MouseEvent};
-use std::sync::mpsc;
-use std::thread;
-use std::time::{Duration, Instant};
+use std::{
+    sync::mpsc,
+    thread,
+    time::{Duration, Instant},
+};
 use tracing::error;
 
 /// Terminal events.
@@ -19,14 +21,10 @@ pub enum Event {
 }
 
 /// Terminal event handler.
-#[allow(dead_code)]
 #[derive(Debug)]
 pub struct EventHandler {
-    /// Event sender channel.
-    sender: mpsc::Sender<Event>,
-    /// Event receiver channel.
     receiver: mpsc::Receiver<Event>,
-    /// Event handler thread.
+    #[allow(dead_code)]
     handler: thread::JoinHandle<()>,
 }
 
@@ -35,46 +33,43 @@ impl EventHandler {
     ///
     /// # Panics
     ///
-    /// TODO: add panic
+    /// Panics if event polling or sending fails.
     #[must_use]
-    pub fn new(tick_rate: u64) -> Self {
-        let tick_rate = Duration::from_millis(tick_rate);
+    pub fn new(tick_rate_ms: u64) -> Self {
+        let tick_rate = Duration::from_millis(tick_rate_ms);
         let (sender, receiver) = mpsc::channel();
-        let handler = {
-            let sender = sender.clone();
-            thread::spawn(move || {
-                let mut last_tick = Instant::now();
-                loop {
-                    let timeout = tick_rate
-                        .checked_sub(last_tick.elapsed())
-                        .unwrap_or(tick_rate);
 
-                    if event::poll(timeout).expect("no events available") {
-                        match event::read() {
-                            Ok(CrosstermEvent::Key(e)) => sender.send(Event::Key(e)),
-                            Ok(CrosstermEvent::Mouse(e)) => sender.send(Event::Mouse(e)),
-                            Ok(CrosstermEvent::Resize(w, h)) => sender.send(Event::Resize(w, h)),
-                            Err(e) => {
-                                error!("Error reading event: {:?}", e);
-                                break;
-                            }
-                            _ => Ok(()), // Ignore other events
+        let handler = thread::spawn(move || {
+            let mut last_tick = Instant::now();
+            loop {
+                let timeout = tick_rate.saturating_sub(last_tick.elapsed());
+
+                if event::poll(timeout).expect("event polling failed") {
+                    let send_result = match event::read() {
+                        Ok(CrosstermEvent::Key(e)) => sender.send(Event::Key(e)),
+                        Ok(CrosstermEvent::Mouse(e)) => sender.send(Event::Mouse(e)),
+                        Ok(CrosstermEvent::Resize(w, h)) => sender.send(Event::Resize(w, h)),
+                        Ok(_) => Ok(()),
+                        Err(e) => {
+                            error!("Error reading event: {e:?}");
+                            break;
                         }
-                        .expect("failed to send terminal event");
-                    }
-
-                    if last_tick.elapsed() >= tick_rate {
-                        sender.send(Event::Tick).expect("failed to send tick event");
-                        last_tick = Instant::now();
+                    };
+                    if send_result.is_err() {
+                        break;
                     }
                 }
-            })
-        };
-        Self {
-            sender,
-            receiver,
-            handler,
-        }
+
+                if last_tick.elapsed() >= tick_rate {
+                    if sender.send(Event::Tick).is_err() {
+                        break;
+                    }
+                    last_tick = Instant::now();
+                }
+            }
+        });
+
+        Self { receiver, handler }
     }
 
     /// Receive the next event from the handler thread.
@@ -84,7 +79,7 @@ impl EventHandler {
     ///
     /// # Errors
     ///
-    /// TODO: add error types
+    /// Returns an error if the sender is disconnected.
     pub fn next(&self) -> Result<Event> {
         Ok(self.receiver.recv()?)
     }

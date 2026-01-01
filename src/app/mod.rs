@@ -73,31 +73,27 @@ impl App {
     }
 
     pub fn next(&mut self) {
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i >= self.torrents.len() - 1 {
-                    0
-                } else {
-                    i + 1
-                }
-            }
-            None => 0,
-        };
+        let len = self.torrents.len();
+        if len == 0 {
+            return;
+        }
+        let i = self
+            .state
+            .selected()
+            .map_or(0, |i| if i >= len - 1 { 0 } else { i + 1 });
         self.close_help();
         self.state.select(Some(i));
     }
 
     pub fn previous(&mut self) {
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i == 0 {
-                    self.torrents.len() - 1
-                } else {
-                    i - 1
-                }
-            }
-            None => 0,
-        };
+        let len = self.torrents.len();
+        if len == 0 {
+            return;
+        }
+        let i = self
+            .state
+            .selected()
+            .map_or(0, |i| if i == 0 { len - 1 } else { i - 1 });
         self.close_help();
         self.state.select(Some(i));
     }
@@ -111,13 +107,9 @@ impl App {
 
     /// Switches to the previous tab.
     #[inline]
-    pub const fn prev_tab(&mut self) {
+    pub fn prev_tab(&mut self) {
         self.close_help();
-        if self.index > 0 {
-            self.index -= 1;
-        } else {
-            self.index = self.tabs.len() - 1;
-        }
+        self.index = self.index.checked_sub(1).unwrap_or(self.tabs.len() - 1);
     }
 
     /// Switches to the tab whose index is `idx`.
@@ -189,9 +181,9 @@ impl App {
     }
 
     pub fn prepare_move_action(&mut self) {
-        if let Some(download_dir) = self.get_current_downlaod_dir() {
+        if let Some(download_dir) = self.get_current_download_dir() {
             self.input_handler
-                .set_text(download_dir.to_string_lossy().to_string());
+                .set_text(download_dir.to_string_lossy().into_owned());
         }
         self.input_mode = true;
     }
@@ -209,32 +201,31 @@ impl App {
 
     fn selected(&self, highlighted: bool) -> Selected {
         let torrents = &self.torrents.torrents;
-        if self.torrents.selected.is_empty() || highlighted {
-            let selected_id = self
+        if (self.torrents.selected.is_empty() || highlighted)
+            && let Some(id) = self
                 .state
                 .selected()
-                .and_then(|idx| torrents.get(idx).and_then(|t| t.id));
-            if let Some(id) = selected_id {
-                return Selected::Current(id);
-            }
+                .and_then(|idx| torrents.get(idx).and_then(|t| t.id))
+        {
+            return Selected::Current(id);
         }
-        let selected_torrents = torrents
-            .iter()
-            .filter_map(|t| t.id.filter(|id| self.torrents.selected.contains(id)))
-            .collect();
-        Selected::List(selected_torrents)
+        Selected::List(
+            torrents
+                .iter()
+                .filter_map(|t| t.id.filter(|id| self.torrents.selected.contains(id)))
+                .collect(),
+        )
     }
 
-    fn get_current_downlaod_dir(&self) -> Option<PathBuf> {
-        match self.selected(true) {
-            Selected::Current(current_id) => self
-                .torrents
-                .torrents
-                .iter()
-                .find(|&t| t.id == Some(current_id))
-                .and_then(|t| t.download_dir.as_ref())
-                .map(PathBuf::from),
-            Selected::List(_) => None,
-        }
+    fn get_current_download_dir(&self) -> Option<PathBuf> {
+        let Selected::Current(current_id) = self.selected(true) else {
+            return None;
+        };
+        self.torrents
+            .torrents
+            .iter()
+            .find(|t| t.id == Some(current_id))
+            .and_then(|t| t.download_dir.as_deref())
+            .map(PathBuf::from)
     }
 }
