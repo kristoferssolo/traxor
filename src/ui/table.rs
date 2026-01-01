@@ -8,12 +8,12 @@ use ratatui::{
 use std::collections::HashSet;
 use transmission_rpc::types::{Torrent, TorrentGetField, TorrentStatus};
 
-pub fn build_table<'a>(
-    torrents: &'a [Torrent],
+pub fn build_table(
+    torrents: &[&Torrent],
     selected: &HashSet<i64>,
     colors: &ColorConfig,
     fields: &[TorrentGetField],
-) -> Table<'a> {
+) -> Table<'static> {
     let row_style = row_style(colors);
     let header_style = header_style(colors);
     let highlight_row_style = hightlighted_row_style(colors);
@@ -60,13 +60,13 @@ fn hightlighted_row_style(cfg: &ColorConfig) -> Style {
     Style::default().bg(bg).fg(fg)
 }
 
-fn make_row<'a>(
-    torrent: &'a Torrent,
+fn make_row(
+    torrent: &Torrent,
     fields: &[TorrentGetField],
     selected: &HashSet<i64>,
     highlight: Style,
     colors: &ColorConfig,
-) -> Row<'a> {
+) -> Row<'static> {
     let status_style = status_style(torrent.status, colors);
 
     let cells = fields.iter().map(|&field| {

@@ -9,6 +9,7 @@ pub mod utils;
 
 use crate::error::Result;
 use crate::{app::input::InputHandler, config::Config};
+use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
 use ratatui::widgets::TableState;
 use std::path::PathBuf;
 use types::Selected;
@@ -21,6 +22,7 @@ pub enum InputMode {
     None,
     Move,
     Rename,
+    Filter,
     /// Confirm delete dialog. Bool indicates whether to delete local data.
     ConfirmDelete(bool),
 }
@@ -37,6 +39,7 @@ pub struct App {
     pub config: Config,
     pub input_handler: InputHandler,
     pub input_mode: InputMode,
+    pub filter_text: String,
 }
 
 impl App {
@@ -58,6 +61,7 @@ impl App {
             config,
             input_handler: InputHandler::new(),
             input_mode: InputMode::None,
+            filter_text: String::new(),
         })
     }
 
@@ -121,12 +125,15 @@ impl App {
     #[inline]
     pub fn prev_tab(&mut self) {
         self.close_help();
-        self.index = self.index.checked_sub(1).unwrap_or(self.tabs.len() - 1);
+        self.index = self
+            .index
+            .checked_sub(1)
+            .unwrap_or_else(|| self.tabs.len() - 1);
     }
 
     /// Switches to the tab whose index is `idx` if it exists.
     #[inline]
-    pub fn switch_tab(&mut self, idx: usize) {
+    pub const fn switch_tab(&mut self, idx: usize) {
         if idx < self.tabs.len() {
             self.close_help();
             self.index = idx;
@@ -225,6 +232,61 @@ impl App {
         self.input_handler.clear();
         self.input_mode = InputMode::None;
         self.close_help();
+    }
+
+    /// Start filter mode.
+    pub fn start_filter(&mut self) {
+        self.input_handler.set_text(self.filter_text.clone());
+        self.input_mode = InputMode::Filter;
+    }
+
+    /// Apply filter from input.
+    pub fn apply_filter(&mut self) {
+        self.filter_text = self.input_handler.text.clone();
+        self.input_handler.clear();
+        self.input_mode = InputMode::None;
+        self.state.select(Some(0));
+    }
+
+    /// Clear the active filter.
+    pub fn clear_filter(&mut self) {
+        self.filter_text.clear();
+        self.input_handler.clear();
+        self.input_mode = InputMode::None;
+    }
+
+    /// Get the active filter text (live from input or saved).
+    #[must_use]
+    pub fn active_filter(&self) -> &str {
+        if self.input_mode == InputMode::Filter {
+            &self.input_handler.text
+        } else {
+            &self.filter_text
+        }
+    }
+
+    /// Get filtered torrents based on current filter text using fuzzy matching.
+    #[must_use]
+    pub fn filtered_torrents(&self) -> Vec<&transmission_rpc::types::Torrent> {
+        let filter = self.active_filter();
+        if filter.is_empty() {
+            self.torrents.torrents.iter().collect()
+        } else {
+            let matcher = SkimMatcherV2::default();
+            let mut scored: Vec<_> = self
+                .torrents
+                .torrents
+                .iter()
+                .filter_map(|t| {
+                    t.name
+                        .as_ref()
+                        .and_then(|name| matcher.fuzzy_match(name, filter).map(|score| (t, score)))
+                })
+                .collect();
+            // Sort by score descending (best matches first)
+            scored.sort_by(|a, b| b.1.cmp(&a.1));
+            scored.into_iter().map(|(t, _)| t).collect()
+        }
     }
 
     /// Prepare delete confirmation dialog.

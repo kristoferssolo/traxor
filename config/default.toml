@@ -35,6 +35,10 @@ rename_torrent = "r"
 delete = "d"
 delete_force = "D"
 
+# Search/filter
+filter = "/"
+clear_filter = "escape"
+
 # General
 toggle_help = "?"
 quit = "q"

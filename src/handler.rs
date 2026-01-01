@@ -73,6 +73,8 @@ pub async fn get_action(key_event: KeyEvent, app: &mut App) -> Result<Option<Act
         (Action::ToggleHelp, &keybinds.toggle_help),
         (Action::Move, &keybinds.move_torrent),
         (Action::Rename, &keybinds.rename_torrent),
+        (Action::Filter, &keybinds.filter),
+        (Action::ClearFilter, &keybinds.clear_filter),
     ]
     .into_iter()
     .find_map(|(action, keybind)| matches_keybind(&key_event, keybind).then_some(action)))
@@ -100,11 +102,14 @@ pub async fn update(app: &mut App, action: Action) -> Result<()> {
         Action::StartAll => app.torrents.start_all().await?,
         Action::Move => app.prepare_move_action(),
         Action::Rename => app.prepare_rename_action(),
+        Action::Filter => app.start_filter(),
+        Action::ClearFilter => app.clear_filter(),
         Action::Delete(delete_local_data) => app.prepare_delete(delete_local_data),
         Action::Select => app.select(),
         Action::Submit => match app.input_mode {
             InputMode::Move => app.move_torrent().await?,
             InputMode::Rename => app.rename_torrent().await?,
+            InputMode::Filter => app.apply_filter(),
             InputMode::None | InputMode::ConfirmDelete(_) => {}
         },
         Action::ConfirmYes => app.confirm_delete().await?,

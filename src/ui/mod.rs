@@ -51,12 +51,12 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     frame.render_widget(tabs, chunks[0]); // renders tab
 
     app.torrents.set_fields(None);
-    let torrents = &app.torrents.torrents;
+    let torrents = app.filtered_torrents();
     let selected = &app.torrents.selected;
     let colors = &app.config.colors;
+    let fields = app.tabs()[app.index()].fields();
 
-    let table = build_table(torrents, selected, colors, app.tabs()[app.index()].fields());
-
+    let table = build_table(&torrents, selected, colors, fields);
     frame.render_stateful_widget(table, chunks[1], &mut app.state);
 
     status::render(frame, app, chunks[2]);

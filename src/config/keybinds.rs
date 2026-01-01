@@ -25,4 +25,6 @@ pub struct KeybindsConfig {
     pub toggle_help: String,
     pub move_torrent: String,
     pub rename_torrent: String,
+    pub filter: String,
+    pub clear_filter: String,
 }
