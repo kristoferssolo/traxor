@@ -21,6 +21,8 @@ pub enum InputMode {
     None,
     Move,
     Rename,
+    /// Confirm delete dialog. Bool indicates whether to delete local data.
+    ConfirmDelete(bool),
 }
 
 /// Main Application.
@@ -167,16 +169,6 @@ impl App {
         Ok(())
     }
 
-    /// # Errors
-    ///
-    /// TODO: add error types
-    pub async fn delete(&mut self, delete_local_data: bool) -> Result<()> {
-        let ids = self.selected(false);
-        self.torrents.delete(ids, delete_local_data).await?;
-        self.close_help();
-        Ok(())
-    }
-
     /// Move selected or highlighted torrent(s) to a new location.
     ///
     /// # Errors
@@ -230,6 +222,26 @@ impl App {
         self.input_handler.clear();
         self.input_mode = InputMode::None;
         self.close_help();
+    }
+
+    /// Prepare delete confirmation dialog.
+    pub const fn prepare_delete(&mut self, delete_local_data: bool) {
+        self.input_mode = InputMode::ConfirmDelete(delete_local_data);
+    }
+
+    /// Execute the confirmed delete action.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the RPC call fails.
+    pub async fn confirm_delete(&mut self) -> Result<()> {
+        let InputMode::ConfirmDelete(delete_local_data) = self.input_mode else {
+            return Ok(());
+        };
+        let ids = self.selected(false);
+        self.torrents.delete(ids, delete_local_data).await?;
+        self.clear_input();
+        Ok(())
     }
 
     pub fn select(&mut self) {
