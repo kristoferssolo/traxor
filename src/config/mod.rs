@@ -1,6 +1,7 @@
 pub mod color;
 pub mod keybinds;
 pub mod log;
+pub mod tabs;
 
 use color::ColorConfig;
 use color_eyre::{
@@ -11,10 +12,12 @@ use filecaster::FromFile;
 use keybinds::KeybindsConfig;
 use log::LogConfig;
 use merge::Merge;
+use serde::Deserialize;
 use std::{
     fs::read_to_string,
     path::{Path, PathBuf},
 };
+use tabs::TabConfig;
 use tracing::{debug, info, warn};
 
 const DEFAULT_CONFIG_STR: &str = include_str!("../../config/default.toml");
@@ -24,6 +27,15 @@ pub struct Config {
     pub keybinds: KeybindsConfig,
     pub colors: ColorConfig,
     pub log: LogConfig,
+    #[from_file(skip)]
+    pub tabs: Vec<TabConfig>,
+}
+
+/// Helper struct for parsing tabs from TOML.
+#[derive(Debug, Deserialize, Default)]
+struct TabsFile {
+    #[serde(default)]
+    tabs: Vec<TabConfig>,
 }
 
 impl Config {
@@ -50,12 +62,34 @@ impl Config {
             ("user-specific", get_config_path()?),
         ];
 
+        let mut tabs: Option<Vec<TabConfig>> = None;
+
         for (label, path) in &candidates {
             merge_config(&mut cfg_file, label, path)?;
+            // Load tabs separately (last one wins)
+            if let Some(t) = load_tabs(path) {
+                tabs = Some(t);
+            }
         }
 
+        let mut config: Self = cfg_file.into();
+        config.tabs = tabs.unwrap_or_else(tabs::default_tabs);
+
         debug!("Configuration loaded successfully.");
-        Ok(cfg_file.into())
+        Ok(config)
+    }
+}
+
+fn load_tabs(path: &Path) -> Option<Vec<TabConfig>> {
+    if !path.exists() {
+        return None;
+    }
+    let content = read_to_string(path).ok()?;
+    let tabs_file: TabsFile = toml::from_str(&content).ok()?;
+    if tabs_file.tabs.is_empty() {
+        None
+    } else {
+        Some(tabs_file.tabs)
     }
 }
 
