@@ -26,3 +26,24 @@ error_foreground = "red"
 traxor = "info"
 ratatui = "warn"
 transmission_rpc = "warn"
+
+# Custom tabs configuration
+# Each [[tabs]] entry defines a tab with a name and list of columns.
+# Available columns:
+#   name, status, size, downloaded, uploaded, ratio, progress, eta,
+#   peers, seeds, leeches, downspeed, upspeed, path, added, done,
+#   left, queue, error, labels, tracker, hash, private, stalled,
+#   finished, files, activity
+#
+# Example:
+# [[tabs]]
+# name = "All"
+# columns = ["status", "ratio", "size", "uploaded", "path", "name"]
+#
+# [[tabs]]
+# name = "Active"
+# columns = ["progress", "downspeed", "upspeed", "eta", "name"]
+#
+# [[tabs]]
+# name = "Downloading"
+# columns = ["size", "left", "progress", "downspeed", "eta", "name"]

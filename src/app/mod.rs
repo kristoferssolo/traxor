@@ -47,9 +47,10 @@ impl App {
     ///
     /// TODO: add error types
     pub fn new(config: Config) -> Result<Self> {
+        let tabs = config.tabs.iter().cloned().map(Tab::new).collect();
         Ok(Self {
             running: true,
-            tabs: vec![Tab::All, Tab::Active, Tab::Downloading],
+            tabs,
             index: 0,
             state: TableState::default(),
             torrents: Torrents::new()?,

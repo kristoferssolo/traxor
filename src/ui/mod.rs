@@ -4,7 +4,7 @@ mod status;
 mod table;
 
 use crate::{
-    app::{App, InputMode, Tab},
+    app::{App, InputMode},
     config::color::ColorConfig,
 };
 use help::render_help;
@@ -55,7 +55,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     let selected = &app.torrents.selected;
     let colors = &app.config.colors;
 
-    let table = build_table(torrents, selected, colors, Tab::from(app.index()).fields());
+    let table = build_table(torrents, selected, colors, app.tabs()[app.index()].fields());
 
     frame.render_stateful_widget(table, chunks[1], &mut app.state);
 

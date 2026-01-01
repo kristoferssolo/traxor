@@ -1,79 +1,37 @@
+use crate::config::tabs::TabConfig;
 use std::fmt::Display;
 use transmission_rpc::types::TorrentGetField;
 
-/// Available tabs.
-#[derive(Debug, Clone, Default)]
-pub enum Tab {
-    #[default]
-    All,
-    Active,
-    Downloading,
+/// A tab with name and column configuration.
+#[derive(Debug, Clone)]
+pub struct Tab {
+    config: TabConfig,
+    fields: Vec<TorrentGetField>,
 }
 
 impl Tab {
-    /// Returns slice [`TorrentGetField`] apropriate variants.
+    /// Create a new tab from config.
     #[must_use]
-    pub const fn fields(&self) -> &[TorrentGetField] {
-        match self {
-            Self::All => &[
-                TorrentGetField::Status,
-                TorrentGetField::PeersGettingFromUs,
-                TorrentGetField::UploadRatio,
-                TorrentGetField::TotalSize,
-                TorrentGetField::UploadedEver,
-                TorrentGetField::DownloadDir,
-                TorrentGetField::Name,
-            ],
-            Self::Active => &[
-                TorrentGetField::TotalSize,
-                TorrentGetField::UploadedEver,
-                TorrentGetField::UploadRatio,
-                TorrentGetField::PeersGettingFromUs,
-                TorrentGetField::PeersSendingToUs,
-                TorrentGetField::Status,
-                TorrentGetField::Eta,
-                TorrentGetField::PercentDone,
-                TorrentGetField::RateDownload,
-                TorrentGetField::RateUpload,
-                TorrentGetField::Name,
-            ],
-            Self::Downloading => &[
-                TorrentGetField::TotalSize,
-                TorrentGetField::LeftUntilDone,
-                TorrentGetField::PercentDone,
-                TorrentGetField::RateDownload,
-                TorrentGetField::Eta,
-                TorrentGetField::DownloadDir,
-                TorrentGetField::Name,
-            ],
-        }
+    pub fn new(config: TabConfig) -> Self {
+        let fields = config.fields();
+        Self { config, fields }
     }
-}
 
-impl From<usize> for Tab {
-    fn from(value: usize) -> Self {
-        #[allow(clippy::match_same_arms)]
-        match value {
-            0 => Self::All,
-            1 => Self::Active,
-            2 => Self::Downloading,
-            _ => Self::All,
-        }
+    /// Returns the column fields for this tab.
+    #[must_use]
+    pub fn fields(&self) -> &[TorrentGetField] {
+        &self.fields
     }
-}
 
-impl AsRef<str> for Tab {
-    fn as_ref(&self) -> &str {
-        match self {
-            Self::All => "All",
-            Self::Active => "Active",
-            Self::Downloading => "Downloading",
-        }
+    /// Returns the tab name.
+    #[must_use]
+    pub fn name(&self) -> &str {
+        &self.config.name
     }
 }
 
 impl Display for Tab {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_ref())
+        write!(f, "{}", self.config.name)
     }
 }
