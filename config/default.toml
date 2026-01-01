@@ -18,6 +18,8 @@ next_tab = "l"
 switch_tab_1 = "1"
 switch_tab_2 = "2"
 switch_tab_3 = "3"
+switch_tab_4 = "4"
+switch_tab_5 = "5"
 
 # Torrent actions
 toggle_torrent = "enter"
@@ -70,24 +72,20 @@ transmission_rpc = "warn"
 
 [[tabs]]
 name = "All"
-columns = ["status", "leeches", "ratio", "size", "uploaded", "path", "name"]
-
-[[tabs]]
-name = "Active"
-columns = [
-  "size",
-  "uploaded",
-  "ratio",
-  "leeches",
-  "seeds",
-  "status",
-  "eta",
-  "progress",
-  "downspeed",
-  "upspeed",
-  "name",
-]
+columns = ["status", "progress", "size", "ratio", "seeds", "leeches", "added", "name"]
 
 [[tabs]]
 name = "Downloading"
-columns = ["size", "left", "progress", "downspeed", "eta", "path", "name"]
+columns = ["progress", "size", "left", "downspeed", "eta", "seeds", "name"]
+
+[[tabs]]
+name = "Seeding"
+columns = ["ratio", "uploaded", "upspeed", "leeches", "size", "added", "name"]
+
+[[tabs]]
+name = "Active"
+columns = ["status", "progress", "downspeed", "upspeed", "eta", "seeds", "leeches", "name"]
+
+[[tabs]]
+name = "Queued"
+columns = ["status", "queue", "size", "progress", "added", "name"]
