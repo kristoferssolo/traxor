@@ -34,6 +34,8 @@ pub enum Action {
     Select,
     #[display("Submit")]
     Submit,
+    #[display("Confirm Yes")]
+    ConfirmYes,
     #[display("Cancel")]
     Cancel,
 }

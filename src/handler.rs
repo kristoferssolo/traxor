@@ -6,6 +6,15 @@ use tracing::{debug, info};
 
 #[tracing::instrument(name = "Handling input", skip(app))]
 async fn handle_input(key_event: KeyEvent, app: &mut App) -> Result<Option<Action>> {
+    // Handle confirmation dialogs separately
+    if matches!(app.input_mode, InputMode::ConfirmDelete(_)) {
+        return match key_event.code {
+            KeyCode::Char('y' | 'Y') => Ok(Some(Action::ConfirmYes)),
+            KeyCode::Char('n' | 'N') | KeyCode::Esc => Ok(Some(Action::Cancel)),
+            _ => Ok(None),
+        };
+    }
+
     match key_event.code {
         KeyCode::Enter => Ok(Some(Action::Submit)),
         KeyCode::Tab => {
@@ -84,13 +93,14 @@ pub async fn update(app: &mut App, action: Action) -> Result<()> {
         Action::StartAll => app.torrents.start_all().await?,
         Action::Move => app.prepare_move_action(),
         Action::Rename => app.prepare_rename_action(),
-        Action::Delete(x) => app.delete(x).await?,
+        Action::Delete(delete_local_data) => app.prepare_delete(delete_local_data),
         Action::Select => app.select(),
         Action::Submit => match app.input_mode {
             InputMode::Move => app.move_torrent().await?,
             InputMode::Rename => app.rename_torrent().await?,
-            InputMode::None => {}
+            InputMode::None | InputMode::ConfirmDelete(_) => {}
         },
+        Action::ConfirmYes => app.confirm_delete().await?,
         Action::Cancel => {
             app.input_handler.clear();
             app.input_mode = InputMode::None;
