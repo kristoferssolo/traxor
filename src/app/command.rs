@@ -107,6 +107,22 @@ impl Torrents {
         Ok(())
     }
 
+    /// Move torrents to a new location.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the RPC call fails.
+    pub async fn move_torrents(&mut self, ids: Selected, location: &str) -> Result<()> {
+        let ids: Vec<Id> = ids.into();
+        if ids.is_empty() {
+            return Ok(());
+        }
+        self.client
+            .torrent_set_location(ids, location.to_owned(), Some(true))
+            .await?;
+        Ok(())
+    }
+
     /// Rename a torrent.
     ///
     /// # Errors
