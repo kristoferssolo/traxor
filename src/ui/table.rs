@@ -6,7 +6,7 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Row, Table},
 };
 use std::collections::HashSet;
-use transmission_rpc::types::{Torrent, TorrentGetField};
+use transmission_rpc::types::{Torrent, TorrentGetField, TorrentStatus};
 
 pub fn build_table<'a>(
     torrents: &'a [Torrent],
@@ -20,7 +20,7 @@ pub fn build_table<'a>(
 
     let rows = torrents
         .iter()
-        .map(|t| make_row(t, fields, selected, row_style))
+        .map(|t| make_row(t, fields, selected, row_style, colors))
         .collect::<Vec<_>>();
 
     let widths = fields
@@ -65,14 +65,33 @@ fn make_row<'a>(
     fields: &[TorrentGetField],
     selected: &HashSet<i64>,
     highlight: Style,
+    colors: &ColorConfig,
 ) -> Row<'a> {
+    let status_style = status_style(torrent.status, colors);
+
     let cells = fields.iter().map(|&field| {
         if let Some(id) = torrent.id
             && selected.contains(&id)
         {
             return field.value(torrent).set_style(highlight);
         }
-        field.value(torrent).into()
+        field.value(torrent).set_style(status_style)
     });
     Row::new(cells)
+}
+
+fn status_style(status: Option<TorrentStatus>, colors: &ColorConfig) -> Style {
+    let color = match status {
+        Some(TorrentStatus::Downloading) => &colors.status_downloading,
+        Some(TorrentStatus::Seeding) => &colors.status_seeding,
+        Some(TorrentStatus::Stopped) => &colors.status_stopped,
+        Some(TorrentStatus::Verifying) => &colors.status_verifying,
+        Some(
+            TorrentStatus::QueuedToDownload
+            | TorrentStatus::QueuedToSeed
+            | TorrentStatus::QueuedToVerify,
+        ) => &colors.status_queued,
+        None => &colors.info_foreground,
+    };
+    Style::default().fg(to_color(color))
 }
