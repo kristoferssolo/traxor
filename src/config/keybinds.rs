@@ -32,4 +32,6 @@ pub struct KeybindsConfig {
     pub toggle_help: String,
     #[from_file(default = "m")]
     pub move_torrent: String,
+    #[from_file(default = "r")]
+    pub rename_torrent: String,
 }

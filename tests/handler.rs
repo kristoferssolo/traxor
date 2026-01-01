@@ -1,5 +1,5 @@
 use crossterm::event::{KeyCode, KeyEvent};
-use traxor::{app::App, app::action::Action, config::Config, handler::get_action};
+use traxor::{app::App, app::InputMode, app::action::Action, config::Config, handler::get_action};
 
 #[tokio::test]
 async fn test_get_action_quit() {
@@ -137,7 +137,7 @@ async fn test_get_action_toggle_help() {
 async fn test_get_action_input_mode() {
     let config = Config::load().unwrap();
     let mut app = App::new(config).unwrap();
-    app.input_mode = true;
+    app.input_mode = InputMode::Move;
     assert_eq!(
         get_action(KeyEvent::from(KeyCode::Enter), &mut app)
             .await

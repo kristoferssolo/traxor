@@ -1,4 +1,4 @@
-use crate::app::App;
+use crate::app::{App, InputMode};
 use ratatui::{
     prelude::*,
     widgets::{Block, Borders, Clear, Paragraph},
@@ -9,7 +9,13 @@ pub fn render(f: &mut Frame, app: &App) {
     let size = f.area();
     let input_area = Rect::new(size.width / 4, size.height / 2 - 1, size.width / 2, 3);
 
-    let block = Block::default().title("Move to").borders(Borders::ALL);
+    let title = match app.input_mode {
+        InputMode::Move => "Move to",
+        InputMode::Rename => "Rename",
+        InputMode::None => return,
+    };
+
+    let block = Block::default().title(title).borders(Borders::ALL);
     f.render_widget(Clear, input_area);
     f.render_widget(block, input_area);
 

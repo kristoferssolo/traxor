@@ -3,7 +3,7 @@ mod input;
 mod table;
 
 use crate::{
-    app::{App, Tab},
+    app::{App, InputMode, Tab},
     config::color::ColorConfig,
 };
 use help::render_help;
@@ -58,7 +58,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         render_help(frame, app);
     }
 
-    if app.input_mode {
+    if app.input_mode != InputMode::None {
         input::render(frame, app);
     }
 }

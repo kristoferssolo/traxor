@@ -75,7 +75,6 @@ impl Torrents {
             .torrents;
         Ok(self)
     }
-
 }
 
 impl Debug for Torrents {

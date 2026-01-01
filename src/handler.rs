@@ -1,4 +1,4 @@
-use crate::app::{App, action::Action};
+use crate::app::{App, InputMode, action::Action};
 use crate::error::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use thiserror::Error;
@@ -29,10 +29,10 @@ async fn handle_input(key_event: KeyEvent, app: &mut App) -> Result<Option<Actio
 ///
 /// # Errors
 ///
-/// TODO: add error types
+/// Returns an error if input handling fails.
 #[tracing::instrument(name = "Getting action", skip(app))]
 pub async fn get_action(key_event: KeyEvent, app: &mut App) -> Result<Option<Action>> {
-    if app.input_mode {
+    if app.input_mode != InputMode::None {
         return handle_input(key_event, app).await;
     }
 
@@ -56,6 +56,7 @@ pub async fn get_action(key_event: KeyEvent, app: &mut App) -> Result<Option<Act
         (Action::Select, &keybinds.select),
         (Action::ToggleHelp, &keybinds.toggle_help),
         (Action::Move, &keybinds.move_torrent),
+        (Action::Rename, &keybinds.rename_torrent),
     ]
     .into_iter()
     .find_map(|(action, keybind)| matches_keybind(&key_event, keybind).then_some(action)))
@@ -65,7 +66,7 @@ pub async fn get_action(key_event: KeyEvent, app: &mut App) -> Result<Option<Act
 ///
 /// # Errors
 ///
-/// TODO: add error types
+/// Returns an error if the action fails.
 #[tracing::instrument(name = "Update", skip(app))]
 pub async fn update(app: &mut App, action: Action) -> Result<()> {
     info!("updating app with action: {}", action);
@@ -82,13 +83,17 @@ pub async fn update(app: &mut App, action: Action) -> Result<()> {
         Action::PauseAll => app.torrents.stop_all().await?,
         Action::StartAll => app.torrents.start_all().await?,
         Action::Move => app.prepare_move_action(),
+        Action::Rename => app.prepare_rename_action(),
         Action::Delete(x) => app.delete(x).await?,
-        Action::Rename => unimplemented!(),
         Action::Select => app.select(),
-        Action::Submit => app.move_torrent().await?,
+        Action::Submit => match app.input_mode {
+            InputMode::Move => app.move_torrent().await?,
+            InputMode::Rename => app.rename_torrent().await?,
+            InputMode::None => {}
+        },
         Action::Cancel => {
             app.input_handler.clear();
-            app.input_mode = false;
+            app.input_mode = InputMode::None;
         }
     }
     Ok(())
@@ -162,11 +167,10 @@ fn parse_keybind(key_str: &str) -> std::result::Result<KeyEvent, ParseKeybindErr
 
             // function keys F1...F<N>
             f if f.starts_with('f') => {
-                key_code = Some(KeyCode::F(
-                    f[1..]
-                        .parse()
-                        .map_err(|_| ParseKeybindError::UnknownPart(part.to_owned()))?,
-                ));
+                key_code =
+                    Some(KeyCode::F(f[1..].parse().map_err(|_| {
+                        ParseKeybindError::UnknownPart(part.to_owned())
+                    })?));
             }
 
             // single-character fallback

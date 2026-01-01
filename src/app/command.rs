@@ -23,7 +23,9 @@ impl Torrents {
 
         if !to_start.is_empty() {
             let ids: Vec<_> = to_start.into_iter().map(|(id, _)| id).collect();
-            self.client.torrent_action(TorrentAction::Start, ids).await?;
+            self.client
+                .torrent_action(TorrentAction::Start, ids)
+                .await?;
         }
         if !to_stop.is_empty() {
             let ids: Vec<_> = to_stop.into_iter().map(|(id, _)| id).collect();
@@ -133,7 +135,11 @@ impl Torrents {
             return Ok(());
         };
         self.client
-            .torrent_rename_path(vec![id], old_name.clone(), name.to_string_lossy().into_owned())
+            .torrent_rename_path(
+                vec![id],
+                old_name.clone(),
+                name.to_string_lossy().into_owned(),
+            )
             .await?;
         Ok(())
     }

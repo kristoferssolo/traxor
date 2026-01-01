@@ -14,6 +14,15 @@ use std::path::PathBuf;
 use types::Selected;
 pub use {tab::Tab, torrent::Torrents};
 
+/// Input mode type for the application.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum InputMode {
+    #[default]
+    None,
+    Move,
+    Rename,
+}
+
 /// Main Application.
 #[derive(Debug)]
 pub struct App {
@@ -25,7 +34,7 @@ pub struct App {
     pub show_help: bool,
     pub config: Config,
     pub input_handler: InputHandler,
-    pub input_mode: bool,
+    pub input_mode: InputMode,
 }
 
 impl App {
@@ -41,11 +50,11 @@ impl App {
             tabs: vec![Tab::All, Tab::Active, Tab::Downloading],
             index: 0,
             state: TableState::default(),
-            torrents: Torrents::new()?, // Handle the Result here
+            torrents: Torrents::new()?,
             show_help: false,
             config,
             input_handler: InputHandler::new(),
-            input_mode: false,
+            input_mode: InputMode::None,
         })
     }
 
@@ -178,18 +187,49 @@ impl App {
         self.torrents
             .move_torrents(ids, &self.input_handler.text)
             .await?;
-        self.input_handler.clear();
-        self.input_mode = false;
-        self.close_help();
+        self.clear_input();
         Ok(())
     }
 
+    /// Prepare move action by pre-filling current download directory.
     pub fn prepare_move_action(&mut self) {
         if let Some(download_dir) = self.get_current_download_dir() {
             self.input_handler
                 .set_text(download_dir.to_string_lossy().into_owned());
         }
-        self.input_mode = true;
+        self.input_mode = InputMode::Move;
+    }
+
+    /// Rename the highlighted torrent.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the RPC call fails.
+    pub async fn rename_torrent(&mut self) -> Result<()> {
+        let Some(torrent) = self.get_current_torrent() else {
+            self.clear_input();
+            return Ok(());
+        };
+        self.torrents
+            .rename(&torrent, std::path::Path::new(&self.input_handler.text))
+            .await?;
+        self.clear_input();
+        Ok(())
+    }
+
+    /// Prepare rename action by pre-filling current torrent name.
+    pub fn prepare_rename_action(&mut self) {
+        if let Some(name) = self.get_current_torrent_name() {
+            self.input_handler.set_text(name);
+        }
+        self.input_mode = InputMode::Rename;
+    }
+
+    /// Clear input and reset input mode.
+    fn clear_input(&mut self) {
+        self.input_handler.clear();
+        self.input_mode = InputMode::None;
+        self.close_help();
     }
 
     pub fn select(&mut self) {
@@ -222,6 +262,16 @@ impl App {
     }
 
     fn get_current_download_dir(&self) -> Option<PathBuf> {
+        self.get_current_torrent()
+            .and_then(|t| t.download_dir)
+            .map(PathBuf::from)
+    }
+
+    fn get_current_torrent_name(&self) -> Option<String> {
+        self.get_current_torrent().and_then(|t| t.name)
+    }
+
+    fn get_current_torrent(&self) -> Option<transmission_rpc::types::Torrent> {
         let Selected::Current(current_id) = self.selected(true) else {
             return None;
         };
@@ -229,7 +279,6 @@ impl App {
             .torrents
             .iter()
             .find(|t| t.id == Some(current_id))
-            .and_then(|t| t.download_dir.as_deref())
-            .map(PathBuf::from)
+            .cloned()
     }
 }
