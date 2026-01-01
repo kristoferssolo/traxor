@@ -8,7 +8,7 @@ use tracing::warn;
 
 pub fn render(f: &mut Frame, app: &App) {
     match app.input_mode {
-        InputMode::Move | InputMode::Rename => render_text_input(f, app),
+        InputMode::Move | InputMode::Rename | InputMode::Filter => render_text_input(f, app),
         InputMode::ConfirmDelete(delete_local_data) => render_confirm_delete(f, delete_local_data),
         InputMode::None => {}
     }
@@ -21,6 +21,7 @@ fn render_text_input(f: &mut Frame, app: &App) {
     let title = match app.input_mode {
         InputMode::Move => "Move to",
         InputMode::Rename => "Rename",
+        InputMode::Filter => "Filter",
         _ => return,
     };
 

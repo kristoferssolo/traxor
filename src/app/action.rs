@@ -30,6 +30,10 @@ pub enum Action {
     Delete(bool),
     #[display("Rename Torrent")]
     Rename,
+    #[display("Filter")]
+    Filter,
+    #[display("Clear Filter")]
+    ClearFilter,
     #[display("Select")]
     Select,
     #[display("Submit")]

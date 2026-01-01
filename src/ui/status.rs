@@ -23,24 +23,32 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
     let uploaded = FileSize::new(total_uploaded.unsigned_abs());
 
     let total = app.torrents.len();
+    let filtered = app.filtered_torrents().len();
     let selected_count = app.torrents.selected.len();
 
+    let active_filter = app.active_filter();
     let count_info = if selected_count > 0 {
         format!("{selected_count}/{total}")
+    } else if !active_filter.is_empty() {
+        format!("{filtered}/{total}")
     } else {
         format!("{total}")
     };
 
     let mode_text = match app.input_mode {
-        InputMode::Move => Some("MOVE"),
-        InputMode::Rename => Some("RENAME"),
-        InputMode::ConfirmDelete(_) => Some("DELETE"),
+        InputMode::Move => Some("MOVE".to_string()),
+        InputMode::Rename => Some("RENAME".to_string()),
+        InputMode::Filter => Some(format!("Filter: {active_filter}")),
+        InputMode::ConfirmDelete(_) => Some("DELETE".to_string()),
+        InputMode::None if !active_filter.is_empty() => Some(format!("Filter: {active_filter}")),
         InputMode::None => None,
     };
 
     let keybinds = match app.input_mode {
+        InputMode::None if !app.filter_text.is_empty() => "Esc Clear filter │ ? Help",
         InputMode::None => "? Help",
         InputMode::Move | InputMode::Rename => "Enter Submit │ Esc Cancel",
+        InputMode::Filter => "Enter Confirm │ Esc Cancel",
         InputMode::ConfirmDelete(_) => "y Confirm │ n Cancel",
     };
 
@@ -65,7 +73,7 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded);
 
-    if let Some(mode) = mode_text {
+    if let Some(ref mode) = mode_text {
         block = block
             .title(format!(" {mode} "))
             .title_style(Style::default().fg(Color::Yellow).bold());
