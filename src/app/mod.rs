@@ -124,11 +124,13 @@ impl App {
         self.index = self.index.checked_sub(1).unwrap_or(self.tabs.len() - 1);
     }
 
-    /// Switches to the tab whose index is `idx`.
+    /// Switches to the tab whose index is `idx` if it exists.
     #[inline]
-    pub const fn switch_tab(&mut self, idx: usize) {
-        self.close_help();
-        self.index = idx;
+    pub fn switch_tab(&mut self, idx: usize) {
+        if idx < self.tabs.len() {
+            self.close_help();
+            self.index = idx;
+        }
     }
 
     /// Returns current active [`Tab`] number
