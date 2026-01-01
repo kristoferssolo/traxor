@@ -27,14 +27,16 @@ impl<B: Backend> Tui<B> {
     pub const fn new(terminal: Terminal<B>, events: EventHandler) -> Self {
         Self { terminal, events }
     }
+}
 
+impl<B: Backend<Error: Send + Sync + 'static>> Tui<B> {
     /// Initializes the terminal interface.
     ///
     /// It enables the raw mode and sets terminal properties.
     ///
     /// # Errors
     ///
-    /// TODO: add error types
+    /// Returns an error if terminal initialization fails.
     pub fn init(&mut self) -> Result<()> {
         terminal::enable_raw_mode()?;
         crossterm::execute!(io::stderr(), EnterAlternateScreen, EnableMouseCapture)?;
@@ -63,7 +65,7 @@ impl<B: Backend> Tui<B> {
     ///
     /// # Errors
     ///
-    /// TODO: add error types
+    /// Returns an error if drawing fails.
     pub fn draw(&mut self, app: &mut App) -> Result<()> {
         self.terminal.draw(|frame| ui::render(app, frame))?;
         Ok(())
@@ -76,7 +78,7 @@ impl<B: Backend> Tui<B> {
     ///
     /// # Errors
     ///
-    /// TODO: add error types
+    /// Returns an error if terminal reset fails.
     fn reset() -> Result<()> {
         terminal::disable_raw_mode()?;
         crossterm::execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture)?;
@@ -89,7 +91,7 @@ impl<B: Backend> Tui<B> {
     ///
     /// # Errors
     ///
-    /// TODO: add error types
+    /// Returns an error if terminal cleanup fails.
     pub fn exit(&mut self) -> Result<()> {
         Self::reset()?;
         self.terminal.show_cursor()?;
