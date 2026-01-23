@@ -12,6 +12,12 @@ A terminal UI for managing Transmission torrents.
 - Real-time transfer statistics
 - Fully configurable keybinds and colors
 
+## Screenshots
+
+| All torrents | Seeding torrents |
+|:--:|:--:|
+| ![All torrents](assets/all.png) | ![Seeding torrents](assets/seeding.png) |
+
 ## Installation
 
 ```bash
