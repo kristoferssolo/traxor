@@ -6,7 +6,7 @@ A terminal UI for managing Transmission torrents.
 
 - Vim-style navigation (`hjkl`)
 - Live fuzzy search/filter
-- Custom tabs with configurable columns
+- Custom tab layouts with configurable columns
 - Multi-select for batch operations
 - Move, rename, delete torrents
 - Real-time transfer statistics
@@ -66,6 +66,8 @@ Configuration file: `~/.config/traxor/config.toml`
 Only specify values you want to override. See [config/default.toml](config/default.toml) for all options.
 
 ### Custom Tabs
+
+Tabs control which columns are shown. They do not filter torrents by status.
 
 ```toml
 [[tabs]]
