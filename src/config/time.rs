@@ -20,7 +20,22 @@ impl Default for TimeConfig {
 impl TimeConfig {
     #[must_use]
     pub fn use_compact_eta(&self) -> bool {
-        !matches!(self.eta_format.to_lowercase().as_str(), "seconds")
+        matches!(self.eta_format.to_lowercase().as_str(), "compact")
+    }
+
+    /// Validate configured time display settings.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when `eta_format` is not one of the supported values.
+    pub fn validate(&self) -> Result<(), String> {
+        match self.eta_format.to_lowercase().as_str() {
+            "compact" | "seconds" => Ok(()),
+            _ => Err(format!(
+                "invalid time.eta_format {:?}; expected \"compact\" or \"seconds\"",
+                self.eta_format
+            )),
+        }
     }
 }
 
