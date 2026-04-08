@@ -25,7 +25,7 @@ pub fn build_table(
 
     let widths = fields
         .iter()
-        .map(|&f| Constraint::Length(f.width()))
+        .map(|&field| column_width(field))
         .collect::<Vec<_>>();
 
     let header = Row::new(fields.iter().map(|&field| field.title()))
@@ -45,6 +45,17 @@ fn default_block() -> Block<'static> {
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(Color::DarkGray))
+}
+
+fn column_width(field: TorrentGetField) -> Constraint {
+    match field {
+        // Keep the torrent name flexible so wide terminals show more of the thing users
+        // actually scan, while narrower terminals can still render compact metadata columns.
+        TorrentGetField::Name => Constraint::Fill(1),
+        TorrentGetField::DownloadDir | TorrentGetField::TrackerList => Constraint::Min(20),
+        TorrentGetField::HashString => Constraint::Min(16),
+        _ => Constraint::Length(field.width()),
+    }
 }
 
 fn select_style(cfg: &ColorConfig) -> Style {
@@ -100,4 +111,41 @@ fn status_style(status: Option<TorrentStatus>, colors: &ColorConfig) -> Style {
         None => &colors.info_foreground,
     };
     Style::default().fg(to_color(color))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::column_width;
+    use crate::app::utils::Wrapper;
+    use ratatui::layout::Constraint;
+    use transmission_rpc::types::TorrentGetField;
+
+    #[test]
+    fn name_column_uses_fill() {
+        assert_eq!(column_width(TorrentGetField::Name), Constraint::Fill(1));
+    }
+
+    #[test]
+    fn long_text_columns_use_minimum_widths() {
+        assert_eq!(
+            column_width(TorrentGetField::DownloadDir),
+            Constraint::Min(20)
+        );
+        assert_eq!(
+            column_width(TorrentGetField::TrackerList),
+            Constraint::Min(20)
+        );
+        assert_eq!(
+            column_width(TorrentGetField::HashString),
+            Constraint::Min(16)
+        );
+    }
+
+    #[test]
+    fn compact_columns_remain_fixed_width() {
+        assert_eq!(
+            column_width(TorrentGetField::Status),
+            Constraint::Length(TorrentGetField::Status.width())
+        );
+    }
 }
