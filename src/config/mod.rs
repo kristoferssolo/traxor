@@ -170,6 +170,8 @@ mod tests {
             [colors]
             highlight_background = "#3a3a5a"
             highlight_foreground = "white"
+            selected_background = "#245d5a"
+            selected_foreground = "white"
             header_foreground = "yellow"
             info_foreground = "blue"
             status_downloading = "cyan"
@@ -236,6 +238,8 @@ mod tests {
             [colors]
             highlight_background = "#3a3a5a"
             highlight_foreground = "white"
+            selected_background = "#245d5a"
+            selected_foreground = "white"
             header_foreground = "yellow"
             info_foreground = "blue"
             status_downloading = "cyan"
@@ -303,6 +307,8 @@ mod tests {
             [colors]
             highlight_background = "#3a3a5a"
             highlight_foreground = "white"
+            selected_background = "#245d5a"
+            selected_foreground = "white"
             header_foreground = "yellow"
             info_foreground = "blue"
             status_downloading = "cyan"

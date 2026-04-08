@@ -63,8 +63,8 @@ fn column_width(field: TorrentGetField) -> Constraint {
 }
 
 fn select_style(cfg: &ColorConfig) -> Style {
-    let fg = to_color(&cfg.highlight_foreground);
-    let bg = to_color(&cfg.highlight_background);
+    let fg = to_color(&cfg.selected_foreground);
+    let bg = to_color(&cfg.selected_background);
     Style::default().fg(fg).bg(bg).add_modifier(Modifier::BOLD)
 }
 
@@ -91,15 +91,18 @@ fn make_row(
 ) -> Row<'static> {
     let status_style = status_style(torrent.status, colors);
 
-    let cells = fields.iter().map(|&field| {
-        if let Some(id) = torrent.id
-            && selected.contains(&id)
-        {
-            return field.value(torrent, time).set_style(highlight);
-        }
-        field.value(torrent, time).set_style(status_style)
-    });
-    Row::new(cells)
+    let cells = fields
+        .iter()
+        .map(|&field| field.value(torrent, time).set_style(status_style));
+    let row = Row::new(cells);
+
+    if let Some(id) = torrent.id
+        && selected.contains(&id)
+    {
+        return row.style(highlight);
+    }
+
+    row
 }
 
 fn status_style(status: Option<TorrentStatus>, colors: &ColorConfig) -> Style {
