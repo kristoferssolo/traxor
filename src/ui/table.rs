@@ -1,5 +1,8 @@
 use super::to_color;
-use crate::{app::utils::Wrapper, config::color::ColorConfig};
+use crate::{
+    app::utils::Wrapper,
+    config::{color::ColorConfig, time::TimeConfig},
+};
 use ratatui::{
     layout::Constraint,
     style::{Color, Modifier, Style, Styled},
@@ -12,6 +15,7 @@ pub fn build_table(
     torrents: &[&Torrent],
     selected: &HashSet<i64>,
     colors: &ColorConfig,
+    time: &TimeConfig,
     fields: &[TorrentGetField],
 ) -> Table<'static> {
     let select_style = select_style(colors);
@@ -20,7 +24,7 @@ pub fn build_table(
 
     let rows = torrents
         .iter()
-        .map(|t| make_row(t, fields, selected, select_style, colors))
+        .map(|t| make_row(t, fields, selected, select_style, colors, time))
         .collect::<Vec<_>>();
 
     let widths = fields
@@ -83,6 +87,7 @@ fn make_row(
     selected: &HashSet<i64>,
     highlight: Style,
     colors: &ColorConfig,
+    time: &TimeConfig,
 ) -> Row<'static> {
     let status_style = status_style(torrent.status, colors);
 
@@ -90,9 +95,9 @@ fn make_row(
         if let Some(id) = torrent.id
             && selected.contains(&id)
         {
-            return field.value(torrent).set_style(highlight);
+            return field.value(torrent, time).set_style(highlight);
         }
-        field.value(torrent).set_style(status_style)
+        field.value(torrent, time).set_style(status_style)
     });
     Row::new(cells)
 }

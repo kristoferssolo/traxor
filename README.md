@@ -88,6 +88,16 @@ status_seeding = "white"
 status_stopped = "dark_gray"
 ```
 
+### Time
+
+```toml
+[time]
+date_format = "%Y-%m-%d %H:%M"
+eta_format = "compact"
+```
+
+`date_format` uses chrono strftime syntax and is rendered in local time. `eta_format` accepts `compact` or `seconds`.
+
 ### Keybinds
 
 ```toml

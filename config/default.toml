@@ -69,6 +69,15 @@ ratatui = "warn"
 transmission_rpc = "warn"
 
 # ============================================================================
+#                                   TIME
+# ============================================================================
+[time]
+# Date/time columns are formatted in local time using chrono strftime syntax.
+date_format = "%Y-%m-%d %H:%M:%S"
+# ETA can be "compact" (1h 12m) or "seconds" (4320 s).
+eta_format = "compact"
+
+# ============================================================================
 #                                   TABS
 # ============================================================================
 # Define custom tabs with specific columns. Each tab needs a name and columns list.
