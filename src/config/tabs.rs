@@ -10,18 +10,68 @@ pub struct TabConfig {
 }
 
 impl TabConfig {
+    /// Validate configured tab columns and statuses.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the tab contains unknown column or status names.
+    pub fn validate(&self, idx: usize) -> Result<(), String> {
+        let invalid_columns = self
+            .columns
+            .iter()
+            .filter(|column| parse_field(column).is_none())
+            .cloned()
+            .collect::<Vec<_>>();
+        if !invalid_columns.is_empty() {
+            return Err(format!(
+                "invalid columns in tabs[{idx}] ({:?}): {}",
+                self.name,
+                invalid_columns.join(", ")
+            ));
+        }
+
+        let invalid_statuses = self
+            .statuses
+            .iter()
+            .filter(|status| parse_status(status).is_none())
+            .cloned()
+            .collect::<Vec<_>>();
+        if !invalid_statuses.is_empty() {
+            return Err(format!(
+                "invalid statuses in tabs[{idx}] ({:?}): {}",
+                self.name,
+                invalid_statuses.join(", ")
+            ));
+        }
+
+        Ok(())
+    }
+
     /// Parse column strings into `TorrentGetField` variants.
+    ///
+    /// # Panics
+    ///
+    /// Panics if called before [`Self::validate`] succeeds for this tab.
     #[must_use]
     pub fn fields(&self) -> Vec<TorrentGetField> {
-        self.columns.iter().filter_map(|s| parse_field(s)).collect()
+        self.columns
+            .iter()
+            .map(|column| parse_field(column).expect("tab columns should be validated before use"))
+            .collect()
     }
 
     /// Parse status strings into `TorrentStatus` variants.
+    ///
+    /// # Panics
+    ///
+    /// Panics if called before [`Self::validate`] succeeds for this tab.
     #[must_use]
     pub fn statuses(&self) -> Vec<TorrentStatus> {
         self.statuses
             .iter()
-            .filter_map(|status| parse_status(status))
+            .map(|status| {
+                parse_status(status).expect("tab statuses should be validated before use")
+            })
             .collect()
     }
 }
