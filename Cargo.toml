@@ -31,10 +31,6 @@ url = "2.5"
 [dev-dependencies]
 claims = "0.8"
 
-[package.metadata.binstall]
-pkg-url = "{ repo }/releases/download/v{ version }/{ name }-v{ version }-{ target }{ archive-suffix }"
-bin-dir = "{ bin }{ binary-ext }"
-
 [lints.clippy]
 pedantic = "warn"
 nursery = "warn"
