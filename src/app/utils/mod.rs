@@ -316,11 +316,15 @@ fn format_datetime(value: Option<DateTime<Utc>>, time: &TimeConfig) -> String {
 }
 
 fn format_duration(seconds: i64) -> String {
+    const SECONDS_PER_MINUTE: i64 = 60;
+    const SECONDS_PER_HOUR: i64 = 60 * SECONDS_PER_MINUTE;
+    const SECONDS_PER_DAY: i64 = 24 * SECONDS_PER_HOUR;
+
     let seconds = seconds.max(0);
-    let days = seconds / 86_400;
-    let hours = (seconds % 86_400) / 3_600;
-    let minutes = (seconds % 3_600) / 60;
-    let secs = seconds % 60;
+    let days = seconds / SECONDS_PER_DAY;
+    let hours = (seconds % SECONDS_PER_DAY) / SECONDS_PER_HOUR;
+    let minutes = (seconds % SECONDS_PER_HOUR) / SECONDS_PER_MINUTE;
+    let secs = seconds % SECONDS_PER_MINUTE;
 
     if days > 0 {
         return format!("{days}d {hours}h");
