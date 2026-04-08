@@ -12,6 +12,7 @@ use crate::{app::input::InputHandler, config::Config};
 use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
 use ratatui::widgets::TableState;
 use std::path::PathBuf;
+use transmission_rpc::types::Torrent;
 use types::Selected;
 pub use {tab::Tab, torrent::Torrents};
 
@@ -89,7 +90,7 @@ impl App {
     }
 
     pub fn next(&mut self) {
-        let len = self.torrents.len();
+        let len = self.filtered_torrents().len();
         if len == 0 {
             return;
         }
@@ -102,7 +103,7 @@ impl App {
     }
 
     pub fn previous(&mut self) {
-        let len = self.torrents.len();
+        let len = self.filtered_torrents().len();
         if len == 0 {
             return;
         }
@@ -258,35 +259,34 @@ impl App {
     /// Get the active filter text (live from input or saved).
     #[must_use]
     pub fn active_filter(&self) -> &str {
-        if self.input_mode == InputMode::Filter {
-            &self.input_handler.text
-        } else {
-            &self.filter_text
+        match self.input_mode {
+            InputMode::Filter => &self.input_handler.text,
+            _ => &self.filter_text,
         }
     }
 
     /// Get filtered torrents based on current filter text using fuzzy matching.
     #[must_use]
-    pub fn filtered_torrents(&self) -> Vec<&transmission_rpc::types::Torrent> {
+    pub fn filtered_torrents(&self) -> Vec<&Torrent> {
         let filter = self.active_filter();
         if filter.is_empty() {
-            self.torrents.torrents.iter().collect()
-        } else {
-            let matcher = SkimMatcherV2::default();
-            let mut scored: Vec<_> = self
-                .torrents
-                .torrents
-                .iter()
-                .filter_map(|t| {
-                    t.name
-                        .as_ref()
-                        .and_then(|name| matcher.fuzzy_match(name, filter).map(|score| (t, score)))
-                })
-                .collect();
-            // Sort by score descending (best matches first)
-            scored.sort_by(|a, b| b.1.cmp(&a.1));
-            scored.into_iter().map(|(t, _)| t).collect()
+            return self.torrents.torrents.iter().collect();
         }
+
+        let matcher = SkimMatcherV2::default();
+        let mut scored = self
+            .torrents
+            .torrents
+            .iter()
+            .filter_map(|t| {
+                t.name
+                    .as_ref()
+                    .and_then(|name| matcher.fuzzy_match(name, filter).map(|score| (t, score)))
+            })
+            .collect::<Vec<_>>();
+        // Sort by score descending (best matches first)
+        scored.sort_by(|a, b| b.1.cmp(&a.1));
+        scored.into_iter().map(|(t, _)| t).collect()
     }
 
     /// Prepare delete confirmation dialog.
@@ -321,7 +321,7 @@ impl App {
     }
 
     fn selected(&self, highlighted: bool) -> Selected {
-        let torrents = &self.torrents.torrents;
+        let torrents = self.filtered_torrents();
         if (self.torrents.selected.is_empty() || highlighted)
             && let Some(id) = self
                 .state
@@ -348,14 +348,9 @@ impl App {
         self.get_current_torrent().and_then(|t| t.name)
     }
 
-    fn get_current_torrent(&self) -> Option<transmission_rpc::types::Torrent> {
-        let Selected::Current(current_id) = self.selected(true) else {
-            return None;
-        };
-        self.torrents
-            .torrents
-            .iter()
-            .find(|t| t.id == Some(current_id))
-            .cloned()
+    fn get_current_torrent(&self) -> Option<Torrent> {
+        self.state
+            .selected()
+            .and_then(|idx| self.filtered_torrents().get(idx).copied().cloned())
     }
 }
