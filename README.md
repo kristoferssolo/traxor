@@ -67,15 +67,15 @@ Only specify values you want to override. See [config/default.toml](config/defau
 
 ### Custom Tabs
 
-Tabs control which columns are shown. They do not filter torrents by status.
-
 ```toml
 [[tabs]]
 name = "My Tab"
 columns = ["status", "progress", "name", "size"]
+statuses = ["Downloading", "QueuedToDownload"]
 ```
 
 Available columns: `name`, `status`, `size`, `downloaded`, `uploaded`, `ratio`, `progress`, `eta`, `peers`, `seeds`, `leeches`, `downspeed`, `upspeed`, `path`, `added`, `done`, `left`, `queue`, `error`, `labels`, `tracker`, `hash`, `private`, `stalled`, `finished`, `files`, `activity`
+Available statuses: `Stopped`, `QueuedToVerify`, `Verifying`, `QueuedToDownload`, `Downloading`, `QueuedToSeed`, `Seeding`
 
 ### Colors
 

@@ -26,13 +26,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_new() {
+    fn new() {
         let net_speed = NetSpeed::new(1024);
         assert_eq!(net_speed.0.as_raw(), 1024);
     }
 
     #[test]
-    fn test_display() {
+    fn display() {
         let net_speed = NetSpeed::new(1024);
         assert_eq!(net_speed.to_string(), "1.00 KB/s");
 

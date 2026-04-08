@@ -269,8 +269,14 @@ impl App {
     #[must_use]
     pub fn filtered_torrents(&self) -> Vec<&Torrent> {
         let filter = self.active_filter();
+        let tab = &self.tabs[self.index];
         if filter.is_empty() {
-            return self.torrents.torrents.iter().collect();
+            return self
+                .torrents
+                .torrents
+                .iter()
+                .filter(|torrent| tab.matches(torrent))
+                .collect();
         }
 
         let matcher = SkimMatcherV2::default();
@@ -278,6 +284,7 @@ impl App {
             .torrents
             .torrents
             .iter()
+            .filter(|torrent| tab.matches(torrent))
             .filter_map(|t| {
                 t.name
                     .as_ref()

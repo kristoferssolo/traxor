@@ -26,13 +26,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_new() {
+    fn new() {
         let file_size = FileSize::new(1024);
         assert_eq!(file_size.0.as_raw(), 1024);
     }
 
     #[test]
-    fn test_display() {
+    fn display() {
         let file_size = FileSize::new(1024);
         assert_eq!(file_size.to_string(), "1.00 KB");
 

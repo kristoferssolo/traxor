@@ -1,10 +1,12 @@
 use serde::{Deserialize, Serialize};
-use transmission_rpc::types::TorrentGetField;
+use transmission_rpc::types::{TorrentGetField, TorrentStatus};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct TabConfig {
     pub name: String,
     pub columns: Vec<String>,
+    #[serde(default)]
+    pub statuses: Vec<String>,
 }
 
 impl TabConfig {
@@ -12,6 +14,15 @@ impl TabConfig {
     #[must_use]
     pub fn fields(&self) -> Vec<TorrentGetField> {
         self.columns.iter().filter_map(|s| parse_field(s)).collect()
+    }
+
+    /// Parse status strings into `TorrentStatus` variants.
+    #[must_use]
+    pub fn statuses(&self) -> Vec<TorrentStatus> {
+        self.statuses
+            .iter()
+            .filter_map(|status| parse_status(status))
+            .collect()
     }
 }
 
@@ -45,6 +56,21 @@ fn parse_field(s: &str) -> Option<TorrentGetField> {
         "finished" | "isfinished" | "is_finished" => TorrentGetField::IsFinished,
         "files" | "filecount" | "file_count" => TorrentGetField::FileCount,
         "activity" | "activitydate" | "activity_date" => TorrentGetField::ActivityDate,
+        _ => return None,
+    })
+}
+
+fn parse_status(status: &str) -> Option<TorrentStatus> {
+    Some(match status.to_lowercase().as_str() {
+        "stopped" => TorrentStatus::Stopped,
+        "queuedtoverify" | "queued_to_verify" | "queued-verify" => TorrentStatus::QueuedToVerify,
+        "verifying" => TorrentStatus::Verifying,
+        "queuedtodownload" | "queued_to_download" | "queued-download" => {
+            TorrentStatus::QueuedToDownload
+        }
+        "downloading" => TorrentStatus::Downloading,
+        "queuedtoseed" | "queued_to_seed" | "queued-seed" => TorrentStatus::QueuedToSeed,
+        "seeding" => TorrentStatus::Seeding,
         _ => return None,
     })
 }
