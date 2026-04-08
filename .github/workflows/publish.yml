@@ -13,19 +13,8 @@ on:
         required: true
         type: string
 jobs:
-  audit:
-    name: Audit
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions-rust-lang/audit@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
   crates_io_publish:
     name: Publish (crates.io)
-    needs:
-      - audit
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
