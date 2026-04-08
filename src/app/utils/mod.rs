@@ -2,6 +2,8 @@ pub mod filesize;
 pub mod netspeed;
 pub mod unit;
 
+use crate::config::time::TimeConfig;
+use chrono::{DateTime, Local, Utc};
 use filesize::FileSize;
 use netspeed::NetSpeed;
 use std::fmt::Display;
@@ -14,7 +16,7 @@ pub trait Wrapper {
         String::new()
     }
 
-    fn value(&self, torrent: &Torrent) -> String {
+    fn value(&self, torrent: &Torrent, _: &TimeConfig) -> String {
         torrent.name.clone().unwrap_or_default()
     }
 
@@ -107,26 +109,26 @@ impl Wrapper for TorrentGetField {
         .into()
     }
 
-    fn value(&self, torrent: &Torrent) -> String {
+    fn value(&self, torrent: &Torrent, time: &TimeConfig) -> String {
         match self {
-            Self::ActivityDate => format_option(torrent.activity_date),
-            Self::AddedDate => format_option(torrent.added_date),
+            Self::ActivityDate => format_datetime(torrent.activity_date, time),
+            Self::AddedDate => format_datetime(torrent.added_date, time),
             Self::Availability => "N/A".into(),
             Self::BandwidthPriority => torrent.bandwidth_priority.format(),
             Self::Comment => torrent.comment.clone().unwrap_or_default(),
             Self::CorruptEver => FileSize::from(torrent.corrupt_ever).to_string(),
             Self::Creator => torrent.creator.clone().unwrap_or_default(),
-            Self::DateCreated => format_option(torrent.date_created),
+            Self::DateCreated => format_datetime(torrent.date_created, time),
             Self::DesiredAvailable => FileSize::from(torrent.desired_available).to_string(),
-            Self::DoneDate => format_option(torrent.done_date),
+            Self::DoneDate => format_datetime(torrent.done_date, time),
             Self::DownloadDir => torrent.download_dir.clone().unwrap_or_default(),
             Self::DownloadLimit => NetSpeed::from(torrent.download_limit).to_string(),
             Self::DownloadLimited => format_option(torrent.download_limited),
             Self::DownloadedEver => FileSize::from(torrent.downloaded_ever).to_string(),
-            Self::EditDate => format_option(torrent.edit_date),
+            Self::EditDate => format_datetime(torrent.edit_date, time),
             Self::Error => torrent.error.format(),
             Self::ErrorString => torrent.error_string.clone().unwrap_or_default(),
-            Self::Eta => format_eta(torrent.eta),
+            Self::Eta => format_eta(torrent.eta, time),
             Self::EtaIdle => format_option(torrent.eta_idle),
             Self::FileCount => format_option(torrent.file_count),
             Self::FileStats => torrent.file_stats.format(),
@@ -146,7 +148,7 @@ impl Wrapper for TorrentGetField {
                 .map_or_else(String::new, |l| l.join(", ")),
             Self::LeftUntilDone => FileSize::from(torrent.left_until_done).to_string(),
             Self::MagnetLink => torrent.magnet_link.clone().unwrap_or_default(),
-            Self::ManualAnnounceTime => format_option(torrent.manual_announce_time),
+            Self::ManualAnnounceTime => format_datetime(torrent.manual_announce_time, time),
             Self::MaxConnectedPeers => format_option(torrent.max_connected_peers),
             Self::MetadataPercentComplete => torrent.metadata_percent_complete.format(),
             Self::Name => torrent.name.clone().unwrap_or_default(),
@@ -183,7 +185,7 @@ impl Wrapper for TorrentGetField {
             Self::SeedRatioMode => torrent.seed_ratio_mode.format(),
             Self::SequentialDownload => format_option(torrent.sequential_download),
             Self::SizeWhenDone => FileSize::from(torrent.size_when_done).to_string(),
-            Self::StartDate => format_option(torrent.start_date),
+            Self::StartDate => format_datetime(torrent.start_date, time),
             Self::Status => torrent.status.format(),
             Self::TorrentFile => torrent.torrent_file.clone().unwrap_or_default(),
             Self::TotalSize => FileSize::from(torrent.total_size).to_string(),
@@ -291,12 +293,45 @@ fn format_option<T: Display>(value: Option<T>) -> String {
     value.map_or_else(String::new, |v| v.to_string())
 }
 
-fn format_eta(value: Option<i64>) -> String {
+fn format_eta(value: Option<i64>, time: &TimeConfig) -> String {
     match value {
         Some(-2) => "?".into(),
+        Some(v) if v > 0 && time.use_compact_eta() => format_duration(v),
         Some(v) if v > 0 => format!("{v} s"),
         _ => String::new(),
     }
+}
+
+fn format_datetime(value: Option<DateTime<Utc>>, time: &TimeConfig) -> String {
+    let Some(value) = value else {
+        return String::new();
+    };
+    if value == DateTime::<Utc>::UNIX_EPOCH {
+        return String::new();
+    }
+    value
+        .with_timezone(&Local)
+        .format(&time.date_format)
+        .to_string()
+}
+
+fn format_duration(seconds: i64) -> String {
+    let seconds = seconds.max(0);
+    let days = seconds / 86_400;
+    let hours = (seconds % 86_400) / 3_600;
+    let minutes = (seconds % 3_600) / 60;
+    let secs = seconds % 60;
+
+    if days > 0 {
+        return format!("{days}d {hours}h");
+    }
+    if hours > 0 {
+        return format!("{hours}h {minutes}m");
+    }
+    if minutes > 0 {
+        return format!("{minutes}m {secs}s");
+    }
+    format!("{secs}s")
 }
 
 trait Formatter {
@@ -360,3 +395,35 @@ impl_enum_formatter!(ErrorType, {
     ErrorType::TrackerError => "TrackerError",
     ErrorType::LocalError => "LocalError",
 });
+
+#[cfg(test)]
+mod tests {
+    use super::{format_datetime, format_eta};
+    use crate::config::time::TimeConfig;
+    use chrono::{TimeZone, Utc};
+
+    #[test]
+    fn eta_uses_compact_format_by_default() {
+        assert_eq!(format_eta(Some(3661), &TimeConfig::default()), "1h 1m");
+    }
+
+    #[test]
+    fn eta_can_use_raw_seconds() {
+        let cfg = TimeConfig {
+            eta_format: "seconds".into(),
+            ..TimeConfig::default()
+        };
+        assert_eq!(format_eta(Some(3661), &cfg), "3661 s");
+    }
+
+    #[test]
+    fn datetime_respects_format_and_hides_epoch_placeholder() {
+        let cfg = TimeConfig {
+            date_format: "%Y-%m-%d".into(),
+            ..TimeConfig::default()
+        };
+        let ts = Utc.with_ymd_and_hms(2024, 1, 2, 3, 4, 5).single();
+        assert_eq!(format_datetime(ts, &cfg), "2024-01-02");
+        assert!(format_datetime(Some(chrono::DateTime::<Utc>::UNIX_EPOCH), &cfg).is_empty());
+    }
+}

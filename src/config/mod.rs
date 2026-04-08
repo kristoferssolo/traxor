@@ -2,6 +2,7 @@ pub mod color;
 pub mod keybinds;
 pub mod log;
 pub mod tabs;
+pub mod time;
 
 use color::ColorConfig;
 use color_eyre::{
@@ -16,6 +17,7 @@ use std::{
     path::{Path, PathBuf},
 };
 use tabs::TabConfig;
+use time::TimeConfig;
 use toml::Value;
 use tracing::{debug, info};
 
@@ -27,6 +29,8 @@ pub struct Config {
     pub keybinds: KeybindsConfig,
     pub colors: ColorConfig,
     pub log: LogConfig,
+    #[serde(default)]
+    pub time: TimeConfig,
     #[serde(default)]
     pub tabs: Vec<TabConfig>,
 }
