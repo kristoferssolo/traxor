@@ -6,6 +6,11 @@ fn test_app_creation() {
     let config = assert_ok!(Config::load());
     let app = assert_ok!(App::new(config));
     assert_eq!(app.tabs().len(), 5);
+    assert_eq!(app.tabs()[0].name(), "Overview");
+    assert_eq!(app.tabs()[1].name(), "Transfer");
+    assert_eq!(app.tabs()[2].name(), "Peers");
+    assert_eq!(app.tabs()[3].name(), "History");
+    assert_eq!(app.tabs()[4].name(), "Storage");
 }
 
 #[test]

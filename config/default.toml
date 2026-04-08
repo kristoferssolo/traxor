@@ -80,21 +80,21 @@ transmission_rpc = "warn"
 #   finished, files, activity
 
 [[tabs]]
-name = "All"
-columns = ["status", "progress", "size", "ratio", "seeds", "leeches", "added", "name"]
+name = "Overview"
+columns = ["status", "progress", "size", "ratio", "downspeed", "upspeed", "eta", "name"]
 
 [[tabs]]
-name = "Downloading"
-columns = ["progress", "size", "left", "downspeed", "eta", "seeds", "name"]
+name = "Transfer"
+columns = ["progress", "downloaded", "left", "downspeed", "upspeed", "eta", "activity", "name"]
 
 [[tabs]]
-name = "Seeding"
-columns = ["ratio", "uploaded", "upspeed", "leeches", "size", "added", "name"]
+name = "Peers"
+columns = ["status", "peers", "seeds", "leeches", "downspeed", "upspeed", "tracker", "name"]
 
 [[tabs]]
-name = "Active"
-columns = ["status", "progress", "downspeed", "upspeed", "eta", "seeds", "leeches", "name"]
+name = "History"
+columns = ["status", "added", "done", "activity", "queue", "ratio", "name"]
 
 [[tabs]]
-name = "Queued"
-columns = ["status", "queue", "size", "progress", "added", "name"]
+name = "Storage"
+columns = ["status", "size", "downloaded", "uploaded", "files", "path", "name"]
