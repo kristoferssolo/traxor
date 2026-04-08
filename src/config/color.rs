@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 pub struct ColorConfig {
     pub highlight_background: String,
     pub highlight_foreground: String,
+    pub selected_background: String,
+    pub selected_foreground: String,
     pub header_foreground: String,
     pub info_foreground: String,
     pub status_downloading: String,
