@@ -3,7 +3,7 @@ use crossterm::event::{KeyCode, KeyEvent};
 use traxor::{app::App, app::InputMode, app::action::Action, config::Config, handler::get_action};
 
 #[tokio::test]
-async fn test_get_action_quit() {
+async fn get_action_quit() {
     let config = Config::load().unwrap();
     let mut app = App::new(config).unwrap();
     assert_eq!(
@@ -15,7 +15,7 @@ async fn test_get_action_quit() {
 }
 
 #[tokio::test]
-async fn test_get_action_navigation() {
+async fn get_action_navigation() {
     let config = Config::load().unwrap();
     let mut app = App::new(config).unwrap();
     assert_eq!(
@@ -45,7 +45,7 @@ async fn test_get_action_navigation() {
 }
 
 #[tokio::test]
-async fn test_get_action_switch_tab() {
+async fn get_action_switch_tab() {
     let config = Config::load().unwrap();
     let mut app = App::new(config).unwrap();
     assert_eq!(
@@ -69,7 +69,7 @@ async fn test_get_action_switch_tab() {
 }
 
 #[tokio::test]
-async fn test_get_action_torrent_actions() {
+async fn get_action_torrent_actions() {
     let config = Config::load().unwrap();
     let mut app = App::new(config).unwrap();
     assert_eq!(
@@ -105,7 +105,7 @@ async fn test_get_action_torrent_actions() {
 }
 
 #[tokio::test]
-async fn test_get_action_unhandled() {
+async fn get_action_unhandled() {
     let config = Config::load().unwrap();
     let mut app = App::new(config).unwrap();
     assert_eq!(
@@ -123,7 +123,7 @@ async fn test_get_action_unhandled() {
 }
 
 #[tokio::test]
-async fn test_get_action_toggle_help() {
+async fn get_action_toggle_help() {
     let config = Config::load().unwrap();
     let mut app = App::new(config).unwrap();
     assert_eq!(
@@ -135,7 +135,7 @@ async fn test_get_action_toggle_help() {
 }
 
 #[tokio::test]
-async fn test_get_action_input_mode() {
+async fn get_action_input_mode() {
     let config = Config::load().unwrap();
     let mut app = App::new(config).unwrap();
     app.input_mode = InputMode::Move;

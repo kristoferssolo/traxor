@@ -84,17 +84,21 @@ name = "Overview"
 columns = ["status", "progress", "size", "ratio", "downspeed", "upspeed", "eta", "name"]
 
 [[tabs]]
-name = "Transfer"
+name = "Downloading"
 columns = ["progress", "downloaded", "left", "downspeed", "upspeed", "eta", "activity", "name"]
+statuses = ["QueuedToDownload", "Downloading"]
 
 [[tabs]]
 name = "Peers"
 columns = ["status", "peers", "seeds", "leeches", "downspeed", "upspeed", "tracker", "name"]
+statuses = ["QueuedToSeed", "Seeding"]
 
 [[tabs]]
 name = "History"
 columns = ["status", "added", "done", "activity", "queue", "ratio", "name"]
+statuses = ["QueuedToDownload", "Downloading", "QueuedToSeed", "Seeding", "QueuedToVerify", "Verifying"]
 
 [[tabs]]
-name = "Storage"
+name = "Queued"
 columns = ["status", "size", "downloaded", "uploaded", "files", "path", "name"]
+statuses = ["QueuedToDownload", "QueuedToSeed", "QueuedToVerify"]

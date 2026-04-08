@@ -4,7 +4,7 @@ use traxor::event::EventHandler;
 use traxor::tui::Tui;
 
 #[test]
-fn test_tui_new() {
+fn tui_new() {
     let backend = TestBackend::new(10, 10);
     let terminal = Terminal::new(backend).unwrap();
     let events = EventHandler::new(250); // Dummy tick_rate

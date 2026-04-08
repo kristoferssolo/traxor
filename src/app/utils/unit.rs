@@ -132,19 +132,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_unit_from_u64() {
+    fn unit_from_u64() {
         let unit = Unit::from(1024u64);
         assert_eq!(unit.as_raw(), 1024);
     }
 
     #[test]
-    fn test_unit_from_raw() {
+    fn unit_from_raw() {
         let unit = Unit::from_raw(1024);
         assert_eq!(unit.as_raw(), 1024);
     }
 
     #[test]
-    fn test_unit_display() {
+    fn unit_display() {
         let unit = Unit::from_raw(1024);
         let display = UnitDisplay::new(&unit, &["B", "KB", "MB"]);
         assert_eq!(display.to_string(), "1.00 KB");

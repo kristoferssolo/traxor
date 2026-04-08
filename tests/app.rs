@@ -1,21 +1,21 @@
 use claims::assert_ok;
-use transmission_rpc::types::Torrent;
+use transmission_rpc::types::{Torrent, TorrentStatus};
 use traxor::{app::App, config::Config};
 
 #[test]
-fn test_app_creation() {
+fn app_creation() {
     let config = assert_ok!(Config::load());
     let app = assert_ok!(App::new(config));
     assert_eq!(app.tabs().len(), 5);
     assert_eq!(app.tabs()[0].name(), "Overview");
-    assert_eq!(app.tabs()[1].name(), "Transfer");
+    assert_eq!(app.tabs()[1].name(), "Downloading");
     assert_eq!(app.tabs()[2].name(), "Peers");
     assert_eq!(app.tabs()[3].name(), "History");
-    assert_eq!(app.tabs()[4].name(), "Storage");
+    assert_eq!(app.tabs()[4].name(), "Queued");
 }
 
 #[test]
-fn test_app_quit() {
+fn app_quit() {
     let config = assert_ok!(Config::load());
     let mut app = assert_ok!(App::new(config));
     app.quit();
@@ -23,7 +23,7 @@ fn test_app_quit() {
 }
 
 #[test]
-fn test_app_next_tab() {
+fn app_next_tab() {
     let config = assert_ok!(Config::load());
     let mut app = assert_ok!(App::new(config));
     assert_eq!(app.index(), 0);
@@ -40,7 +40,7 @@ fn test_app_next_tab() {
 }
 
 #[test]
-fn test_app_prev_tab() {
+fn app_prev_tab() {
     let config = assert_ok!(Config::load());
     let mut app = assert_ok!(App::new(config));
     assert_eq!(app.index(), 0);
@@ -51,7 +51,7 @@ fn test_app_prev_tab() {
 }
 
 #[test]
-fn test_app_switch_tab() {
+fn app_switch_tab() {
     let config = assert_ok!(Config::load());
     let mut app = assert_ok!(App::new(config));
     assert_eq!(app.index(), 0);
@@ -62,7 +62,7 @@ fn test_app_switch_tab() {
 }
 
 #[test]
-fn test_app_toggle_popup() {
+fn app_toggle_popup() {
     let config = assert_ok!(Config::load());
     let mut app = assert_ok!(App::new(config));
     assert!(!app.show_help);
@@ -73,7 +73,7 @@ fn test_app_toggle_popup() {
 }
 
 #[test]
-fn test_app_open_close_popup() {
+fn app_open_close_popup() {
     let config = assert_ok!(Config::load());
     let mut app = assert_ok!(App::new(config));
     assert!(!app.show_help);
@@ -84,7 +84,7 @@ fn test_app_open_close_popup() {
 }
 
 #[test]
-fn test_app_next_uses_filtered_torrents() {
+fn app_next_uses_filtered_torrents() {
     let config = assert_ok!(Config::load());
     let mut app = assert_ok!(App::new(config));
     app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "beta")];
@@ -98,7 +98,7 @@ fn test_app_next_uses_filtered_torrents() {
 }
 
 #[test]
-fn test_app_prepare_rename_action_uses_filtered_selection() {
+fn app_prepare_rename_action_uses_filtered_selection() {
     let config = assert_ok!(Config::load());
     let mut app = assert_ok!(App::new(config));
     app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "beta")];
@@ -110,7 +110,39 @@ fn test_app_prepare_rename_action_uses_filtered_selection() {
     assert_eq!(app.input_handler.text, "beta");
 }
 
+#[test]
+fn app_filtered_torrents_respects_active_tab_statuses() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.torrents.torrents = vec![
+        torrent_with_status(1, "downloading", TorrentStatus::Downloading),
+        torrent_with_status(2, "queued", TorrentStatus::QueuedToDownload),
+        torrent_with_status(3, "seeding", TorrentStatus::Seeding),
+        torrent_with_status(4, "stopped", TorrentStatus::Stopped),
+    ];
+
+    app.switch_tab(1);
+    let downloading = app.filtered_torrents();
+    assert_eq!(downloading.len(), 2);
+    assert_eq!(downloading[0].name.as_deref(), Some("downloading"));
+    assert_eq!(downloading[1].name.as_deref(), Some("queued"));
+
+    app.switch_tab(2);
+    let seeding = app.filtered_torrents();
+    assert_eq!(seeding.len(), 1);
+    assert_eq!(seeding[0].name.as_deref(), Some("seeding"));
+
+    app.switch_tab(4);
+    let queued = app.filtered_torrents();
+    assert_eq!(queued.len(), 1);
+    assert_eq!(queued[0].name.as_deref(), Some("queued"));
+}
+
 fn torrent(id: i64, name: &str) -> Torrent {
+    torrent_with_status(id, name, TorrentStatus::Stopped)
+}
+
+fn torrent_with_status(id: i64, name: &str, status: TorrentStatus) -> Torrent {
     Torrent {
         activity_date: None,
         added_date: None,
@@ -172,7 +204,7 @@ fn torrent(id: i64, name: &str) -> Torrent {
         sequential_download: None,
         size_when_done: None,
         start_date: None,
-        status: None,
+        status: Some(status),
         torrent_file: None,
         total_size: None,
         trackers: None,
