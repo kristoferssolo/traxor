@@ -110,4 +110,4 @@ filter = "/"
 
 ## License
 
-This project is licensed under the GPLv3 License - see the [LICENSE](./LICENSE) file for details.
+Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE) or [MIT license](LICENSE-MIT) at your option.
