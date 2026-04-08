@@ -1,6 +1,6 @@
 [package]
 name = "traxor"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["Kristofers Solo <dev@kristofers.xyz>"]
 description = "A terminal UI for managing Transmission torrents"
 repository = "https://github.com/kristoferssolo/traxor"
