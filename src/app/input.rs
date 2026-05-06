@@ -1,6 +1,7 @@
 use crate::error::Result;
 use std::{
     ffi::OsStr,
+    io::ErrorKind,
     path::{Path, PathBuf},
 };
 use tokio::fs;
@@ -146,7 +147,7 @@ async fn find_matching_directories(base_path: &Path, partial_name: &OsStr) -> Re
 
     while let Some(entry) = entries.next_entry().await? {
         let file_name = entry.file_name();
-        if !entry.file_type().await?.is_dir() {
+        if !is_suggestable_directory(&entry).await? {
             continue;
         }
 
@@ -162,10 +163,29 @@ async fn find_matching_directories(base_path: &Path, partial_name: &OsStr) -> Re
     Ok(matches)
 }
 
+async fn is_suggestable_directory(entry: &fs::DirEntry) -> Result<bool> {
+    let file_type = entry.file_type().await?;
+    if file_type.is_dir() {
+        return Ok(true);
+    }
+
+    if !file_type.is_symlink() {
+        return Ok(false);
+    }
+
+    match fs::metadata(entry.path()).await {
+        Ok(metadata) => Ok(metadata.is_dir()),
+        Err(error) if error.kind() == ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(error.into()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::InputHandler;
     use std::fs;
+    #[cfg(unix)]
+    use std::os::unix::fs::symlink;
     use tempfile::TempDir;
 
     #[tokio::test]
@@ -240,6 +260,56 @@ mod tests {
         input.complete().await.expect("completion should succeed");
 
         assert_eq!(input.text, format!("{}/missing", dir.path().display()));
+        assert!(input.completions().is_empty());
+        assert_eq!(input.completion_idx(), None);
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn complete_suggests_symlinked_directories() {
+        let dir = temp_dir();
+        let target = dir.path().join("target");
+        create_dir(&target);
+        symlink(&target, dir.path().join("linked")).expect("symlink should be created");
+        let mut input = InputHandler::new();
+        input.set_text(format!("{}/li", dir.path().display()));
+
+        input.complete().await.expect("completion should succeed");
+
+        assert_eq!(input.completions().len(), 1);
+        assert_eq!(input.text, format!("{}/linked/", dir.path().display()));
+        assert_eq!(input.cursor_position, input.text.len());
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn complete_ignores_symlinks_to_files() {
+        let dir = temp_dir();
+        let target = dir.path().join("target.txt");
+        create_file(&target);
+        symlink(&target, dir.path().join("linked")).expect("symlink should be created");
+        let mut input = InputHandler::new();
+        input.set_text(format!("{}/li", dir.path().display()));
+
+        input.complete().await.expect("completion should succeed");
+
+        assert_eq!(input.text, format!("{}/li", dir.path().display()));
+        assert!(input.completions().is_empty());
+        assert_eq!(input.completion_idx(), None);
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn complete_ignores_broken_symlinks() {
+        let dir = temp_dir();
+        symlink(dir.path().join("missing"), dir.path().join("linked"))
+            .expect("symlink should be created");
+        let mut input = InputHandler::new();
+        input.set_text(format!("{}/li", dir.path().display()));
+
+        input.complete().await.expect("completion should succeed");
+
+        assert_eq!(input.text, format!("{}/li", dir.path().display()));
         assert!(input.completions().is_empty());
         assert_eq!(input.completion_idx(), None);
     }
