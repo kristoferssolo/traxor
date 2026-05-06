@@ -192,7 +192,7 @@ fn render_confirm_delete(f: &mut Frame, delete_local_data: bool) {
         "Remove from list?"
     };
 
-    let text = Paragraph::new(vec![Line::from(first_line), Line::from("(y)es / (n)o")])
+    let text = Paragraph::new(vec![Line::from(first_line), Line::from("[y]es / [n]o")])
         .alignment(Alignment::Center);
 
     f.render_widget(

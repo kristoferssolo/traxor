@@ -11,7 +11,7 @@ async fn handle_input(key_event: KeyEvent, app: &mut App) -> Result<Option<Actio
     // Handle confirmation dialogs separately
     if matches!(app.input_mode, InputMode::ConfirmDelete(_)) {
         return match key_event.code {
-            KeyCode::Char('y' | 'Y') => Ok(Some(Action::ConfirmYes)),
+            KeyCode::Char('y' | 'Y') | KeyCode::Enter => Ok(Some(Action::ConfirmYes)),
             KeyCode::Char('n' | 'N') | KeyCode::Esc => Ok(Some(Action::Cancel)),
             _ => Ok(None),
         };

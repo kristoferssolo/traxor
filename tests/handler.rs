@@ -156,6 +156,38 @@ async fn get_action_input_mode() {
 }
 
 #[tokio::test]
+async fn get_action_confirm_delete() {
+    let config = Config::load().unwrap();
+    let mut app = App::new(config).unwrap();
+    app.input_mode = InputMode::ConfirmDelete(false);
+
+    for key_code in [KeyCode::Enter, KeyCode::Char('y'), KeyCode::Char('Y')] {
+        assert_eq!(
+            get_action(KeyEvent::from(key_code), &mut app)
+                .await
+                .unwrap(),
+            Some(Action::ConfirmYes)
+        );
+    }
+
+    for key_code in [KeyCode::Char('n'), KeyCode::Char('N'), KeyCode::Esc] {
+        assert_eq!(
+            get_action(KeyEvent::from(key_code), &mut app)
+                .await
+                .unwrap(),
+            Some(Action::Cancel)
+        );
+    }
+
+    assert_eq!(
+        get_action(KeyEvent::from(KeyCode::Char('x')), &mut app)
+            .await
+            .unwrap(),
+        None
+    );
+}
+
+#[tokio::test]
 async fn get_action_tab_completes_move_input() {
     let dir = temp_dir();
     fs::create_dir(dir.path().join("alpha")).unwrap();
