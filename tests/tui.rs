@@ -1,3 +1,4 @@
+use claims::assert_ok;
 use ratatui::Terminal;
 use ratatui::backend::TestBackend;
 use traxor::event::EventHandler;
@@ -6,7 +7,7 @@ use traxor::tui::Tui;
 #[test]
 fn tui_new() {
     let backend = TestBackend::new(10, 10);
-    let terminal = Terminal::new(backend).unwrap();
+    let terminal = assert_ok!(Terminal::new(backend));
     let events = EventHandler::new(250); // Dummy tick_rate
     let _tui = Tui::new(terminal, events);
     // Add assertions for initial state of Tui if applicable

@@ -1,208 +1,140 @@
-#![allow(clippy::unwrap_used)]
+use claims::{assert_none, assert_ok, assert_some_eq};
 use crossterm::event::{KeyCode, KeyEvent};
 use std::fs;
 use tempfile::TempDir;
 use traxor::{app::App, app::InputMode, app::action::Action, config::Config, handler::get_action};
 
+macro_rules! assert_action {
+    ($app:expr, $key_code:expr) => {
+        assert_ok!(get_action(KeyEvent::from($key_code), $app).await)
+    };
+}
+
 #[tokio::test]
 async fn get_action_quit() {
-    let config = Config::load().unwrap();
-    let mut app = App::new(config).unwrap();
-    assert_eq!(
-        get_action(KeyEvent::from(KeyCode::Char('q')), &mut app)
-            .await
-            .unwrap(),
-        Some(Action::Quit)
-    );
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    assert_some_eq!(assert_action!(&mut app, KeyCode::Char('q')), Action::Quit);
 }
 
 #[tokio::test]
 async fn get_action_navigation() {
-    let config = Config::load().unwrap();
-    let mut app = App::new(config).unwrap();
-    assert_eq!(
-        get_action(KeyEvent::from(KeyCode::Char('l')), &mut app)
-            .await
-            .unwrap(),
-        Some(Action::NextTab)
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    assert_some_eq!(
+        assert_action!(&mut app, KeyCode::Char('l')),
+        Action::NextTab
     );
-    assert_eq!(
-        get_action(KeyEvent::from(KeyCode::Char('h')), &mut app)
-            .await
-            .unwrap(),
-        Some(Action::PrevTab)
+    assert_some_eq!(
+        assert_action!(&mut app, KeyCode::Char('h')),
+        Action::PrevTab
     );
-    assert_eq!(
-        get_action(KeyEvent::from(KeyCode::Char('j')), &mut app)
-            .await
-            .unwrap(),
-        Some(Action::NextTorrent)
+    assert_some_eq!(
+        assert_action!(&mut app, KeyCode::Char('j')),
+        Action::NextTorrent
     );
-    assert_eq!(
-        get_action(KeyEvent::from(KeyCode::Char('k')), &mut app)
-            .await
-            .unwrap(),
-        Some(Action::PrevTorrent)
+    assert_some_eq!(
+        assert_action!(&mut app, KeyCode::Char('k')),
+        Action::PrevTorrent
     );
 }
 
 #[tokio::test]
 async fn get_action_switch_tab() {
-    let config = Config::load().unwrap();
-    let mut app = App::new(config).unwrap();
-    assert_eq!(
-        get_action(KeyEvent::from(KeyCode::Char('1')), &mut app)
-            .await
-            .unwrap(),
-        Some(Action::SwitchTab(0))
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    assert_some_eq!(
+        assert_action!(&mut app, KeyCode::Char('1')),
+        Action::SwitchTab(0)
     );
-    assert_eq!(
-        get_action(KeyEvent::from(KeyCode::Char('2')), &mut app)
-            .await
-            .unwrap(),
-        Some(Action::SwitchTab(1))
+    assert_some_eq!(
+        assert_action!(&mut app, KeyCode::Char('2')),
+        Action::SwitchTab(1)
     );
-    assert_eq!(
-        get_action(KeyEvent::from(KeyCode::Char('3')), &mut app)
-            .await
-            .unwrap(),
-        Some(Action::SwitchTab(2))
+    assert_some_eq!(
+        assert_action!(&mut app, KeyCode::Char('3')),
+        Action::SwitchTab(2)
     );
 }
 
 #[tokio::test]
 async fn get_action_torrent_actions() {
-    let config = Config::load().unwrap();
-    let mut app = App::new(config).unwrap();
-    assert_eq!(
-        get_action(KeyEvent::from(KeyCode::Enter), &mut app)
-            .await
-            .unwrap(),
-        Some(Action::ToggleTorrent)
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    assert_some_eq!(
+        assert_action!(&mut app, KeyCode::Enter),
+        Action::ToggleTorrent
     );
-    assert_eq!(
-        get_action(KeyEvent::from(KeyCode::Char('a')), &mut app)
-            .await
-            .unwrap(),
-        Some(Action::ToggleAll)
+    assert_some_eq!(
+        assert_action!(&mut app, KeyCode::Char('a')),
+        Action::ToggleAll
     );
-    assert_eq!(
-        get_action(KeyEvent::from(KeyCode::Char('d')), &mut app)
-            .await
-            .unwrap(),
-        Some(Action::Delete(false))
+    assert_some_eq!(
+        assert_action!(&mut app, KeyCode::Char('d')),
+        Action::Delete(false)
     );
-    assert_eq!(
-        get_action(KeyEvent::from(KeyCode::Char('D')), &mut app)
-            .await
-            .unwrap(),
-        Some(Action::Delete(true))
+    assert_some_eq!(
+        assert_action!(&mut app, KeyCode::Char('D')),
+        Action::Delete(true)
     );
-    assert_eq!(
-        get_action(KeyEvent::from(KeyCode::Char(' ')), &mut app)
-            .await
-            .unwrap(),
-        Some(Action::Select)
-    );
+    assert_some_eq!(assert_action!(&mut app, KeyCode::Char(' ')), Action::Select);
 }
 
 #[tokio::test]
 async fn get_action_unhandled() {
-    let config = Config::load().unwrap();
-    let mut app = App::new(config).unwrap();
-    assert_eq!(
-        get_action(KeyEvent::from(KeyCode::Char('x')), &mut app)
-            .await
-            .unwrap(),
-        None
-    );
-    assert_eq!(
-        get_action(KeyEvent::from(KeyCode::F(1)), &mut app)
-            .await
-            .unwrap(),
-        None
-    );
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    assert_none!(assert_action!(&mut app, KeyCode::Char('x')));
+    assert_none!(assert_action!(&mut app, KeyCode::F(1)));
 }
 
 #[tokio::test]
 async fn get_action_toggle_help() {
-    let config = Config::load().unwrap();
-    let mut app = App::new(config).unwrap();
-    assert_eq!(
-        get_action(KeyEvent::from(KeyCode::Char('?')), &mut app)
-            .await
-            .unwrap(),
-        Some(Action::ToggleHelp)
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    assert_some_eq!(
+        assert_action!(&mut app, KeyCode::Char('?')),
+        Action::ToggleHelp
     );
 }
 
 #[tokio::test]
 async fn get_action_input_mode() {
-    let config = Config::load().unwrap();
-    let mut app = App::new(config).unwrap();
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
     app.input_mode = InputMode::Move;
-    assert_eq!(
-        get_action(KeyEvent::from(KeyCode::Enter), &mut app)
-            .await
-            .unwrap(),
-        Some(Action::Submit)
-    );
-    assert_eq!(
-        get_action(KeyEvent::from(KeyCode::Esc), &mut app)
-            .await
-            .unwrap(),
-        Some(Action::Cancel)
-    );
+    assert_some_eq!(assert_action!(&mut app, KeyCode::Enter), Action::Submit);
+    assert_some_eq!(assert_action!(&mut app, KeyCode::Esc), Action::Cancel);
 }
 
 #[tokio::test]
 async fn get_action_confirm_delete() {
-    let config = Config::load().unwrap();
-    let mut app = App::new(config).unwrap();
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
     app.input_mode = InputMode::ConfirmDelete(false);
 
     for key_code in [KeyCode::Enter, KeyCode::Char('y'), KeyCode::Char('Y')] {
-        assert_eq!(
-            get_action(KeyEvent::from(key_code), &mut app)
-                .await
-                .unwrap(),
-            Some(Action::ConfirmYes)
-        );
+        assert_some_eq!(assert_action!(&mut app, key_code), Action::ConfirmYes);
     }
 
     for key_code in [KeyCode::Char('n'), KeyCode::Char('N'), KeyCode::Esc] {
-        assert_eq!(
-            get_action(KeyEvent::from(key_code), &mut app)
-                .await
-                .unwrap(),
-            Some(Action::Cancel)
-        );
+        assert_some_eq!(assert_action!(&mut app, key_code), Action::Cancel);
     }
 
-    assert_eq!(
-        get_action(KeyEvent::from(KeyCode::Char('x')), &mut app)
-            .await
-            .unwrap(),
-        None
-    );
+    assert_none!(assert_action!(&mut app, KeyCode::Char('x')));
 }
 
 #[tokio::test]
 async fn get_action_tab_completes_move_input() {
     let dir = temp_dir();
-    fs::create_dir(dir.path().join("alpha")).unwrap();
-    let config = Config::load().unwrap();
-    let mut app = App::new(config).unwrap();
+    assert_ok!(fs::create_dir(dir.path().join("alpha")));
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
     app.input_mode = InputMode::Move;
     app.input_handler
         .set_text(format!("{}/a", dir.path().display()));
 
-    assert_eq!(
-        get_action(KeyEvent::from(KeyCode::Tab), &mut app)
-            .await
-            .unwrap(),
-        None
-    );
+    assert_none!(assert_action!(&mut app, KeyCode::Tab));
     assert_eq!(
         app.input_handler.text,
         format!("{}/alpha/", dir.path().display())
@@ -212,25 +144,20 @@ async fn get_action_tab_completes_move_input() {
 #[tokio::test]
 async fn get_action_tab_does_not_complete_rename_or_filter_input() {
     let dir = temp_dir();
-    fs::create_dir(dir.path().join("alpha")).unwrap();
+    assert_ok!(fs::create_dir(dir.path().join("alpha")));
 
     for input_mode in [InputMode::Rename, InputMode::Filter] {
-        let config = Config::load().unwrap();
-        let mut app = App::new(config).unwrap();
+        let config = assert_ok!(Config::load());
+        let mut app = assert_ok!(App::new(config));
         let input = format!("{}/a", dir.path().display());
         app.input_mode = input_mode;
         app.input_handler.set_text(input.clone());
 
-        assert_eq!(
-            get_action(KeyEvent::from(KeyCode::Tab), &mut app)
-                .await
-                .unwrap(),
-            None
-        );
+        assert_none!(assert_action!(&mut app, KeyCode::Tab));
         assert_eq!(app.input_handler.text, input);
     }
 }
 
 fn temp_dir() -> TempDir {
-    TempDir::new().unwrap()
+    TempDir::new().expect("temp directory")
 }
