@@ -1,5 +1,7 @@
-use crate::app::{App, InputMode, action::Action};
-use crate::error::Result;
+use crate::{
+    app::{App, InputMode, action::Action},
+    error::Result,
+};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use thiserror::Error;
 use tracing::{debug, info};
@@ -18,7 +20,9 @@ async fn handle_input(key_event: KeyEvent, app: &mut App) -> Result<Option<Actio
     match key_event.code {
         KeyCode::Enter => Ok(Some(Action::Submit)),
         KeyCode::Tab => {
-            app.complete_input().await?;
+            if app.input_mode == InputMode::Move {
+                app.complete_input().await?;
+            }
             Ok(None)
         }
         KeyCode::Char(ch) => {

@@ -1,5 +1,7 @@
 #![allow(clippy::unwrap_used)]
 use crossterm::event::{KeyCode, KeyEvent};
+use std::fs;
+use tempfile::TempDir;
 use traxor::{app::App, app::InputMode, app::action::Action, config::Config, handler::get_action};
 
 #[tokio::test]
@@ -151,4 +153,52 @@ async fn get_action_input_mode() {
             .unwrap(),
         Some(Action::Cancel)
     );
+}
+
+#[tokio::test]
+async fn get_action_tab_completes_move_input() {
+    let dir = temp_dir();
+    fs::create_dir(dir.path().join("alpha")).unwrap();
+    let config = Config::load().unwrap();
+    let mut app = App::new(config).unwrap();
+    app.input_mode = InputMode::Move;
+    app.input_handler
+        .set_text(format!("{}/a", dir.path().display()));
+
+    assert_eq!(
+        get_action(KeyEvent::from(KeyCode::Tab), &mut app)
+            .await
+            .unwrap(),
+        None
+    );
+    assert_eq!(
+        app.input_handler.text,
+        format!("{}/alpha/", dir.path().display())
+    );
+}
+
+#[tokio::test]
+async fn get_action_tab_does_not_complete_rename_or_filter_input() {
+    let dir = temp_dir();
+    fs::create_dir(dir.path().join("alpha")).unwrap();
+
+    for input_mode in [InputMode::Rename, InputMode::Filter] {
+        let config = Config::load().unwrap();
+        let mut app = App::new(config).unwrap();
+        let input = format!("{}/a", dir.path().display());
+        app.input_mode = input_mode;
+        app.input_handler.set_text(input.clone());
+
+        assert_eq!(
+            get_action(KeyEvent::from(KeyCode::Tab), &mut app)
+                .await
+                .unwrap(),
+            None
+        );
+        assert_eq!(app.input_handler.text, input);
+    }
+}
+
+fn temp_dir() -> TempDir {
+    TempDir::new().unwrap()
 }

@@ -7,11 +7,10 @@ mod torrent;
 pub mod types;
 pub mod utils;
 
-use crate::error::Result;
-use crate::{app::input::InputHandler, config::Config};
+use crate::{app::input::InputHandler, config::Config, error::Result};
 use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
 use ratatui::widgets::TableState;
-use std::path::PathBuf;
+use std::{cmp::Reverse, path::PathBuf};
 use transmission_rpc::types::Torrent;
 use types::Selected;
 pub use {tab::Tab, torrent::Torrents};
@@ -292,7 +291,7 @@ impl App {
             })
             .collect::<Vec<_>>();
         // Sort by score descending (best matches first)
-        scored.sort_by(|a, b| b.1.cmp(&a.1));
+        scored.sort_by_key(|(_, score)| Reverse(*score));
         scored.into_iter().map(|(t, _)| t).collect()
     }
 

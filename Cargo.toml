@@ -30,6 +30,7 @@ url = "2.5"
 
 [dev-dependencies]
 claims = "0.8"
+tempfile = "3"
 
 [lints.clippy]
 pedantic = "warn"

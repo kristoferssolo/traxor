@@ -2,7 +2,7 @@ use crate::app::{App, InputMode};
 use ratatui::{
     prelude::*,
     text::Line,
-    widgets::{Block, BorderType, Borders, Clear, Paragraph},
+    widgets::{Block, BorderType, Borders, Clear, List, ListItem, Paragraph},
 };
 use tracing::warn;
 
@@ -41,6 +41,10 @@ fn render_text_input(f: &mut Frame, app: &App) {
         }),
     );
 
+    if app.input_mode == InputMode::Move {
+        render_completion_popup(f, app, input_area);
+    }
+
     let cursor_offset = u16::try_from(app.input_handler.cursor_position).unwrap_or_else(|_| {
         warn!("cursor_position out of range, clamping");
         0
@@ -50,6 +54,59 @@ fn render_text_input(f: &mut Frame, app: &App) {
         input_area.x + cursor_offset + 1,
         input_area.y + 1,
     ));
+}
+
+fn render_completion_popup(f: &mut Frame, app: &App, input_area: Rect) {
+    let completions = app.input_handler.completions();
+    let Some(active_idx) = app.input_handler.completion_idx() else {
+        return;
+    };
+
+    let available_height = f.area().bottom().saturating_sub(input_area.bottom());
+    let visible_count = completions
+        .len()
+        .min(6)
+        .min(usize::from(available_height.saturating_sub(2)));
+    if visible_count == 0 {
+        return;
+    }
+
+    let start = active_idx
+        .saturating_add(1)
+        .saturating_sub(visible_count)
+        .min(completions.len().saturating_sub(visible_count));
+    let items = completions
+        .iter()
+        .enumerate()
+        .skip(start)
+        .take(visible_count)
+        .map(|(idx, path)| {
+            let name = path
+                .file_name()
+                .map_or_else(|| path.to_string_lossy(), |name| name.to_string_lossy());
+            let text = format!("{name}/");
+            if idx == active_idx {
+                ListItem::new(text).style(Style::default().fg(Color::Black).bg(Color::Cyan))
+            } else {
+                ListItem::new(text)
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let popup_area = Rect::new(
+        input_area.x,
+        input_area.bottom(),
+        input_area.width,
+        u16::try_from(visible_count + 2).unwrap_or(available_height),
+    );
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(Style::default().fg(Color::Cyan));
+    let list = List::new(items).block(block);
+
+    f.render_widget(Clear, popup_area);
+    f.render_widget(list, popup_area);
 }
 
 fn render_filter_input(f: &mut Frame, app: &App) {
