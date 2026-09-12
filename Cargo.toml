@@ -14,13 +14,13 @@ chrono = "0.4"
 color-eyre = "0.6"
 crossterm = "0.29"
 derive_more = { version = "2.1", features = ["display"] }
-dirs = "6.0"
+dirs = "7.0"
 fuzzy-matcher = "0.3"
 ratatui = "0.30"
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "2.0"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "fs"] }
-toml = "1.1.2"
+toml = "1.1"
 tracing = "0.1"
 tracing-appender = "0.2"
 tracing-bunyan-formatter = { version = "0.3", default-features = false }

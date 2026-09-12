@@ -1,4 +1,3 @@
-export RUSTC_WRAPPER :=  env("RUSTC_WRAPPER", "sccache")
 export RUST_LOG := env("RUST_LOG", "warn")
 
 set shell := ["bash", "-euo", "pipefail", "-c"]
