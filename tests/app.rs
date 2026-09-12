@@ -1,5 +1,5 @@
 use claims::assert_ok;
-use transmission_rpc::types::{Torrent, TorrentStatus};
+use transmission_rpc::types::{Torrent, TorrentGetField, TorrentStatus};
 use traxor::{app::App, config::Config};
 
 #[test]
@@ -12,6 +12,11 @@ fn app_creation() {
     assert_eq!(app.tabs()[2].name(), "Peers");
     assert_eq!(app.tabs()[3].name(), "History");
     assert_eq!(app.tabs()[4].name(), "Queued");
+    assert!(
+        app.tabs()[0]
+            .fields()
+            .contains(&TorrentGetField::DownloadDir)
+    );
 }
 
 #[test]

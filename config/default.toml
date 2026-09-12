@@ -92,7 +92,7 @@ eta_format = "compact"
 
 [[tabs]]
 name = "Overview"
-columns = ["status", "progress", "size", "ratio", "downspeed", "upspeed", "eta", "name"]
+columns = ["status", "progress", "size", "ratio", "downspeed", "upspeed", "eta", "name", "path"]
 
 [[tabs]]
 name = "Downloading"
