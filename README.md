@@ -53,6 +53,8 @@ traxor
 | `Enter` | Start/stop torrent |
 | `a` | Start/stop all |
 | `Space` | Multi-select |
+| `Ctrl+a` | Select all visible |
+| `Ctrl+u` | Clear selection |
 | `m` | Move torrent |
 | `r` | Rename torrent |
 | `d` | Delete torrent |

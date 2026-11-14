@@ -40,6 +40,10 @@ pub enum Action {
     ClearFilter,
     #[display("Select")]
     Select,
+    #[display("Select All")]
+    SelectAll,
+    #[display("Clear Selection")]
+    ClearSelection,
     #[display("Submit")]
     Submit,
     #[display("Confirm Yes")]

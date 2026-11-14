@@ -115,6 +115,8 @@ pub async fn update(app: &mut App, action: Action) -> Result<()> {
         Action::ClearFilter => app.clear_filter(),
         Action::Delete(delete_local_data) => app.prepare_delete(delete_local_data),
         Action::Select => app.select(),
+        Action::SelectAll => app.select_all(),
+        Action::ClearSelection => app.clear_selection(),
         Action::Submit => match app.input_mode {
             InputMode::Move => app.move_torrent().await?,
             InputMode::Rename => app.rename_torrent().await?,

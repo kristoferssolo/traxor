@@ -498,6 +498,29 @@ impl App {
         self.next();
     }
 
+    /// Adds every torrent visible in the current tab and filter to the selection.
+    ///
+    /// Does nothing when no torrent is visible.
+    pub fn select_all(&mut self) {
+        let ids = self
+            .filtered_torrents()
+            .iter()
+            .filter_map(|torrent| torrent.id)
+            .collect::<Vec<_>>();
+        if ids.is_empty() {
+            return;
+        }
+        self.torrents.selected.extend(ids);
+        self.close_help();
+    }
+
+    /// Clears the whole selection, including torrents hidden by the current
+    /// tab or filter, so no hidden selection resurfaces later.
+    pub fn clear_selection(&mut self) {
+        self.torrents.selected.clear();
+        self.close_help();
+    }
+
     fn selected(&self, highlighted: bool) -> Selected {
         let torrents = self.filtered_torrents();
         if (self.torrents.selected.is_empty() || highlighted)

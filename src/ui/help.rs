@@ -31,6 +31,8 @@ pub fn render_help(frame: &mut Frame, app: &App) {
         key_row(&kb.toggle_torrent, "Start/stop torrent", key_style),
         key_row(&kb.toggle_all, "Start/stop all", key_style),
         key_row(&select_key, "Multi-select", key_style),
+        key_row(&kb.select_all, "Select all visible", key_style),
+        key_row(&kb.clear_selection, "Clear selection", key_style),
         key_row(&kb.move_torrent, "Move torrent", key_style),
         key_row(&kb.rename_torrent, "Rename torrent", key_style),
         key_row(&kb.delete, "Remove torrent", key_style),

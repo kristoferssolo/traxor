@@ -1,5 +1,6 @@
 use claims::{assert_err, assert_none, assert_ok, assert_some_eq};
 use std::{
+    collections::HashSet,
     io::{BufRead, BufReader, Read, Write},
     net::TcpListener,
     sync::mpsc::{self, Receiver},
@@ -473,6 +474,59 @@ fn app_jumps_are_noops_on_empty_list() {
 
     assert_eq!(app.state.selected(), None);
     assert!(app.show_help);
+}
+
+#[test]
+fn app_select_all_selects_only_visible_torrents() {
+    let mut app = app_with_torrents(0);
+    app.torrents.torrents = vec![
+        torrent_with_status(1, "alpha", TorrentStatus::Downloading),
+        torrent_with_status(2, "beta", TorrentStatus::Downloading),
+        torrent_with_status(3, "gamma", TorrentStatus::Seeding),
+    ];
+    app.switch_tab(1);
+    app.filter_text = "beta".into();
+    app.open_help();
+
+    app.select_all();
+
+    assert_eq!(app.torrents.selected, HashSet::from([2]));
+    assert!(!app.show_help);
+    assert_eq!(app.state.selected(), None);
+}
+
+#[test]
+fn app_select_all_keeps_existing_selection() {
+    let mut app = app_with_torrents(3);
+    app.torrents.selected.insert(99);
+
+    app.select_all();
+
+    assert_eq!(app.torrents.selected, HashSet::from([0, 1, 2, 99]));
+}
+
+#[test]
+fn app_select_all_is_noop_on_empty_list() {
+    let mut app = app_with_torrents(0);
+    app.open_help();
+
+    app.select_all();
+
+    assert!(app.torrents.selected.is_empty());
+    assert!(app.show_help);
+}
+
+#[test]
+fn app_clear_selection_clears_hidden_torrents() {
+    let mut app = app_with_torrents(3);
+    app.torrents.selected.extend([0, 1, 2]);
+    app.filter_text = "torrent-1".into();
+    app.open_help();
+
+    app.clear_selection();
+
+    assert!(app.torrents.selected.is_empty());
+    assert!(!app.show_help);
 }
 
 fn app_with_torrents(count: i64) -> App {

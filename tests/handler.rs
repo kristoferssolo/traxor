@@ -102,6 +102,8 @@ async fn get_action_torrent_actions() {
         Action::Delete(true)
     );
     assert_some_eq!(assert_action!(&mut app, KeyCode::Char(' ')), Action::Select);
+    assert_some_eq!(assert_action!(&mut app, ctrl('a')), Action::SelectAll);
+    assert_some_eq!(assert_action!(&mut app, ctrl('u')), Action::ClearSelection);
 }
 
 #[tokio::test]
@@ -375,6 +377,10 @@ async fn get_action_ctrl_alt_chars_type_altgr_text_only_on_windows() {
         app.input_handler.cursor_position,
         app.input_handler.text.len()
     );
+}
+
+const fn ctrl(ch: char) -> KeyEvent {
+    KeyEvent::new(KeyCode::Char(ch), KeyModifiers::CONTROL)
 }
 
 fn temp_dir() -> TempDir {
