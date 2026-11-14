@@ -7,7 +7,6 @@ use ratatui::{
     text::Span,
     widgets::{Block, BorderType, Borders, Paragraph},
 };
-use unicode_width::UnicodeWidthStr;
 
 /// Blank column before the left-side text.
 const LEADING_SPACE: usize = 1;
@@ -168,7 +167,20 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
 
 /// Total display width of `spans` in terminal columns.
 fn spans_width(spans: &[Span<'_>]) -> usize {
-    spans.iter().map(Span::width).sum()
+    spans.iter().map(rendered_width).sum()
+}
+
+/// Cells `span` occupies once rendered: the sum of its graphemes' widths, as ratatui draws
+/// them. Measuring the whole string can differ: `"لا"` measures one cell as a string but its
+/// two graphemes fill two cells.
+fn rendered_width(span: &Span<'_>) -> usize {
+    span.styled_graphemes(Style::default())
+        .map(|grapheme| grapheme_width(grapheme.symbol))
+        .sum()
+}
+
+fn grapheme_width(symbol: &str) -> usize {
+    Span::raw(symbol).width()
 }
 
 /// Shortens `spans` to at most `max_width` terminal columns.
@@ -179,13 +191,13 @@ fn truncate_spans(spans: Vec<Span<'_>>, max_width: usize) -> Vec<Span<'_>> {
     if spans_width(&spans) <= max_width {
         return spans;
     }
-    let Some(mut remaining) = max_width.checked_sub(ELLIPSIS.width()) else {
+    let Some(mut remaining) = max_width.checked_sub(grapheme_width(ELLIPSIS)) else {
         return Vec::new();
     };
 
     let mut truncated = Vec::new();
     for span in spans {
-        let span_width = span.width();
+        let span_width = rendered_width(&span);
         if span_width <= remaining {
             remaining -= span_width;
             truncated.push(span);
@@ -194,11 +206,11 @@ fn truncate_spans(spans: Vec<Span<'_>>, max_width: usize) -> Vec<Span<'_>> {
 
         let mut content = String::new();
         for grapheme in span.styled_graphemes(Style::default()) {
-            let grapheme_width = grapheme.symbol.width();
-            if grapheme_width > remaining {
+            let symbol_width = grapheme_width(grapheme.symbol);
+            if symbol_width > remaining {
                 break;
             }
-            remaining -= grapheme_width;
+            remaining -= symbol_width;
             content.push_str(grapheme.symbol);
         }
         truncated.push(Span::styled(content, span.style));
@@ -211,6 +223,7 @@ fn truncate_spans(spans: Vec<Span<'_>>, max_width: usize) -> Vec<Span<'_>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use claims::assert_some_eq;
 
     fn text(spans: &[Span<'_>]) -> String {
         spans.iter().map(|span| span.content.as_ref()).collect()
@@ -234,7 +247,7 @@ mod tests {
 
         assert_eq!(text(&truncated), "abcd…");
         assert_eq!(spans_width(&truncated), 5);
-        assert_eq!(truncated.last().map(|span| span.style), Some(red));
+        assert_some_eq!(truncated.last().map(|span| span.style), red);
     }
 
     #[test]
@@ -245,6 +258,14 @@ mod tests {
 
         assert_eq!(text(&truncated), "错误…");
         assert_eq!(spans_width(&truncated), 5);
+    }
+
+    #[test]
+    fn widths_follow_rendered_graphemes_for_ligatures() {
+        let spans = vec![Span::raw("لا".repeat(3))];
+
+        assert_eq!(spans_width(&spans), 6);
+        assert_eq!(text(&truncate_spans(spans, 5)), "لالا…");
     }
 
     #[test]
