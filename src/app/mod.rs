@@ -72,16 +72,6 @@ impl App {
         self.input_handler.complete().await
     }
 
-    /// Handles the tick event of the terminal.
-    ///
-    /// # Errors
-    ///
-    /// TODO: add error types
-    pub async fn tick(&mut self) -> Result<()> {
-        self.torrents.update().await?;
-        Ok(())
-    }
-
     /// Set running to false to quit the application.
     #[inline]
     pub const fn quit(&mut self) {

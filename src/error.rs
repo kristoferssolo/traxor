@@ -13,12 +13,6 @@ pub enum TraxorError {
 
     #[error("URL parse error: {0}")]
     UrlParse(#[from] url::ParseError),
-
-    #[error("No torrent selected")]
-    NoSelection,
-
-    #[error("Invalid torrent ID: {0}")]
-    InvalidTorrentId(i64),
 }
 
 impl From<Box<dyn std::error::Error + Send + Sync>> for TraxorError {
