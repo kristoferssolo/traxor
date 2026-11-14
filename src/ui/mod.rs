@@ -77,8 +77,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         table_offset: app.state.offset(),
         table_rows,
     };
-    // Rows left after the two borders, the header, and its bottom margin
-    app.set_page_size(usize::from(chunks[1].height.saturating_sub(4)));
+    app.set_page_size(hit_test::table_body_rows(chunks[1]));
 
     status::render(frame, app, chunks[2]);
 
