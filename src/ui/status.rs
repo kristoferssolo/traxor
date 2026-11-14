@@ -74,6 +74,14 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
         ],
     };
 
+    // An error notice takes the place of the keybind hints until the next key press.
+    let left_spans = app.status_message.as_ref().map_or(keybinds, |message| {
+        vec![Span::styled(
+            message.text.as_str(),
+            Style::default().fg(Color::Red),
+        )]
+    });
+
     // Build right side with colored spans
     let count_style = if selected_count > 0 {
         Style::default().fg(Color::Magenta).bold()
@@ -118,7 +126,7 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
 
     // Calculate widths
     let available_width = area.width.saturating_sub(2) as usize;
-    let left_len = keybinds
+    let left_len = left_spans
         .iter()
         .map(|s| s.content.chars().count())
         .sum::<usize>()
@@ -129,7 +137,7 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
         .sum::<usize>();
 
     let mut spans = vec![Span::raw(" ")];
-    spans.extend(keybinds);
+    spans.extend(left_spans);
 
     if left_len + right_len < available_width {
         let padding = available_width.saturating_sub(left_len + right_len);

@@ -1,8 +1,15 @@
-use claims::{assert_none, assert_ok, assert_some_eq};
+use claims::{assert_none, assert_ok, assert_some, assert_some_eq};
 use crossterm::event::{KeyCode, KeyEvent};
-use std::fs;
+use std::{fs, net::TcpListener};
 use tempfile::TempDir;
-use traxor::{app::App, app::InputMode, app::action::Action, config::Config, handler::get_action};
+use transmission_rpc::types::Torrent;
+use traxor::{
+    app::App,
+    app::InputMode,
+    app::action::Action,
+    config::Config,
+    handler::{get_action, handle_key_event},
+};
 
 macro_rules! assert_action {
     ($app:expr, $key_code:expr) => {
@@ -156,6 +163,39 @@ async fn get_action_tab_does_not_complete_rename_or_filter_input() {
         assert_none!(assert_action!(&mut app, KeyCode::Tab));
         assert_eq!(app.input_handler.text, input);
     }
+}
+
+#[tokio::test]
+async fn handle_key_event_reports_failed_action_and_keeps_running() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    assert_ok!(app.torrents.url(&unreachable_rpc_url()));
+    app.torrents.torrents = vec![assert_ok!(toml::from_str::<Torrent>(
+        "id = 1\nname = \"old\""
+    ))];
+    app.state.select(Some(0));
+    app.prepare_rename_action();
+    app.input_handler.set_text("new".to_owned());
+
+    handle_key_event(KeyEvent::from(KeyCode::Enter), &mut app).await;
+
+    assert!(app.running);
+    assert_eq!(app.input_mode, InputMode::Rename);
+    assert_eq!(app.input_handler.text, "new");
+    let message = assert_some!(app.status_message.as_ref());
+    assert!(message.text.starts_with("Transmission RPC error"));
+
+    handle_key_event(KeyEvent::from(KeyCode::Esc), &mut app).await;
+
+    assert_none!(app.status_message);
+    assert_eq!(app.input_mode, InputMode::None);
+}
+
+/// Returns an RPC URL on a local port with no listener, so requests fail fast.
+fn unreachable_rpc_url() -> String {
+    let listener = assert_ok!(TcpListener::bind("127.0.0.1:0"));
+    let port = assert_ok!(listener.local_addr()).port();
+    format!("http://127.0.0.1:{port}/transmission/rpc")
 }
 
 fn temp_dir() -> TempDir {
