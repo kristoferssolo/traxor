@@ -183,9 +183,9 @@ async fn is_suggestable_directory(entry: &fs::DirEntry) -> Result<bool> {
 #[cfg(test)]
 mod tests {
     use super::InputHandler;
-    use std::fs;
     #[cfg(unix)]
     use std::os::unix::fs::symlink;
+    use std::{fs, path::PathBuf};
     use tempfile::TempDir;
 
     #[tokio::test]
@@ -244,7 +244,7 @@ mod tests {
 
         input.insert_char('x');
 
-        assert!(input.completions().is_empty());
+        assert_eq!(input.completions(), Vec::<PathBuf>::new());
         assert_eq!(input.completion_idx(), None);
     }
 
@@ -260,7 +260,7 @@ mod tests {
         input.complete().await.expect("completion should succeed");
 
         assert_eq!(input.text, format!("{}/missing", dir.path().display()));
-        assert!(input.completions().is_empty());
+        assert_eq!(input.completions(), Vec::<PathBuf>::new());
         assert_eq!(input.completion_idx(), None);
     }
 
@@ -294,7 +294,7 @@ mod tests {
         input.complete().await.expect("completion should succeed");
 
         assert_eq!(input.text, format!("{}/li", dir.path().display()));
-        assert!(input.completions().is_empty());
+        assert_eq!(input.completions(), Vec::<PathBuf>::new());
         assert_eq!(input.completion_idx(), None);
     }
 
@@ -310,7 +310,7 @@ mod tests {
         input.complete().await.expect("completion should succeed");
 
         assert_eq!(input.text, format!("{}/li", dir.path().display()));
-        assert!(input.completions().is_empty());
+        assert_eq!(input.completions(), Vec::<PathBuf>::new());
         assert_eq!(input.completion_idx(), None);
     }
 
