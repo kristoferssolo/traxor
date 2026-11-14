@@ -20,10 +20,6 @@ pub enum Action {
     ToggleTorrent,
     #[display("Toggle All Torrents")]
     ToggleAll,
-    #[display("Pause All Torrents")]
-    PauseAll,
-    #[display("Start All Torrents")]
-    StartAll,
     #[display("Move Torrent(-s)")]
     Move,
     #[display("Delete Torrent(-s) (force: {})", _0)]

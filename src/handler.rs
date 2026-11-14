@@ -107,8 +107,6 @@ pub async fn update(app: &mut App, action: Action) -> Result<()> {
         Action::ToggleHelp => app.toggle_help(),
         Action::ToggleTorrent => app.toggle_torrents().await?,
         Action::ToggleAll => app.torrents.toggle_all().await?,
-        Action::PauseAll => app.torrents.stop_all().await?,
-        Action::StartAll => app.torrents.start_all().await?,
         Action::Move => app.prepare_move_action(),
         Action::Rename => app.prepare_rename_action(),
         Action::Filter => app.start_filter(),

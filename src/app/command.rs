@@ -59,44 +59,6 @@ impl Torrents {
         Ok(())
     }
 
-    /// Start all torrents immediately.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the RPC call fails.
-    pub async fn start_all(&mut self) -> Result<()> {
-        self.action_all(TorrentAction::StartNow).await
-    }
-
-    /// Stop all torrents.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the RPC call fails.
-    pub async fn stop_all(&mut self) -> Result<()> {
-        self.action_all(TorrentAction::Stop).await
-    }
-
-    /// Move a torrent to a new location.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the RPC call fails.
-    pub async fn move_dir(
-        &mut self,
-        torrent: &Torrent,
-        location: &Path,
-        move_from: Option<bool>,
-    ) -> Result<()> {
-        let Some(id) = torrent.id() else {
-            return Ok(());
-        };
-        self.client
-            .torrent_set_location(vec![id], location.to_string_lossy().into_owned(), move_from)
-            .await?;
-        Ok(())
-    }
-
     /// Delete torrents, optionally removing local data.
     ///
     /// # Errors
@@ -141,14 +103,6 @@ impl Torrents {
                 name.to_string_lossy().into_owned(),
             )
             .await?;
-        Ok(())
-    }
-
-    async fn action_all(&mut self, action: TorrentAction) -> Result<()> {
-        let ids: Vec<_> = self.torrents.iter().filter_map(Torrent::id).collect();
-        if !ids.is_empty() {
-            self.client.torrent_action(action, ids).await?;
-        }
         Ok(())
     }
 }
