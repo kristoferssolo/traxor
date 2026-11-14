@@ -570,7 +570,7 @@ mod tests {
             edit(&mut input);
 
             assert_eq!(input.completions(), Vec::<PathBuf>::new());
-            assert_eq!(input.completion_idx(), None);
+            assert_none!(input.completion_idx());
         }
     }
 
