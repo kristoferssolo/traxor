@@ -4,7 +4,6 @@ use ratatui::{
     text::Line,
     widgets::{Block, BorderType, Borders, Clear, List, ListItem, Paragraph},
 };
-use tracing::warn;
 
 pub fn render(f: &mut Frame, app: &App) {
     match app.input_mode {
@@ -17,7 +16,13 @@ pub fn render(f: &mut Frame, app: &App) {
 
 fn render_text_input(f: &mut Frame, app: &App) {
     let size = f.area();
-    let input_area = Rect::new(size.width / 4, size.height / 2 - 1, size.width / 2, 3);
+    let input_area = Rect::new(
+        size.width / 4,
+        (size.height / 2).saturating_sub(1),
+        size.width / 2,
+        3,
+    )
+    .intersection(size);
 
     let title = match app.input_mode {
         InputMode::Move => "Move to",
@@ -32,28 +37,24 @@ fn render_text_input(f: &mut Frame, app: &App) {
     f.render_widget(Clear, input_area);
     f.render_widget(block, input_area);
 
-    let input = Paragraph::new(app.input_handler.text.as_str()).block(Block::default());
-    f.render_widget(
-        input,
-        input_area.inner(Margin {
-            vertical: 1,
-            horizontal: 1,
-        }),
+    let text_area = input_area.inner(Margin {
+        vertical: 1,
+        horizontal: 1,
+    });
+    let view = input_view(
+        &app.input_handler.text,
+        app.input_handler.cursor_position,
+        text_area.width,
     );
+    f.render_widget(Paragraph::new(view.visible), text_area);
 
     if app.input_mode == InputMode::Move {
         render_completion_popup(f, app, input_area);
     }
 
-    let cursor_offset = u16::try_from(app.input_handler.cursor_position).unwrap_or_else(|_| {
-        warn!("cursor_position out of range, clamping");
-        0
-    });
-
-    f.set_cursor_position(Position::new(
-        input_area.x + cursor_offset + 1,
-        input_area.y + 1,
-    ));
+    if !text_area.is_empty() {
+        f.set_cursor_position(Position::new(text_area.x + view.cursor_column, text_area.y));
+    }
 }
 
 fn render_completion_popup(f: &mut Frame, app: &App, input_area: Rect) {
@@ -112,7 +113,8 @@ fn render_completion_popup(f: &mut Frame, app: &App, input_area: Rect) {
 fn render_filter_input(f: &mut Frame, app: &App) {
     let size = f.area();
     let width = size.width.min(60);
-    let input_area = Rect::new((size.width.saturating_sub(width)) / 2, 1, width, 3);
+    let input_area =
+        Rect::new((size.width.saturating_sub(width)) / 2, 1, width, 3).intersection(size);
 
     let filtered = app.filtered_torrents().len();
     let total = app.torrents.len();
@@ -136,28 +138,83 @@ fn render_filter_input(f: &mut Frame, app: &App) {
     f.render_widget(Clear, input_area);
     f.render_widget(block, input_area);
 
-    let prompt = Span::styled("> ", Style::default().fg(Color::Cyan).bold());
-    let text = Span::raw(app.input_handler.text.as_str());
-    let input = Paragraph::new(Line::from(vec![prompt, text]));
-
-    f.render_widget(
-        input,
-        input_area.inner(Margin {
-            vertical: 1,
-            horizontal: 1,
-        }),
-    );
-
-    let cursor_offset = u16::try_from(app.input_handler.cursor_position).unwrap_or_else(|_| {
-        warn!("cursor_position out of range, clamping");
-        0
+    let text_area = input_area.inner(Margin {
+        vertical: 1,
+        horizontal: 1,
     });
+    let prompt = Span::styled("> ", Style::default().fg(Color::Cyan).bold());
+    let prompt_width = u16::try_from(prompt.width()).unwrap_or(u16::MAX);
+    let view = input_view(
+        &app.input_handler.text,
+        app.input_handler.cursor_position,
+        text_area.width.saturating_sub(prompt_width),
+    );
+    let input = Paragraph::new(Line::from(vec![prompt, Span::raw(view.visible)]));
+    f.render_widget(input, text_area);
 
-    // +2 for the "> " prompt
-    f.set_cursor_position(Position::new(
-        input_area.x + cursor_offset + 3,
-        input_area.y + 1,
-    ));
+    if text_area.width > prompt_width && text_area.height > 0 {
+        f.set_cursor_position(Position::new(
+            text_area.x + prompt_width + view.cursor_column,
+            text_area.y,
+        ));
+    }
+}
+
+/// The part of a single-line input that fits its box, with the cursor kept on screen.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct InputView<'a> {
+    /// Text to draw from the left edge of the box.
+    visible: &'a str,
+    /// Cursor column relative to the left edge of the box.
+    cursor_column: u16,
+}
+
+/// Scrolls `text` horizontally so the cursor at byte offset `cursor` fits in `width` display
+/// columns.
+///
+/// Scrolls only as far as needed, so text that fits stays left-aligned. The cell under the cursor
+/// is kept visible, including a wide character at the cursor.
+fn input_view(text: &str, cursor: usize, width: u16) -> InputView<'_> {
+    let width = usize::from(width);
+    let cursor = text.floor_char_boundary(cursor);
+    let cursor_cell = text[cursor..]
+        .chars()
+        .next()
+        .map_or(1, |ch| char_width(ch).max(1));
+    let prefix_budget = width.saturating_sub(cursor_cell);
+
+    let mut start = cursor;
+    let mut cursor_column = 0;
+    for (index, ch) in text[..cursor].char_indices().rev() {
+        let ch_width = char_width(ch);
+        if cursor_column + ch_width > prefix_budget {
+            break;
+        }
+        cursor_column += ch_width;
+        start = index;
+    }
+
+    let mut end = start;
+    let mut used = 0;
+    for (index, ch) in text[start..].char_indices() {
+        let ch_width = char_width(ch);
+        if used + ch_width > width {
+            break;
+        }
+        used += ch_width;
+        end = start + index + ch.len_utf8();
+    }
+
+    InputView {
+        visible: &text[start..end],
+        cursor_column: u16::try_from(cursor_column).unwrap_or(u16::MAX),
+    }
+}
+
+/// Display width of `ch` as ratatui measures it.
+fn char_width(ch: char) -> usize {
+    let mut buf = [0; 4];
+    Span::raw(&*ch.encode_utf8(&mut buf)).width()
 }
 
 fn render_confirm_delete(f: &mut Frame, delete_local_data: bool) {
@@ -202,4 +259,72 @@ fn render_confirm_delete(f: &mut Frame, delete_local_data: bool) {
             horizontal: 1,
         }),
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn view(visible: &str, cursor_column: u16) -> InputView<'_> {
+        InputView {
+            visible,
+            cursor_column,
+        }
+    }
+
+    #[test]
+    fn ascii_that_fits_is_not_scrolled() {
+        assert_eq!(input_view("abc", 3, 10), view("abc", 3));
+        assert_eq!(input_view("abc", 1, 10), view("abc", 1));
+        assert_eq!(input_view("abc", 0, 10), view("abc", 0));
+    }
+
+    #[test]
+    fn multibyte_cursor_uses_display_columns() {
+        assert_eq!(input_view("äbc", "ä".len(), 10), view("äbc", 1));
+        assert_eq!(input_view("äöü", "äöü".len(), 10), view("äöü", 3));
+    }
+
+    #[test]
+    fn wide_characters_take_two_columns() {
+        assert_eq!(input_view("日本語", "日本".len(), 10), view("日本語", 4));
+        assert_eq!(input_view("日本語", "日本語".len(), 10), view("日本語", 6));
+    }
+
+    #[test]
+    fn long_text_scrolls_to_keep_cursor_at_end_visible() {
+        assert_eq!(input_view("abcdefghij", 10, 5), view("ghij", 4));
+    }
+
+    #[test]
+    fn long_text_scrolls_for_cursor_in_the_middle() {
+        assert_eq!(input_view("abcdefghij", 0, 5), view("abcde", 0));
+        assert_eq!(input_view("abcdefghij", 3, 5), view("abcde", 3));
+        assert_eq!(input_view("abcdefghij", 7, 5), view("defgh", 4));
+    }
+
+    #[test]
+    fn long_wide_text_scrolls_by_whole_characters() {
+        assert_eq!(
+            input_view("日本語中文", "日本語中文".len(), 5),
+            view("中文", 4)
+        );
+        assert_eq!(input_view("日本語", "日本語".len(), 4), view("語", 2));
+    }
+
+    #[test]
+    fn wide_character_under_cursor_stays_visible() {
+        assert_eq!(input_view("ab日", 2, 3), view("b日", 1));
+    }
+
+    #[test]
+    fn zero_width_box_shows_nothing() {
+        assert_eq!(input_view("abc", 3, 0), view("", 0));
+    }
+
+    #[test]
+    fn invalid_cursor_is_clamped_to_a_char_boundary() {
+        assert_eq!(input_view("ä", 1, 5), view("ä", 0));
+        assert_eq!(input_view("abc", 10, 5), view("abc", 3));
+    }
 }
