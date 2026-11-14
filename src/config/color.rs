@@ -13,4 +13,9 @@ pub struct ColorConfig {
     pub status_stopped: String,
     pub status_verifying: String,
     pub status_queued: String,
+    pub progress_downloading: String,
+    pub progress_seeding: String,
+    pub progress_stopped: String,
+    pub progress_verifying: String,
+    pub progress_queued: String,
 }

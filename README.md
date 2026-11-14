@@ -87,7 +87,14 @@ highlight_foreground = "white"
 status_downloading = "cyan"
 status_seeding = "white"
 status_stopped = "dark_gray"
+progress_downloading = "#163a40"
+progress_seeding = "#262626"
+progress_stopped = "#1c1c1c"
+progress_verifying = "#3a3220"
+progress_queued = "#1c2a3a"
 ```
+
+Each row's Name cell is filled from the left in proportion to the torrent's progress, using the `progress_*` color for its state. On the highlighted or selected row, hex colors are brightened by 30% so the row background stays distinguishable; named colors are used as is.
 
 ### Time
 
