@@ -1,6 +1,6 @@
 use crate::{
-    app::utils::Wrapper,
-    config::{color::ColorConfig, time::TimeConfig},
+    app::{sort::Sort, utils::Wrapper},
+    config::{Config, color::ColorConfig, time::TimeConfig},
     ui::to_color,
 };
 use ratatui::{
@@ -29,22 +29,30 @@ const COLUMN_FLEX: Flex = Flex::Start;
 /// `(numerator, denominator)`, so the highlight or selection stays visible inside the fill.
 const ROW_BACKGROUND_TINT_SCALE: (u16, u16) = (13, 10);
 
+/// Cells a sort indicator such as ` ▼` adds to a column title.
+const SORT_INDICATOR_WIDTH: u16 = 2;
+
 /// Builds the torrent table for `area`.
 ///
 /// `highlighted` is the [`TableState`](ratatui::widgets::TableState) selection the table will
 /// be rendered with. It and `area` determine the Name column's rendered width, which the
 /// progress fill needs.
+///
+/// `sort` marks the sorted column's header with its direction.
 pub fn build_table(
     torrents: &[&Torrent],
     selected: &HashSet<i64>,
     highlighted: Option<usize>,
-    colors: &ColorConfig,
-    time: &TimeConfig,
+    config: &Config,
     fields: &[TorrentGetField],
     area: Rect,
+    sort: Option<Sort>,
 ) -> Table<'static> {
+    let colors = &config.colors;
+    let time = &config.time;
     let select_style = select_style(colors);
     let header_style = header_style(colors);
+    let sorted_header_style = sorted_header_style(colors);
     let highlight_row_style = highlighted_row_style(colors);
 
     let widths = fields
@@ -75,7 +83,16 @@ pub fn build_table(
         })
         .collect::<Vec<_>>();
 
-    let header = Row::new(fields.iter().map(|&field| field.title()))
+    let header_cells = fields.iter().enumerate().map(|(column, &field)| {
+        let title = field.title();
+        match sort {
+            Some(sort) if sort.column == column => {
+                Cell::from(format!("{title} {}", sort.direction.arrow())).style(sorted_header_style)
+            }
+            _ => Cell::from(title),
+        }
+    });
+    let header = Row::new(header_cells)
         .style(header_style)
         .bottom_margin(HEADER_BOTTOM_MARGIN);
 
@@ -107,7 +124,15 @@ fn column_width(field: TorrentGetField) -> Constraint {
         TorrentGetField::Name => Constraint::Fill(1),
         TorrentGetField::DownloadDir | TorrentGetField::TrackerList => Constraint::Min(20),
         TorrentGetField::HashString => Constraint::Min(16),
-        _ => Constraint::Length(field.width()),
+        // Leave room for the sort indicator so sorting never truncates the title.
+        _ => {
+            let title_width = u16::try_from(Span::raw(field.title()).width()).unwrap_or(u16::MAX);
+            Constraint::Length(
+                field
+                    .width()
+                    .max(title_width.saturating_add(SORT_INDICATOR_WIDTH)),
+            )
+        }
     }
 }
 
@@ -147,6 +172,16 @@ fn header_style(cfg: &ColorConfig) -> Style {
     Style::default()
         .fg(fg)
         .add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
+}
+
+/// Header cell of the sorted column, inverted from the other headers.
+fn sorted_header_style(cfg: &ColorConfig) -> Style {
+    let bg = to_color(&cfg.header_foreground);
+    Style::default()
+        .fg(Color::Black)
+        .bg(bg)
+        .add_modifier(Modifier::BOLD)
+        .remove_modifier(Modifier::UNDERLINED)
 }
 
 fn highlighted_row_style(cfg: &ColorConfig) -> Style {
@@ -331,10 +366,10 @@ mod tests {
             &[torrent],
             selected,
             highlighted,
-            &config.colors,
-            &config.time,
+            &config,
             &fields,
             area,
+            None,
         );
         let mut buf = Buffer::empty(area);
         let mut state = TableState::default().with_selected(highlighted);
@@ -364,6 +399,15 @@ mod tests {
         assert_eq!(
             column_width(TorrentGetField::HashString),
             Constraint::Min(16)
+        );
+    }
+
+    #[test]
+    fn fixed_columns_fit_title_and_sort_indicator() {
+        // "Downloaded Ever" is as wide as its 15-cell column.
+        assert_eq!(
+            column_width(TorrentGetField::DownloadedEver),
+            Constraint::Length(17)
         );
     }
 

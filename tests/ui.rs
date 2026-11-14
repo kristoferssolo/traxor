@@ -1,6 +1,12 @@
 use claims::{assert_ok, assert_some};
-use ratatui::{Terminal, backend::TestBackend, style::Color};
+use ratatui::{
+    Terminal,
+    backend::TestBackend,
+    buffer::Buffer,
+    style::{Color, Modifier},
+};
 use toml::Table;
+use transmission_rpc::types::{Torrent, TorrentGetField};
 use traxor::{app::App, config::Config, ui};
 
 #[test]
@@ -243,4 +249,86 @@ fn help_page_stacks_into_one_column_when_narrow() {
 fn help_page_survives_tiny_terminal() {
     render(&mut help_app(), 10, 5);
     render(&mut help_app(), 1, 1);
+}
+
+/// App on the embedded default config, independent of any user config.
+fn app() -> App {
+    let config: Config = assert_ok!(toml::from_str(include_str!("../config/default.toml")));
+    assert_ok!(App::new(config))
+}
+
+fn torrent(id: i64, fields: &str) -> Torrent {
+    assert_ok!(toml::from_str(&format!("id = {id}\n{fields}")))
+}
+
+fn draw(app: &mut App, width: u16) -> Buffer {
+    let mut terminal = assert_ok!(Terminal::new(TestBackend::new(width, 20)));
+    assert_ok!(terminal.draw(|frame| ui::render(app, frame)));
+    terminal.backend().buffer().clone()
+}
+
+fn lines(buffer: &Buffer) -> Vec<String> {
+    (0..buffer.area.height)
+        .map(|y| {
+            (0..buffer.area.width)
+                .map(|x| buffer[(x, y)].symbol())
+                .collect()
+        })
+        .collect()
+}
+
+/// Cell position of the first occurrence of `text`.
+fn find_in_buffer(buffer: &Buffer, text: &str) -> Option<(u16, u16)> {
+    lines(buffer).iter().zip(0..).find_map(|(line, y)| {
+        let byte = line.find(text)?;
+        let x = u16::try_from(line[..byte].chars().count()).ok()?;
+        Some((x, y))
+    })
+}
+
+#[test]
+fn sorted_column_header_shows_direction_and_highlight() {
+    let mut app = app();
+    app.torrents.torrents = vec![
+        torrent(
+            1,
+            r#"name = "small"
+totalSize = 10"#,
+        ),
+        torrent(
+            2,
+            r#"name = "large"
+totalSize = 1000"#,
+        ),
+    ];
+    let size_column = app.tabs()[0]
+        .fields()
+        .iter()
+        .position(|&field| field == TorrentGetField::TotalSize)
+        .expect("overview shows the size column");
+    for _ in 0..=size_column {
+        app.cycle_sort();
+    }
+
+    let buffer = draw(&mut app, 200);
+    let (x, y) =
+        find_in_buffer(&buffer, "Total Size ▼").expect("sorted header has a descending arrow");
+    let sorted = &buffer[(x, y)];
+    assert_eq!(sorted.fg, Color::Black);
+    assert_eq!(sorted.bg, Color::Yellow);
+    assert!(sorted.modifier.contains(Modifier::BOLD));
+    assert!(!sorted.modifier.contains(Modifier::UNDERLINED));
+
+    let (x, y) = find_in_buffer(&buffer, "Status").expect("status header");
+    assert_eq!(buffer[(x, y)].fg, Color::Yellow);
+    assert_ne!(buffer[(x, y)].bg, Color::Yellow);
+    assert!(find_in_buffer(&buffer, "▲").is_none());
+
+    let large = find_in_buffer(&buffer, "large").expect("large row");
+    let small = find_in_buffer(&buffer, "small").expect("small row");
+    assert!(large.1 < small.1);
+
+    app.reverse_sort();
+    let buffer = draw(&mut app, 200);
+    assert!(find_in_buffer(&buffer, "Total Size ▲").is_some());
 }
