@@ -6,7 +6,7 @@ use ratatui::{
 };
 
 pub fn render_help(frame: &mut Frame, app: &App) {
-    let kb = &app.config.keybinds;
+    let kb = app.config.keybinds();
     let key_style = Style::default().fg(Color::Yellow).bold();
     let select_key = display_key(&kb.select);
     let filter_key = display_key(&kb.filter);
