@@ -5,9 +5,6 @@ pub enum TraxorError {
     #[error("Transmission RPC error: {0}")]
     TransmissionRpc(String),
 
-    #[error("Configuration error: {0}")]
-    Config(String),
-
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 
