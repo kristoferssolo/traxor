@@ -1,10 +1,9 @@
-use crate::{app::constants::DEFAULT_RPC_URL, error::Result};
+use crate::{config::rpc::RpcConfig, error::Result};
 use std::{collections::HashSet, fmt::Debug};
 use transmission_rpc::{
     TransClient,
     types::{Torrent, TorrentGetField},
 };
-use url::Url;
 
 /// List of torrents.
 pub struct Torrents {
@@ -16,15 +15,19 @@ pub struct Torrents {
 }
 
 impl Torrents {
-    /// Constructs a new instance of [`Torrents`] for the default RPC URL.
+    /// Constructs a new instance of [`Torrents`] with a client for `rpc`.
     ///
     /// # Errors
     ///
-    /// Returns an error if the default RPC URL is invalid.
-    pub fn new() -> Result<Self> {
-        let url = Url::parse(DEFAULT_RPC_URL)?;
+    /// Returns an error when the RPC URL or credentials are invalid.
+    pub fn new(rpc: &RpcConfig) -> Result<Self> {
+        let url = rpc.parsed_url()?;
+        let client = match rpc.basic_auth()? {
+            Some(auth) => TransClient::with_auth(url, auth),
+            None => TransClient::new(url),
+        };
         Ok(Self {
-            client: TransClient::new(url),
+            client,
             torrents: Vec::new(),
             selected: HashSet::new(),
             fields: None,
@@ -49,16 +52,6 @@ impl Torrents {
     pub fn set_fields(&mut self, fields: Option<Vec<TorrentGetField>>) -> &mut Self {
         self.fields = fields;
         self
-    }
-
-    /// Replaces the client with one configured for `url`.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if `url` is invalid.
-    pub fn url(&mut self, url: &str) -> Result<&mut Self> {
-        self.client = TransClient::new(Url::parse(url)?);
-        Ok(self)
     }
 
     /// Fetches torrents from the daemon, replacing the cached list.

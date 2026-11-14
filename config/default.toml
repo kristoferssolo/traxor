@@ -5,6 +5,16 @@
 # overrides these values. Only specify what you want to change in your user config.
 
 # ============================================================================
+#                                    RPC
+# ============================================================================
+[rpc]
+# Transmission RPC endpoint (http or https).
+url = "http://localhost:9091/transmission/rpc"
+# HTTP basic auth. Set both username and password, or neither.
+# username = "transmission"
+# password = "secret"
+
+# ============================================================================
 #                                 KEYBINDS
 # ============================================================================
 [keybinds]
