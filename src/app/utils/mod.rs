@@ -428,6 +428,9 @@ mod tests {
         };
         let ts = Utc.with_ymd_and_hms(2024, 1, 2, 3, 4, 5).single();
         assert_eq!(format_datetime(ts, &cfg), "2024-01-02");
-        assert!(format_datetime(Some(chrono::DateTime::<Utc>::UNIX_EPOCH), &cfg).is_empty());
+        assert_eq!(
+            format_datetime(Some(chrono::DateTime::<Utc>::UNIX_EPOCH), &cfg),
+            ""
+        );
     }
 }
