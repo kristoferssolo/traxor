@@ -380,6 +380,110 @@ fn delete_target(app: &App) -> &DeleteTarget {
     }
 }
 
+#[test]
+fn app_first_and_last_jump_without_wrapping() {
+    let mut app = app_with_torrents(5);
+    app.state.select(Some(2));
+    app.open_help();
+
+    app.last();
+    assert_eq!(app.state.selected(), Some(4));
+    assert!(!app.show_help);
+    app.last();
+    assert_eq!(app.state.selected(), Some(4));
+
+    app.first();
+    assert_eq!(app.state.selected(), Some(0));
+    app.first();
+    assert_eq!(app.state.selected(), Some(0));
+}
+
+#[test]
+fn app_last_uses_filtered_torrents() {
+    let mut app = app_with_torrents(5);
+    app.filter_text = "torrent-3".into();
+
+    app.last();
+
+    assert_eq!(app.state.selected(), Some(0));
+}
+
+#[test]
+fn app_page_moves_by_page_size_and_stops_at_ends() {
+    let mut app = app_with_torrents(25);
+    app.set_page_size(10);
+
+    app.page_down();
+    assert_eq!(app.state.selected(), Some(10));
+    app.page_down();
+    assert_eq!(app.state.selected(), Some(20));
+    app.page_down();
+    assert_eq!(app.state.selected(), Some(24));
+
+    app.page_up();
+    assert_eq!(app.state.selected(), Some(14));
+    app.page_up();
+    assert_eq!(app.state.selected(), Some(4));
+    app.page_up();
+    assert_eq!(app.state.selected(), Some(0));
+}
+
+#[test]
+fn app_page_larger_than_list_clamps_to_ends() {
+    let mut app = app_with_torrents(3);
+    app.state.select(Some(1));
+
+    app.page_down();
+    assert_eq!(app.state.selected(), Some(2));
+    app.page_up();
+    assert_eq!(app.state.selected(), Some(0));
+}
+
+#[test]
+fn app_page_clamps_stale_highlight() {
+    let mut app = app_with_torrents(3);
+    app.set_page_size(1);
+    app.state.select(Some(10));
+
+    app.page_up();
+
+    assert_eq!(app.state.selected(), Some(1));
+}
+
+#[test]
+fn app_page_size_is_at_least_one_row() {
+    let mut app = app_with_torrents(3);
+    app.set_page_size(0);
+    app.state.select(Some(0));
+
+    app.page_down();
+
+    assert_eq!(app.state.selected(), Some(1));
+}
+
+#[test]
+fn app_jumps_are_noops_on_empty_list() {
+    let mut app = app_with_torrents(0);
+    app.open_help();
+
+    app.first();
+    app.last();
+    app.page_down();
+    app.page_up();
+
+    assert_eq!(app.state.selected(), None);
+    assert!(app.show_help);
+}
+
+fn app_with_torrents(count: i64) -> App {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.torrents.torrents = (0..count)
+        .map(|id| torrent(id, &format!("torrent-{id}")))
+        .collect();
+    app
+}
+
 fn torrent(id: i64, name: &str) -> Torrent {
     torrent_with_status(id, name, TorrentStatus::Stopped)
 }

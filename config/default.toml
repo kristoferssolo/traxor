@@ -11,6 +11,10 @@
 # Navigation
 prev_torrent = "k"
 next_torrent = "j"
+first_torrent = "g"
+last_torrent = "G"
+page_down = "pagedown"
+page_up = "pageup"
 prev_tab = "h"
 next_tab = "l"
 

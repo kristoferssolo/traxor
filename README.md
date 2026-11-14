@@ -46,6 +46,8 @@ traxor
 | Key | Action |
 |-----|--------|
 | `j/k` | Navigate up/down |
+| `g/G` | First/last torrent |
+| `PgUp/PgDn` | Page up/down |
 | `h/l` | Previous/next tab |
 | `1-9, 0` | Switch to tab |
 | `Enter` | Start/stop torrent |

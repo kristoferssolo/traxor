@@ -48,6 +48,19 @@ async fn get_action_navigation() {
         assert_action!(&mut app, KeyCode::Char('k')),
         Action::PrevTorrent
     );
+    assert_some_eq!(
+        assert_action!(&mut app, KeyCode::Char('g')),
+        Action::FirstTorrent
+    );
+    assert_some_eq!(
+        assert_action!(&mut app, KeyCode::Char('G')),
+        Action::LastTorrent
+    );
+    assert_some_eq!(
+        assert_action!(&mut app, KeyCode::PageDown),
+        Action::PageDown
+    );
+    assert_some_eq!(assert_action!(&mut app, KeyCode::PageUp), Action::PageUp);
 }
 
 #[tokio::test]
