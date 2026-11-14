@@ -291,6 +291,26 @@ async fn failing_rpc_url() -> String {
     format!("http://127.0.0.1:{port}/transmission/rpc")
 }
 
+#[tokio::test]
+async fn get_action_modified_chars_edit_instead_of_inserting() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.input_mode = InputMode::Rename;
+    app.input_handler.set_text("/downloads/shows".to_owned());
+
+    for (ch, modifiers) in [
+        ('w', KeyModifiers::CONTROL),
+        ('x', KeyModifiers::ALT),
+        ('S', KeyModifiers::SHIFT),
+    ] {
+        assert_none!(assert_ok!(
+            get_action(KeyEvent::new(KeyCode::Char(ch), modifiers), &mut app).await
+        ));
+    }
+
+    assert_eq!(app.input_handler.text, "/downloads/S");
+}
+
 fn temp_dir() -> TempDir {
     TempDir::new().expect("temp directory")
 }

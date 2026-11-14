@@ -60,6 +60,16 @@ traxor
 | `?` | Toggle help |
 | `q` | Quit |
 
+In move, rename, and filter prompts:
+
+| Key | Action |
+|-----|--------|
+| `Left/Right` | Move cursor |
+| `Home/End`, `Ctrl+A/E` | Line start/end |
+| `Delete` | Delete forward |
+| `Ctrl+W` | Delete previous word |
+| `Ctrl+U` | Delete to line start |
+
 ## Configuration
 
 Configuration file: `~/.config/traxor/config.toml`

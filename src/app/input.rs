@@ -39,6 +39,57 @@ impl InputHandler {
         }
     }
 
+    /// Deletes the character after the cursor.
+    pub fn delete_char_forward(&mut self) {
+        if self.cursor_position < self.text.len() {
+            self.text.remove(self.cursor_position);
+            self.clear_completions();
+        }
+    }
+
+    /// Deletes the word before the cursor, shell-style: trailing whitespace and `/`
+    /// separators are skipped first, then the word up to the previous whitespace or `/`.
+    ///
+    /// On a path such as `/downloads/shows/`, this removes `shows/`.
+    pub fn delete_word_before_cursor(&mut self) {
+        let before = &self.text[..self.cursor_position];
+        let word_end = before
+            .trim_end_matches(char::is_whitespace)
+            .trim_end_matches('/')
+            .len();
+        let word_start = before[..word_end]
+            .trim_end_matches(|ch| !is_word_boundary(ch))
+            .len();
+        self.delete_before_cursor(word_start);
+    }
+
+    /// Deletes everything before the cursor.
+    pub fn delete_to_start(&mut self) {
+        self.delete_before_cursor(0);
+    }
+
+    /// Moves the cursor one character to the left.
+    pub fn move_cursor_left(&mut self) {
+        if let Some(ch) = self.text[..self.cursor_position].chars().next_back() {
+            self.cursor_position -= ch.len_utf8();
+        }
+    }
+
+    /// Moves the cursor one character to the right.
+    pub fn move_cursor_right(&mut self) {
+        if let Some(ch) = self.text[self.cursor_position..].chars().next() {
+            self.cursor_position += ch.len_utf8();
+        }
+    }
+
+    pub const fn move_cursor_to_start(&mut self) {
+        self.cursor_position = 0;
+    }
+
+    pub const fn move_cursor_to_end(&mut self) {
+        self.cursor_position = self.text.len();
+    }
+
     pub fn clear(&mut self) {
         self.text.clear();
         self.cursor_position = 0;
@@ -128,6 +179,20 @@ impl InputHandler {
         self.cursor_position = text.len();
         self.text = text;
     }
+
+    /// Deletes from byte offset `start`, which must be a char boundary, up to the cursor.
+    fn delete_before_cursor(&mut self, start: usize) {
+        if start == self.cursor_position {
+            return;
+        }
+        self.text.replace_range(start..self.cursor_position, "");
+        self.cursor_position = start;
+        self.clear_completions();
+    }
+}
+
+const fn is_word_boundary(ch: char) -> bool {
+    ch.is_whitespace() || ch == '/'
 }
 
 fn split_path_components(path: &Path) -> (&Path, &OsStr) {
@@ -194,7 +259,7 @@ async fn is_suggestable_directory(entry: &fs::DirEntry) -> Result<bool> {
 
 #[cfg(test)]
 mod tests {
-    use super::InputHandler;
+    use super::*;
     use claims::{assert_none, assert_ok};
     #[cfg(unix)]
     use std::os::unix::fs::{PermissionsExt, symlink};
@@ -369,6 +434,149 @@ mod tests {
         }
         assert_eq!(input.text, text);
         assert_eq!(input.completions(), Vec::<PathBuf>::new());
+    }
+
+    #[test]
+    fn move_cursor_left_and_right_step_over_multibyte_chars() {
+        let mut input = input_with("aé😀");
+
+        for expected in [3, 1, 0, 0] {
+            input.move_cursor_left();
+            assert_eq!(input.cursor_position, expected);
+        }
+        for expected in [1, 3, 7, 7] {
+            input.move_cursor_right();
+            assert_eq!(input.cursor_position, expected);
+        }
+    }
+
+    #[test]
+    fn move_cursor_to_start_and_end() {
+        let mut input = input_with("日本語");
+
+        input.move_cursor_to_start();
+        assert_eq!(input.cursor_position, 0);
+
+        input.move_cursor_to_end();
+        assert_eq!(input.cursor_position, "日本語".len());
+    }
+
+    #[test]
+    fn insert_char_at_moved_cursor() {
+        let mut input = input_with("aé");
+        input.move_cursor_left();
+
+        input.insert_char('😀');
+
+        assert_eq!(input.text, "a😀é");
+        assert_eq!(input.cursor_position, "a😀".len());
+    }
+
+    #[test]
+    fn delete_char_forward_removes_char_after_cursor() {
+        let mut input = input_with("éa");
+        input.move_cursor_to_start();
+
+        input.delete_char_forward();
+        assert_eq!(input.text, "a");
+        assert_eq!(input.cursor_position, 0);
+
+        input.move_cursor_to_end();
+        input.delete_char_forward();
+        assert_eq!(input.text, "a");
+        assert_eq!(input.cursor_position, 1);
+    }
+
+    #[test]
+    fn delete_word_before_cursor_at_end() {
+        for (text, expected) in [
+            ("/downloads/shows/", "/downloads/"),
+            ("/downloads/shows", "/downloads/"),
+            ("/downloads//", "/"),
+            ("foo bar  ", "foo "),
+            ("日本/映画/", "日本/"),
+            ("naïve café", "naïve "),
+            ("/", ""),
+            ("word", ""),
+            ("", ""),
+        ] {
+            let mut input = input_with(text);
+
+            input.delete_word_before_cursor();
+
+            assert_eq!(input.text, expected, "deleting word from {text:?}");
+            assert_eq!(input.cursor_position, expected.len());
+        }
+    }
+
+    #[test]
+    fn delete_word_before_cursor_keeps_text_after_cursor() {
+        let mut input = input_with("foo bär baz");
+        for _ in 0..4 {
+            input.move_cursor_left();
+        }
+
+        input.delete_word_before_cursor();
+
+        assert_eq!(input.text, "foo  baz");
+        assert_eq!(input.cursor_position, "foo ".len());
+    }
+
+    #[test]
+    fn delete_word_before_cursor_at_start_is_noop() {
+        let mut input = input_with("foo");
+        input.move_cursor_to_start();
+
+        input.delete_word_before_cursor();
+
+        assert_eq!(input.text, "foo");
+        assert_eq!(input.cursor_position, 0);
+    }
+
+    #[test]
+    fn delete_to_start_keeps_text_after_cursor() {
+        let mut input = input_with("日本語 text");
+        for _ in 0..5 {
+            input.move_cursor_left();
+        }
+
+        input.delete_to_start();
+        assert_eq!(input.text, " text");
+        assert_eq!(input.cursor_position, 0);
+
+        input.delete_to_start();
+        assert_eq!(input.text, " text");
+    }
+
+    #[tokio::test]
+    async fn cursor_edits_clear_stale_completions() {
+        let dir = temp_dir();
+        create_dir(dir.path().join("alpha"));
+        let edits: [fn(&mut InputHandler); 3] = [
+            |input| {
+                input.move_cursor_to_start();
+                input.delete_char_forward();
+            },
+            InputHandler::delete_word_before_cursor,
+            InputHandler::delete_to_start,
+        ];
+
+        for edit in edits {
+            let mut input = input_with(&format!("{}/a", dir.path().display()));
+            assert_ok!(input.complete().await);
+            assert_eq!(input.completions().len(), 1);
+
+            edit(&mut input);
+
+            assert_eq!(input.completions(), Vec::<PathBuf>::new());
+            assert_eq!(input.completion_idx(), None);
+        }
+    }
+
+    fn input_with(text: &str) -> InputHandler {
+        let mut input = InputHandler::new();
+        input.set_text(text.to_owned());
+        input
     }
 
     fn temp_dir() -> TempDir {
