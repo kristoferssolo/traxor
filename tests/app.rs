@@ -1,4 +1,4 @@
-use claims::assert_ok;
+use claims::{assert_none, assert_ok};
 use transmission_rpc::types::{Torrent, TorrentGetField, TorrentStatus};
 use traxor::{
     app::{App, InputMode, types::DeleteTarget},
@@ -233,6 +233,25 @@ fn app_highlight_clamps_when_torrent_disappears() {
     assert_eq!(app.state.selected(), Some(1));
     app.prepare_rename_action();
     assert_eq!(app.input_handler.text, "beta");
+}
+
+#[test]
+fn app_highlight_clears_when_visible_rows_become_empty() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.torrents.torrents = vec![torrent_with_status(1, "alpha", TorrentStatus::Downloading)];
+    app.switch_tab(1);
+    app.next();
+
+    app.torrents.torrents = vec![torrent(1, "alpha")];
+    app.sync_highlight();
+    assert_none!(app.state.selected());
+
+    app.torrents.torrents = vec![torrent_with_status(1, "alpha", TorrentStatus::Downloading)];
+    app.prepare_delete(false);
+    assert_eq!(app.input_mode, InputMode::None);
+    app.prepare_rename_action();
+    assert_eq!(app.input_handler.text, "");
 }
 
 fn delete_target(app: &App) -> &DeleteTarget {

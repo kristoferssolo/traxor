@@ -163,7 +163,8 @@ impl App {
     ///
     /// Call after the visible rows may have changed (refresh, filter, tab switch). If the
     /// highlighted torrent is no longer visible, the previous row is clamped to the visible
-    /// rows and the torrent there becomes the highlight.
+    /// rows and the torrent there becomes the highlight. With no visible rows the highlight is
+    /// cleared, so a torrent that reappears later is not acted on before it is drawn highlighted.
     pub fn sync_highlight(&mut self) {
         let rows = self.filtered_torrents();
         let row = self
@@ -173,7 +174,12 @@ impl App {
             self.state.select(Some(row));
             return;
         }
-        let (Some(row), Some(last)) = (self.state.selected(), rows.len().checked_sub(1)) else {
+        let Some(last) = rows.len().checked_sub(1) else {
+            self.highlighted = None;
+            self.state.select(None);
+            return;
+        };
+        let Some(row) = self.state.selected() else {
             return;
         };
         self.highlight_row(row.min(last));
