@@ -47,16 +47,13 @@ impl InputHandler {
         }
     }
 
-    /// Deletes the word before the cursor, shell-style: trailing whitespace and `/`
-    /// separators are skipped first, then the word up to the previous whitespace or `/`.
+    /// Deletes the word before the cursor, shell-style: any trailing run of whitespace
+    /// and `/` separators is skipped first, then the word up to the previous whitespace or `/`.
     ///
     /// On a path such as `/downloads/shows/`, this removes `shows/`.
     pub fn delete_word_before_cursor(&mut self) {
         let before = &self.text[..self.cursor_position];
-        let word_end = before
-            .trim_end_matches(char::is_whitespace)
-            .trim_end_matches('/')
-            .len();
+        let word_end = before.trim_end_matches(is_word_boundary).len();
         let word_start = before[..word_end]
             .trim_end_matches(|ch| !is_word_boundary(ch))
             .len();
@@ -497,6 +494,10 @@ mod tests {
             ("日本/映画/", "日本/"),
             ("naïve café", "naïve "),
             ("/", ""),
+            ("foo /", ""),
+            ("a/ /", ""),
+            ("/ ", ""),
+            ("bar foo/ /", "bar "),
             ("word", ""),
             ("", ""),
         ] {
