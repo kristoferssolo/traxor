@@ -114,6 +114,8 @@ pub async fn update(app: &mut App, action: Action) -> Result<()> {
         Action::Filter => app.start_filter(),
         Action::ClearFilter => app.clear_filter(),
         Action::Delete(delete_local_data) => app.prepare_delete(delete_local_data),
+        Action::SortColumn => app.cycle_sort(),
+        Action::SortReverse => app.reverse_sort(),
         Action::Select => app.select(),
         Action::SelectAll => app.select_all(),
         Action::ClearSelection => app.clear_selection(),

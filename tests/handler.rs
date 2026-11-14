@@ -11,7 +11,7 @@ use traxor::{
     app::action::Action,
     app::types::DeleteTarget,
     config::Config,
-    handler::{get_action, handle_key_event, handle_mouse},
+    handler::{get_action, handle_key_event, handle_mouse, update},
     ui::render,
 };
 
@@ -104,6 +104,37 @@ async fn get_action_torrent_actions() {
     assert_some_eq!(assert_action!(&mut app, KeyCode::Char(' ')), Action::Select);
     assert_some_eq!(assert_action!(&mut app, ctrl('a')), Action::SelectAll);
     assert_some_eq!(assert_action!(&mut app, ctrl('u')), Action::ClearSelection);
+}
+
+#[tokio::test]
+async fn get_action_sort() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    assert_some_eq!(
+        assert_action!(&mut app, KeyCode::Char('s')),
+        Action::SortColumn
+    );
+    assert_some_eq!(
+        assert_ok!(
+            get_action(
+                KeyEvent::new(KeyCode::Char('S'), KeyModifiers::SHIFT),
+                &mut app
+            )
+            .await
+        ),
+        Action::SortReverse
+    );
+}
+
+#[tokio::test]
+async fn update_sort_actions_change_current_tab_sort() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+
+    assert_ok!(update(&mut app, Action::SortColumn).await);
+    let sort = assert_some!(app.tabs()[0].sort());
+    assert_ok!(update(&mut app, Action::SortReverse).await);
+    assert_some_eq!(app.tabs()[0].sort(), sort.reversed());
 }
 
 #[tokio::test]
