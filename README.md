@@ -61,6 +61,8 @@ traxor
 | `D` | Delete with data |
 | `/` | Search/filter |
 | `Esc` | Close popup / clear filter |
+| `s` | Sort by next column |
+| `S` | Reverse sort |
 | `?` | Open/close the full help page |
 | `q` | Quit |
 

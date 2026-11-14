@@ -64,20 +64,29 @@ fn help_columns(kb: &KeybindsConfig) -> Vec<Vec<Section>> {
                 ],
             ),
         ],
-        vec![Section::new(
-            "Actions",
-            vec![
-                (key(&kb.toggle_torrent), "Start/stop"),
-                (key(&kb.toggle_all), "Start/stop all"),
-                (key(&kb.select), "Multi-select"),
-                (key(&kb.select_all), "Select visible"),
-                (key(&kb.clear_selection), "Clear selection"),
-                (key(&kb.move_torrent), "Move"),
-                (key(&kb.rename_torrent), "Rename"),
-                (key(&kb.delete), "Remove"),
-                (key(&kb.delete_force), "Delete with data"),
-            ],
-        )],
+        vec![
+            Section::new(
+                "Actions",
+                vec![
+                    (key(&kb.toggle_torrent), "Start/stop"),
+                    (key(&kb.toggle_all), "Start/stop all"),
+                    (key(&kb.select), "Multi-select"),
+                    (key(&kb.select_all), "Select visible"),
+                    (key(&kb.clear_selection), "Clear selection"),
+                    (key(&kb.move_torrent), "Move"),
+                    (key(&kb.rename_torrent), "Rename"),
+                    (key(&kb.delete), "Remove"),
+                    (key(&kb.delete_force), "Delete with data"),
+                ],
+            ),
+            Section::new(
+                "Sort",
+                vec![
+                    (key(&kb.sort_column), "Next sort column"),
+                    (key(&kb.sort_reverse), "Reverse sort"),
+                ],
+            ),
+        ],
         vec![Section::new(
             "In prompts",
             vec![

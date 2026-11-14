@@ -95,7 +95,7 @@ fn assert_stats_visible(status_line: &str) {
 
 const DEFAULT_CONFIG: &str = include_str!("../config/default.toml");
 
-const ACTION_LABELS: [&str; 26] = [
+const ACTION_LABELS: [&str; 28] = [
     "Up/down",
     "First/last",
     "Page",
@@ -114,6 +114,8 @@ const ACTION_LABELS: [&str; 26] = [
     "Rename",
     "Remove",
     "Delete with data",
+    "Next sort column",
+    "Reverse sort",
     "Move cursor",
     "Start/end",
     "Delete forward",
@@ -331,4 +333,16 @@ totalSize = 1000"#,
     app.reverse_sort();
     let buffer = draw(&mut app, 200);
     assert!(find_in_buffer(&buffer, "Total Size ▲").is_some());
+}
+
+#[test]
+fn status_bar_shows_sort_hints_only_when_they_fit() {
+    let mut app = app();
+
+    let wide = draw(&mut app, 200);
+    assert!(find_in_buffer(&wide, "s Sort │ S Reverse │ ? Help").is_some());
+
+    let narrow = draw(&mut app, 30);
+    assert!(find_in_buffer(&narrow, "? Help │ / Search").is_some());
+    assert!(find_in_buffer(&narrow, "Sort").is_none());
 }
