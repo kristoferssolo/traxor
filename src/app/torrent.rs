@@ -51,7 +51,7 @@ impl Torrents {
         self
     }
 
-    /// Replaces the client with one connected to `url`.
+    /// Replaces the client with one configured for `url`.
     ///
     /// # Errors
     ///

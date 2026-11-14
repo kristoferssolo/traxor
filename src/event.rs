@@ -34,7 +34,8 @@ impl EventHandler {
     ///
     /// # Panics
     ///
-    /// The spawned thread panics if event polling fails.
+    /// Panics if the OS cannot create the event thread. The spawned thread panics if
+    /// event polling fails.
     #[must_use]
     pub fn new(tick_rate_ms: u64) -> Self {
         let tick_rate = Duration::from_millis(tick_rate_ms);

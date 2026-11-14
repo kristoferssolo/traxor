@@ -84,7 +84,7 @@ impl App {
     ///
     /// # Errors
     ///
-    /// Returns an error if the parent directory cannot be read.
+    /// Returns an error if reading the parent directory or an entry's metadata fails.
     pub async fn complete_input(&mut self) -> Result<()> {
         self.input_handler.complete().await
     }
