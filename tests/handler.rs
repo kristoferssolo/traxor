@@ -311,6 +311,27 @@ async fn get_action_modified_chars_edit_instead_of_inserting() {
     assert_eq!(app.input_handler.text, "/downloads/S");
 }
 
+#[tokio::test]
+async fn get_action_ctrl_alt_chars_insert_as_altgr_text() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.input_mode = InputMode::Rename;
+    app.input_handler.set_text("/downloads/shows".to_owned());
+    let altgr = KeyModifiers::CONTROL | KeyModifiers::ALT;
+
+    for ch in ['@', 'a', 'e', 'w', 'u'] {
+        assert_none!(assert_ok!(
+            get_action(KeyEvent::new(KeyCode::Char(ch), altgr), &mut app).await
+        ));
+    }
+
+    assert_eq!(app.input_handler.text, "/downloads/shows@aewu");
+    assert_eq!(
+        app.input_handler.cursor_position,
+        app.input_handler.text.len()
+    );
+}
+
 fn temp_dir() -> TempDir {
     TempDir::new().expect("temp directory")
 }

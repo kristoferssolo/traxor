@@ -19,22 +19,20 @@ async fn handle_input(key_event: KeyEvent, app: &mut App) -> Result<Option<Actio
     }
 
     let ctrl = key_event.modifiers.contains(KeyModifiers::CONTROL);
+    let alt = key_event.modifiers.contains(KeyModifiers::ALT);
+    // Ctrl+Alt is also how crossterm reports AltGr on Windows (crossterm#820), so a
+    // char with both modifiers is text, and editing shortcuts require Ctrl alone.
+    let ctrl_only = ctrl && !alt;
     let input = &mut app.input_handler;
     match key_event.code {
         KeyCode::Enter => return Ok(Some(Action::Submit)),
         KeyCode::Esc => return Ok(Some(Action::Cancel)),
         KeyCode::Tab if app.input_mode == InputMode::Move => app.complete_input().await?,
-        KeyCode::Char('a') if ctrl => input.move_cursor_to_start(),
-        KeyCode::Char('e') if ctrl => input.move_cursor_to_end(),
-        KeyCode::Char('w') if ctrl => input.delete_word_before_cursor(),
-        KeyCode::Char('u') if ctrl => input.delete_to_start(),
-        KeyCode::Char(ch)
-            if !key_event
-                .modifiers
-                .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT) =>
-        {
-            input.insert_char(ch);
-        }
+        KeyCode::Char('a') if ctrl_only => input.move_cursor_to_start(),
+        KeyCode::Char('e') if ctrl_only => input.move_cursor_to_end(),
+        KeyCode::Char('w') if ctrl_only => input.delete_word_before_cursor(),
+        KeyCode::Char('u') if ctrl_only => input.delete_to_start(),
+        KeyCode::Char(ch) if ctrl == alt => input.insert_char(ch),
         KeyCode::Backspace => input.delete_char(),
         KeyCode::Delete => input.delete_char_forward(),
         KeyCode::Left => input.move_cursor_left(),
