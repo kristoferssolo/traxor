@@ -4,38 +4,95 @@ pub mod log;
 pub mod tabs;
 pub mod time;
 
-use color::ColorConfig;
+use crate::config::{
+    color::ColorConfig,
+    keybinds::{KeybindError, KeybindsConfig, Keymap},
+    log::LogConfig,
+    tabs::TabConfig,
+    time::TimeConfig,
+};
 use color_eyre::{
     Result,
-    eyre::{Context, ContextCompat, eyre},
+    eyre::{Context, ContextCompat},
 };
-use keybinds::{KeybindsConfig, Keymap};
-use log::LogConfig;
 use serde::{Deserialize, Serialize};
 use std::{
     fs::read_to_string,
     path::{Path, PathBuf},
 };
-use tabs::TabConfig;
-use time::TimeConfig;
+use thiserror::Error;
 use toml::Value;
 use tracing::{debug, info};
 
 /// Embedded default configuration - single source of truth for all defaults.
 const DEFAULT_CONFIG: &str = include_str!("../../config/default.toml");
 
+/// Validated configuration.
+///
+/// Deserialization validates the raw TOML first, so every `Config` has passed
+/// validation and carries a [`Keymap`] built from its `keybinds`.
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(try_from = "RawConfig", into = "RawConfig")]
 pub struct Config {
     pub keybinds: KeybindsConfig,
     pub colors: ColorConfig,
     pub log: LogConfig,
-    #[serde(default)]
     pub time: TimeConfig,
-    #[serde(default)]
     pub tabs: Vec<TabConfig>,
-    /// Parsed [`KeybindsConfig`], built by [`Config::load`].
-    #[serde(skip)]
-    pub keymap: Keymap,
+    keymap: Keymap,
+}
+
+/// Configuration as written in TOML, before validation
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct RawConfig {
+    keybinds: KeybindsConfig,
+    colors: ColorConfig,
+    log: LogConfig,
+    #[serde(default)]
+    time: TimeConfig,
+    #[serde(default)]
+    tabs: Vec<TabConfig>,
+}
+
+#[derive(Debug, Error)]
+pub enum ConfigError {
+    #[error("{0}")]
+    Invalid(String),
+    #[error(transparent)]
+    Keybind(#[from] KeybindError),
+}
+
+impl TryFrom<RawConfig> for Config {
+    type Error = ConfigError;
+
+    fn try_from(raw: RawConfig) -> Result<Self, Self::Error> {
+        raw.time.validate().map_err(ConfigError::Invalid)?;
+        for (idx, tab) in raw.tabs.iter().enumerate() {
+            tab.validate(idx).map_err(ConfigError::Invalid)?;
+        }
+        let keymap = raw.keybinds.keymap()?;
+
+        Ok(Self {
+            keybinds: raw.keybinds,
+            colors: raw.colors,
+            log: raw.log,
+            time: raw.time,
+            tabs: raw.tabs,
+            keymap,
+        })
+    }
+}
+
+impl From<Config> for RawConfig {
+    fn from(config: Config) -> Self {
+        Self {
+            keybinds: config.keybinds,
+            colors: config.colors,
+            log: config.log,
+            time: config.time,
+            tabs: config.tabs,
+        }
+    }
 }
 
 impl Config {
@@ -71,21 +128,16 @@ impl Config {
         Ok(config)
     }
 
-    fn from_value(value: Value) -> Result<Self> {
-        let mut config: Self = value
-            .try_into()
-            .context("Failed to deserialize merged config")?;
-        config.validate()?;
-        config.keymap = config.keybinds.keymap()?;
-        Ok(config)
+    /// Keymap built from [`Config::keybinds`]
+    #[must_use]
+    pub const fn keymap(&self) -> &Keymap {
+        &self.keymap
     }
 
-    fn validate(&self) -> Result<()> {
-        self.time.validate().map_err(|err| eyre!(err))?;
-        for (idx, tab) in self.tabs.iter().enumerate() {
-            tab.validate(idx).map_err(|err| eyre!(err))?;
-        }
-        Ok(())
+    fn from_value(value: Value) -> Result<Self> {
+        value
+            .try_into()
+            .context("Failed to deserialize merged config")
     }
 }
 
@@ -133,7 +185,9 @@ fn deep_merge(base: &mut Value, other: Value) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use claims::{assert_err, assert_ok};
+    use crate::app::action::Action;
+    use claims::{assert_err, assert_ok, assert_some_eq};
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
     /// Parses the embedded defaults and merges `overrides` on top, as `Config::load` does
     /// with user config. Arrays such as `tabs` replace the defaults entirely.
@@ -153,7 +207,7 @@ mod tests {
             "#,
         )?;
 
-        let err = assert_err!(Config::from_value(value)).to_string();
+        let err = format!("{:#}", assert_err!(Config::from_value(value)));
         assert!(err.contains("invalid columns"));
         assert!(err.contains("bogus"));
         Ok(())
@@ -170,7 +224,7 @@ mod tests {
             "#,
         )?;
 
-        let err = assert_err!(Config::from_value(value)).to_string();
+        let err = format!("{:#}", assert_err!(Config::from_value(value)));
         assert!(err.contains("invalid statuses"));
         assert!(err.contains("Flying"));
         Ok(())
@@ -185,7 +239,7 @@ mod tests {
             "#,
         )?;
 
-        let err = assert_err!(Config::from_value(value)).to_string();
+        let err = format!("{:#}", assert_err!(Config::from_value(value)));
         assert!(err.contains("time.eta_format"));
         Ok(())
     }
@@ -198,7 +252,7 @@ mod tests {
     fn rejects_invalid_keybind() -> Result<()> {
         let value = default_with_keybinds(r#"move_torrent = "ctrl+bogus""#)?;
 
-        let err = assert_err!(Config::from_value(value)).to_string();
+        let err = format!("{:#}", assert_err!(Config::from_value(value)));
         assert!(err.contains("keybinds.move_torrent"));
         assert!(err.contains("ctrl+bogus"));
         Ok(())
@@ -208,7 +262,7 @@ mod tests {
     fn rejects_duplicate_keybind() -> Result<()> {
         let value = default_with_keybinds(r#"rename_torrent = "m""#)?;
 
-        let err = assert_err!(Config::from_value(value)).to_string();
+        let err = format!("{:#}", assert_err!(Config::from_value(value)));
         assert!(err.contains("keybinds.move_torrent"));
         assert!(err.contains("keybinds.rename_torrent"));
         Ok(())
@@ -217,6 +271,27 @@ mod tests {
     #[test]
     fn accepts_default_config() -> Result<()> {
         assert_ok!(Config::from_value(defaults_with("")?));
+        Ok(())
+    }
+
+    #[test]
+    fn direct_deserialization_builds_keymap() -> Result<()> {
+        let quit = KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE);
+
+        let config: Config = toml::from_str(DEFAULT_CONFIG)?;
+        assert_some_eq!(config.keymap().action(&quit), Action::Quit);
+
+        let round_tripped: Config = toml::from_str(&toml::to_string(&config)?)?;
+        assert_some_eq!(round_tripped.keymap().action(&quit), Action::Quit);
+        Ok(())
+    }
+
+    #[test]
+    fn direct_deserialization_rejects_duplicate_keybind() -> Result<()> {
+        let input = toml::to_string(&default_with_keybinds(r#"rename_torrent = "m""#)?)?;
+
+        let err = assert_err!(toml::from_str::<Config>(&input)).to_string();
+        assert!(err.contains("keybinds.rename_torrent"));
         Ok(())
     }
 }

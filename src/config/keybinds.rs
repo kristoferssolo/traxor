@@ -101,8 +101,8 @@ impl KeybindsConfig {
     }
 }
 
-/// Parsed keybinds, built once at config load.
-#[derive(Debug, Clone, Default)]
+/// Parsed keybinds, built once at config load
+#[derive(Debug, Clone)]
 pub struct Keymap(Vec<(KeyEvent, Action)>);
 
 impl Keymap {

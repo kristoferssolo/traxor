@@ -57,7 +57,7 @@ pub async fn get_action(key_event: KeyEvent, app: &mut App) -> Result<Option<Act
 
     debug!("handling key event: {:?}", key_event);
 
-    Ok(app.config.keymap.action(&key_event))
+    Ok(app.config.keymap().action(&key_event))
 }
 
 /// Handles the updates of [`App`].
