@@ -1,13 +1,14 @@
 use claims::{assert_none, assert_ok, assert_some};
+use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     Terminal,
     backend::TestBackend,
-    buffer::Buffer,
+    buffer::{Buffer, Cell},
     style::{Color, Modifier},
 };
 use toml::Table;
 use transmission_rpc::types::{Torrent, TorrentGetField};
-use traxor::{app::App, config::Config, ui};
+use traxor::{app::App, config::Config, error::TraxorError, handler::handle_key_event, ui};
 
 #[test]
 fn status_bar_shows_error_in_red() {
@@ -61,6 +62,74 @@ fn status_bar_truncates_halfwidth_kana_error_and_keeps_stats() {
     let status_line = render_status_line_with_error(&"ｶﾞ".repeat(40));
 
     assert!(status_line.contains('…'), "{status_line:?}");
+    assert_stats_visible(&status_line);
+}
+
+#[test]
+fn status_bar_does_not_claim_offline_before_first_refresh() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+
+    let status_line = status_row(&render_buffer(&mut app));
+
+    assert!(!status_line.contains("offline"), "{status_line:?}");
+    assert!(status_line.contains("Help"), "{status_line:?}");
+}
+
+#[tokio::test]
+async fn status_bar_offline_marker_persists_across_key_presses() {
+    let mut app = offline_app();
+
+    // `j` moves the highlight, which does nothing with an empty list.
+    handle_key_event(KeyEvent::from(KeyCode::Char('j')), &mut app).await;
+    handle_key_event(KeyEvent::from(KeyCode::Char('j')), &mut app).await;
+
+    let buffer = render_buffer(&mut app);
+    let status_line = status_row(&buffer);
+    assert!(
+        status_line.contains(" offline Transmission RPC error: refused "),
+        "{status_line:?}"
+    );
+    assert_offline_marker(&buffer, &status_line);
+    assert_red_at(&buffer, &status_line, "Transmission RPC error");
+    assert_stats_visible(&status_line);
+}
+
+#[tokio::test]
+async fn status_bar_action_error_replaces_connection_error_until_next_key() {
+    let mut app = offline_app();
+    app.show_error("rename failed");
+
+    let buffer = render_buffer(&mut app);
+    let status_line = status_row(&buffer);
+    assert!(
+        status_line.contains(" offline rename failed "),
+        "{status_line:?}"
+    );
+    assert!(!status_line.contains("refused"), "{status_line:?}");
+    assert_offline_marker(&buffer, &status_line);
+    assert_red_at(&buffer, &status_line, "rename failed");
+    assert_stats_visible(&status_line);
+
+    handle_key_event(KeyEvent::from(KeyCode::Char('j')), &mut app).await;
+
+    let status_line = status_row(&render_buffer(&mut app));
+    assert!(
+        status_line.contains(" offline Transmission RPC error: refused "),
+        "{status_line:?}"
+    );
+}
+
+#[test]
+fn status_bar_truncates_long_connection_error_and_keeps_stats() {
+    let mut app = offline_app();
+    app.apply_refresh(Err(TraxorError::TransmissionRpc("refused ".repeat(20))));
+
+    let buffer = render_buffer(&mut app);
+    let status_line = status_row(&buffer);
+
+    assert!(status_line.contains(" offline "), "{status_line:?}");
+    assert_red_at(&buffer, &status_line, "…");
     assert_stats_visible(&status_line);
 }
 
@@ -345,4 +414,46 @@ fn status_bar_shows_sort_hints_only_when_they_fit() {
     let narrow = draw(&mut app, 30);
     assert_some!(find_in_buffer(&narrow, "? Help │ / Search"));
     assert_none!(find_in_buffer(&narrow, "Sort"));
+}
+
+/// Returns an app whose last refresh failed with `refused`.
+fn offline_app() -> App {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.apply_refresh(Err(TraxorError::TransmissionRpc("refused".to_owned())));
+    app
+}
+
+fn render_buffer(app: &mut App) -> Buffer {
+    let mut terminal = assert_ok!(Terminal::new(TestBackend::new(WIDTH, 10)));
+    assert_ok!(terminal.draw(|frame| ui::render(app, frame)));
+    terminal.backend().buffer().clone()
+}
+
+fn status_row(buffer: &Buffer) -> String {
+    (0..WIDTH)
+        .map(|x| buffer[(x, STATUS_ROW)].symbol())
+        .collect()
+}
+
+/// Returns the status row cell where `text` starts.
+fn cell_at<'a>(buffer: &'a Buffer, status_line: &str, text: &str) -> &'a Cell {
+    let byte_index = assert_some!(status_line.find(text), "{text:?} in {status_line:?}");
+    let column = status_line[..byte_index].chars().count();
+    let column = u16::try_from(column).expect("column fits in u16");
+    &buffer[(column, STATUS_ROW)]
+}
+
+fn assert_offline_marker(buffer: &Buffer, status_line: &str) {
+    let marker = cell_at(buffer, status_line, "offline");
+    assert_eq!(marker.fg, Color::Red);
+    assert!(marker.modifier.contains(Modifier::BOLD));
+}
+
+fn assert_red_at(buffer: &Buffer, status_line: &str, text: &str) {
+    assert_eq!(
+        cell_at(buffer, status_line, text).fg,
+        Color::Red,
+        "{text:?}"
+    );
 }

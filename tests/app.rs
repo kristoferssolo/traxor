@@ -1,4 +1,4 @@
-use claims::{assert_err, assert_none, assert_ok, assert_some_eq};
+use claims::{assert_err, assert_matches, assert_none, assert_ok, assert_some_eq};
 use std::{
     collections::HashSet,
     io::{BufRead, BufReader, Read, Write},
@@ -9,7 +9,7 @@ use std::{
 };
 use transmission_rpc::types::{Torrent, TorrentGetField, TorrentStatus};
 use traxor::{
-    app::{App, InputMode, types::DeleteTarget},
+    app::{App, ConnectionState, InputMode, types::DeleteTarget},
     config::Config,
     error::TraxorError,
 };
@@ -687,6 +687,59 @@ fn app_apply_refresh_error_keeps_last_known_torrents() {
     assert_eq!(ids, [Some(1)]);
     assert!(app.running);
     assert_none!(app.status_message);
+}
+
+#[test]
+fn app_starts_without_connection_state() {
+    let config = assert_ok!(Config::load());
+    let app = assert_ok!(App::new(config));
+
+    assert_eq!(app.connection, ConnectionState::Pending);
+}
+
+#[test]
+fn app_apply_refresh_error_marks_disconnected_and_keeps_outage_start() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.apply_refresh(Ok(vec![torrent(1, "old")]));
+    assert_eq!(app.connection, ConnectionState::Connected);
+
+    app.apply_refresh(Err(rpc_error("connection\nrefused")));
+
+    let ConnectionState::Disconnected {
+        since: first_since,
+        error,
+    } = app.connection.clone()
+    else {
+        panic!("expected disconnected, got {:?}", app.connection);
+    };
+    assert_eq!(error, "Transmission RPC error: connection refused");
+    assert_eq!(app.torrents.torrents.len(), 1);
+
+    app.apply_refresh(Err(rpc_error("timed out")));
+
+    assert_matches!(
+        &app.connection,
+        ConnectionState::Disconnected { since, error }
+            if *since == first_since && error == "Transmission RPC error: timed out"
+    );
+    assert_eq!(app.torrents.torrents.len(), 1);
+}
+
+#[test]
+fn app_apply_refresh_success_clears_disconnected() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.apply_refresh(Err(rpc_error("connection refused")));
+
+    app.apply_refresh(Ok(vec![torrent(2, "new")]));
+
+    assert_eq!(app.connection, ConnectionState::Connected);
+    assert_eq!(app.torrents.torrents.len(), 1);
+}
+
+fn rpc_error(message: &str) -> TraxorError {
+    TraxorError::TransmissionRpc(message.to_owned())
 }
 
 fn torrent(id: i64, name: &str) -> Torrent {

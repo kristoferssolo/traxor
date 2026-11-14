@@ -23,7 +23,7 @@ use crate::{
 };
 use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
 use ratatui::{layout::Rect, widgets::TableState};
-use std::{cmp::Reverse, collections::HashSet, path::PathBuf};
+use std::{cmp::Reverse, collections::HashSet, path::PathBuf, time::Instant};
 use tracing::warn;
 use transmission_rpc::types::Torrent;
 
@@ -63,6 +63,26 @@ pub struct StatusMessage {
     pub text: String,
 }
 
+/// Reachability of the Transmission daemon, as seen by the background refresh.
+///
+/// Updated by [`App::apply_refresh`]. Unlike [`StatusMessage`], key presses never clear it;
+/// only the next refresh outcome changes it.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub enum ConnectionState {
+    /// No refresh has completed yet.
+    #[default]
+    Pending,
+    /// The last refresh succeeded.
+    Connected,
+    /// Refreshes have failed since `since`.
+    Disconnected {
+        /// When the first failure of the current outage was received.
+        since: Instant,
+        /// Single-line text of the most recent refresh error.
+        error: String,
+    },
+}
+
 /// Main Application.
 #[derive(Debug)]
 pub struct App {
@@ -87,6 +107,7 @@ pub struct App {
     pub areas: RenderedAreas,
     pub status_message: Option<StatusMessage>,
     page_size: usize,
+    pub connection: ConnectionState,
 }
 
 impl App {
@@ -115,6 +136,7 @@ impl App {
             areas: RenderedAreas::default(),
             status_message: None,
             page_size: DEFAULT_PAGE_SIZE,
+            connection: ConnectionState::Pending,
         })
     }
 
@@ -132,23 +154,34 @@ impl App {
     /// Whitespace runs, including newlines, are collapsed so the message
     /// fits on the single status bar line.
     pub fn show_error(&mut self, text: impl AsRef<str>) {
-        let text = text
-            .as_ref()
-            .split_whitespace()
-            .collect::<Vec<_>>()
-            .join(" ");
+        let text = single_line(text.as_ref());
         self.status_message = Some(StatusMessage { text });
     }
 
     /// Applies the outcome of a background torrent list fetch.
     ///
-    /// A successful fetch replaces the torrent list. A failed one is logged and keeps
-    /// the last known list.
+    /// A successful fetch replaces the torrent list and marks the daemon
+    /// [`ConnectionState::Connected`]. A failed one is logged, keeps the last known list,
+    /// and marks it [`ConnectionState::Disconnected`], keeping the start of an ongoing
+    /// outage and replacing its error text.
     pub fn apply_refresh(&mut self, refresh: Result<Vec<Torrent>>) {
-        match refresh {
-            Ok(torrents) => self.torrents.torrents = torrents,
-            Err(error) => warn!("Failed to update torrents: {error}"),
-        }
+        let error = match refresh {
+            Ok(torrents) => {
+                self.torrents.torrents = torrents;
+                self.connection = ConnectionState::Connected;
+                return;
+            }
+            Err(error) => error,
+        };
+        warn!("Failed to update torrents: {error}");
+        let since = match self.connection {
+            ConnectionState::Disconnected { since, .. } => since,
+            ConnectionState::Pending | ConnectionState::Connected => Instant::now(),
+        };
+        self.connection = ConnectionState::Disconnected {
+            since,
+            error: single_line(&error.to_string()),
+        };
     }
 
     /// Removes the current status bar message, if any.
@@ -587,4 +620,10 @@ impl App {
             .find(|t| t.id == Some(id))
             .cloned()
     }
+}
+
+/// Collapses whitespace runs, including newlines, into single spaces so `text` fits on
+/// one status bar line.
+fn single_line(text: &str) -> String {
+    text.split_whitespace().collect::<Vec<_>>().join(" ")
 }
