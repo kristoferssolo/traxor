@@ -7,12 +7,18 @@ mod torrent;
 pub mod types;
 pub mod utils;
 
-use crate::{app::input::InputHandler, config::Config, error::Result};
+use crate::{
+    app::{
+        input::InputHandler,
+        types::{DeleteTarget, Selected},
+    },
+    config::Config,
+    error::Result,
+};
 use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
 use ratatui::{layout::Rect, widgets::TableState};
 use std::{cmp::Reverse, collections::HashSet, path::PathBuf};
 use transmission_rpc::types::Torrent;
-use types::{DeleteTarget, Selected};
 pub use {tab::Tab, torrent::Torrents};
 
 /// Input mode type for the application.
