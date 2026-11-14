@@ -6,10 +6,11 @@ use url::Url;
 
 #[derive(Debug, Error)]
 pub enum RpcConfigError {
-    #[error("invalid rpc.url {url:?}: {reason}")]
+    #[error("invalid rpc.url {url:?}: {source}")]
     InvalidUrl {
         url: String,
-        reason: url::ParseError,
+        #[source]
+        source: url::ParseError,
     },
 
     #[error("invalid rpc.url {url:?}: scheme must be http or https")]
@@ -64,9 +65,9 @@ impl RpcConfig {
     ///
     /// Returns an error when the URL does not parse or is not http(s).
     pub fn parsed_url(&self) -> Result<Url, RpcConfigError> {
-        let url = Url::parse(&self.url).map_err(|reason| RpcConfigError::InvalidUrl {
+        let url = Url::parse(&self.url).map_err(|source| RpcConfigError::InvalidUrl {
             url: self.url.clone(),
-            reason,
+            source,
         })?;
         if !matches!(url.scheme(), "http" | "https") {
             return Err(RpcConfigError::UnsupportedScheme {
@@ -111,7 +112,7 @@ fn default_url() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use claims::{assert_matches, assert_ok, assert_some};
+    use claims::{assert_err, assert_matches, assert_ok, assert_some};
 
     fn rpc(username: Option<&str>, password: Option<&str>) -> RpcConfig {
         RpcConfig {
@@ -148,6 +149,17 @@ mod tests {
             rpc(None, Some("secret")).validate(),
             Err(RpcConfigError::MissingUsername)
         );
+    }
+
+    #[test]
+    fn keeps_url_parse_error_as_source() {
+        let config = RpcConfig {
+            url: "not a url".into(),
+            ..RpcConfig::default()
+        };
+        let err = assert_err!(config.validate());
+        assert_matches!(err, RpcConfigError::InvalidUrl { .. });
+        assert_some!(std::error::Error::source(&err));
     }
 
     #[test]
