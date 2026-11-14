@@ -1,4 +1,11 @@
 use claims::{assert_none, assert_ok, assert_some_eq};
+use std::{
+    io::{BufRead, BufReader, Read, Write},
+    net::TcpListener,
+    sync::mpsc::{self, Receiver},
+    thread,
+    time::Duration,
+};
 use transmission_rpc::types::{Torrent, TorrentGetField, TorrentStatus};
 use traxor::{
     app::{App, InputMode, types::DeleteTarget},
@@ -252,6 +259,76 @@ fn app_highlight_clears_when_visible_rows_become_empty() {
     assert_eq!(app.input_mode, InputMode::None);
     app.prepare_rename_action();
     assert_eq!(app.input_handler.text, "");
+}
+
+#[tokio::test]
+async fn app_confirm_delete_sends_captured_targets() {
+    let (url, request_body) = capture_rpc_request();
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    assert_ok!(app.torrents.url(&url));
+    app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "beta"), torrent(3, "gamma")];
+    app.next();
+    app.next();
+
+    app.prepare_delete(true);
+    app.torrents.torrents = vec![
+        torrent(4, "delta"),
+        torrent(1, "alpha"),
+        torrent(3, "gamma"),
+    ];
+    assert_ok!(app.confirm_delete().await);
+
+    let body = assert_ok!(request_body.recv_timeout(Duration::from_secs(5)));
+    assert_eq!(
+        body,
+        r#"{"method":"torrent-remove","arguments":{"ids":[2],"delete-local-data":true}}"#
+    );
+    assert_eq!(app.input_mode, InputMode::None);
+}
+
+/// Answers one Transmission RPC call on an ephemeral local port.
+///
+/// Returns the RPC URL and a receiver for the request body. The listener stays bound until the
+/// call is served, and reads time out so a stalled client cannot hang the test.
+fn capture_rpc_request() -> (String, Receiver<String>) {
+    let listener = assert_ok!(TcpListener::bind("127.0.0.1:0"));
+    let url = format!(
+        "http://{}/transmission/rpc",
+        assert_ok!(listener.local_addr())
+    );
+    let (sender, receiver) = mpsc::channel();
+    thread::spawn(move || {
+        let (stream, _) = assert_ok!(listener.accept());
+        assert_ok!(stream.set_read_timeout(Some(Duration::from_secs(5))));
+        let mut reader = BufReader::new(&stream);
+        let mut content_length = 0;
+        loop {
+            let mut line = String::new();
+            assert_ok!(reader.read_line(&mut line));
+            let line = line.trim_end();
+            if line.is_empty() {
+                break;
+            }
+            if let Some((name, value)) = line.split_once(':')
+                && name.eq_ignore_ascii_case("content-length")
+            {
+                content_length = assert_ok!(value.trim().parse());
+            }
+        }
+        let mut body = vec![0; content_length];
+        assert_ok!(reader.read_exact(&mut body));
+        assert_ok!(sender.send(assert_ok!(String::from_utf8(body))));
+
+        let response = r#"{"arguments":{},"result":"success"}"#;
+        let mut writer = &stream;
+        assert_ok!(write!(
+            writer,
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{response}",
+            response.len()
+        ));
+    });
+    (url, receiver)
 }
 
 fn delete_target(app: &App) -> &DeleteTarget {
