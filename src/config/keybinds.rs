@@ -194,7 +194,7 @@ fn parse_keybind(key_str: &str) -> Result<KeyEvent, ParseKeybindError> {
             "apostrophe" => key_code = Some(KeyCode::Char('\'')),
 
             // function keys F1...F<N>
-            f if f.starts_with('f') => {
+            f if f.len() > 1 && f.starts_with('f') => {
                 key_code =
                     Some(KeyCode::F(f[1..].parse().map_err(|_| {
                         ParseKeybindError::UnknownPart(part.to_owned())
@@ -345,6 +345,9 @@ mod tests {
             ("page_down", KeyCode::PageDown, KeyModifiers::NONE),
             ("slash", KeyCode::Char('/'), KeyModifiers::NONE),
             ("F12", KeyCode::F(12), KeyModifiers::NONE),
+            ("f", KeyCode::Char('f'), KeyModifiers::NONE),
+            ("F", KeyCode::Char('F'), KeyModifiers::NONE),
+            ("alt+f", KeyCode::Char('f'), KeyModifiers::ALT),
         ] {
             assert_ok_eq!(parse_keybind(input), KeyEvent::new(code, modifiers));
         }
