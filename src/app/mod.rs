@@ -23,7 +23,7 @@ use crate::{
 };
 use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
 use ratatui::{layout::Rect, widgets::TableState};
-use std::{cmp::Reverse, collections::HashSet, path::PathBuf, time::Instant};
+use std::{cmp::Reverse, collections::HashSet, path::PathBuf};
 use tracing::warn;
 use transmission_rpc::types::Torrent;
 
@@ -74,10 +74,8 @@ pub enum ConnectionState {
     Pending,
     /// The last refresh succeeded.
     Connected,
-    /// Refreshes have failed since `since`.
+    /// The last refresh failed.
     Disconnected {
-        /// When the first failure of the current outage was received.
-        since: Instant,
         /// Single-line text of the most recent refresh error.
         error: String,
     },
@@ -162,8 +160,7 @@ impl App {
     ///
     /// A successful fetch replaces the torrent list and marks the daemon
     /// [`ConnectionState::Connected`]. A failed one is logged, keeps the last known list,
-    /// and marks it [`ConnectionState::Disconnected`], keeping the start of an ongoing
-    /// outage and replacing its error text.
+    /// and marks it [`ConnectionState::Disconnected`] with the latest error text.
     pub fn apply_refresh(&mut self, refresh: Result<Vec<Torrent>>) {
         let error = match refresh {
             Ok(torrents) => {
@@ -174,12 +171,7 @@ impl App {
             Err(error) => error,
         };
         warn!("Failed to update torrents: {error}");
-        let since = match self.connection {
-            ConnectionState::Disconnected { since, .. } => since,
-            ConnectionState::Pending | ConnectionState::Connected => Instant::now(),
-        };
         self.connection = ConnectionState::Disconnected {
-            since,
             error: single_line(&error.to_string()),
         };
     }

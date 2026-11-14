@@ -1,4 +1,4 @@
-use claims::{assert_err, assert_matches, assert_none, assert_ok, assert_some_eq};
+use claims::{assert_err, assert_none, assert_ok, assert_some_eq};
 use std::{
     collections::HashSet,
     io::{BufRead, BufReader, Read, Write},
@@ -698,7 +698,7 @@ fn app_starts_without_connection_state() {
 }
 
 #[test]
-fn app_apply_refresh_error_marks_disconnected_and_keeps_outage_start() {
+fn app_apply_refresh_error_marks_disconnected_and_keeps_list() {
     let config = assert_ok!(Config::load());
     let mut app = assert_ok!(App::new(config));
     app.apply_refresh(Ok(vec![torrent(1, "old")]));
@@ -706,22 +706,21 @@ fn app_apply_refresh_error_marks_disconnected_and_keeps_outage_start() {
 
     app.apply_refresh(Err(rpc_error("connection\nrefused")));
 
-    let ConnectionState::Disconnected {
-        since: first_since,
-        error,
-    } = app.connection.clone()
-    else {
-        panic!("expected disconnected, got {:?}", app.connection);
-    };
-    assert_eq!(error, "Transmission RPC error: connection refused");
+    assert_eq!(
+        app.connection,
+        ConnectionState::Disconnected {
+            error: "Transmission RPC error: connection refused".to_owned()
+        }
+    );
     assert_eq!(app.torrents.torrents.len(), 1);
 
     app.apply_refresh(Err(rpc_error("timed out")));
 
-    assert_matches!(
-        &app.connection,
-        ConnectionState::Disconnected { since, error }
-            if *since == first_since && error == "Transmission RPC error: timed out"
+    assert_eq!(
+        app.connection,
+        ConnectionState::Disconnected {
+            error: "Transmission RPC error: timed out".to_owned()
+        }
     );
     assert_eq!(app.torrents.torrents.len(), 1);
 }

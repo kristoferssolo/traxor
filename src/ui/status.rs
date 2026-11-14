@@ -112,7 +112,7 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
         .as_ref()
         .map(|message| message.text.as_str());
     let left_spans = match (&app.connection, action_error) {
-        (ConnectionState::Disconnected { error, .. }, action_error) => vec![
+        (ConnectionState::Disconnected { error }, action_error) => vec![
             Span::styled(OFFLINE_MARKER, error_style.bold()),
             Span::raw(" "),
             Span::styled(action_error.unwrap_or(error), error_style),
