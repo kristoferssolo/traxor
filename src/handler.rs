@@ -151,9 +151,23 @@ pub fn handle_mouse(mouse_event: MouseEvent, app: &mut App) {
 }
 
 fn click(app: &mut App, position: Position) {
-    let row_count = app.filtered_torrents().len();
-    if let Some(row) = table_row_at(app.areas.table, app.state.offset(), row_count, position) {
-        app.state.select(Some(row));
+    let areas = &app.areas;
+    if let Some(row) = table_row_at(
+        areas.table,
+        areas.table_offset,
+        areas.table_rows.len(),
+        position,
+    ) {
+        // Highlight the torrent that was displayed in that row, wherever it is now. Ignore the
+        // click if a refresh since the last render removed it.
+        let index = areas.table_rows[row].and_then(|id| {
+            app.filtered_torrents()
+                .iter()
+                .position(|torrent| torrent.id == Some(id))
+        });
+        if index.is_some() {
+            app.state.select(index);
+        }
         return;
     }
 

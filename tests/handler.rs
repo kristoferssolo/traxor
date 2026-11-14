@@ -1,14 +1,16 @@
-use claims::{assert_none, assert_ok, assert_some_eq};
+use claims::{assert_none, assert_ok, assert_some, assert_some_eq};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
-use ratatui::{layout::Rect, text::Line};
+use ratatui::{Terminal, backend::TestBackend, layout::Rect, text::Line};
 use std::fs;
 use tempfile::TempDir;
+use transmission_rpc::types::Torrent;
 use traxor::{
     app::App,
     app::InputMode,
     app::action::Action,
     config::Config,
     handler::{get_action, handle_mouse},
+    ui::render,
 };
 
 macro_rules! assert_action {
@@ -192,16 +194,51 @@ fn handle_mouse_ignored_while_dialog_open() {
     assert_eq!(app.index(), 0);
 }
 
+#[test]
+fn handle_mouse_click_highlights_rendered_torrent_after_refresh() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.torrents.torrents = vec![
+        torrent(1, "alpha"),
+        torrent(2, "bravo"),
+        torrent(3, "charlie"),
+    ];
+    let mut terminal = assert_ok!(Terminal::new(TestBackend::new(120, 20)));
+    assert_ok!(terminal.draw(|frame| render(&mut app, frame)));
+
+    // A background refresh removes the first rendered torrent before the click arrives.
+    app.torrents.torrents.remove(0);
+    let column = app.areas.table.x + 2;
+    // Skip the top border, header, and header margin.
+    let first_row = app.areas.table.y + 3;
+
+    handle_mouse(left_click(column, first_row), &mut app);
+    assert_none!(app.state.selected());
+
+    handle_mouse(left_click(column, first_row + 1), &mut app);
+    let highlighted = assert_some!(app.state.selected());
+    assert_eq!(app.filtered_torrents()[highlighted].id, Some(2));
+}
+
 /// Left click on the first title character of the second tab: border, padded first title,
 /// divider, then left padding.
 fn click_on_second_tab(app: &App) -> MouseEvent {
     let first_title_width = assert_ok!(u16::try_from(Line::from(app.tabs()[0].name()).width()));
+    left_click(1 + first_title_width + 2 + 1 + 1, 1)
+}
+
+const fn left_click(column: u16, row: u16) -> MouseEvent {
     MouseEvent {
         kind: MouseEventKind::Down(MouseButton::Left),
-        column: 1 + first_title_width + 2 + 1 + 1,
-        row: 1,
+        column,
+        row,
         modifiers: KeyModifiers::NONE,
     }
+}
+
+/// Builds a torrent with only `id` and `name` set; every other field deserializes to `None`.
+fn torrent(id: i64, name: &str) -> Torrent {
+    assert_ok!(toml::from_str(&format!("id = {id}\nname = {name:?}")))
 }
 
 fn temp_dir() -> TempDir {

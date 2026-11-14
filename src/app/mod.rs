@@ -28,10 +28,17 @@ pub enum InputMode {
 }
 
 /// Screen areas from the last render, used for mouse hit-testing.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct RenderedAreas {
     pub tabs: Rect,
     pub table: Rect,
+    /// Table scroll offset after the last render.
+    pub table_offset: usize,
+    /// Torrent ids of the rendered table rows in display order.
+    ///
+    /// The torrent list can be refreshed between a render and a click, so clicks resolve rows
+    /// through these ids instead of indexing the current list.
+    pub table_rows: Vec<Option<i64>>,
 }
 
 /// Main Application.
