@@ -1,4 +1,4 @@
-use claims::{assert_none, assert_ok};
+use claims::{assert_none, assert_ok, assert_some_eq};
 use transmission_rpc::types::{Torrent, TorrentGetField, TorrentStatus};
 use traxor::{
     app::{App, InputMode, types::DeleteTarget},
@@ -212,7 +212,7 @@ fn app_highlight_follows_torrent_across_reorder() {
     assert_eq!(app.input_handler.text, "beta");
 
     app.sync_highlight();
-    assert_eq!(app.state.selected(), Some(0));
+    assert_some_eq!(app.state.selected(), 0);
 }
 
 #[test]
@@ -230,7 +230,7 @@ fn app_highlight_clamps_when_torrent_disappears() {
 
     app.input_handler.clear();
     app.sync_highlight();
-    assert_eq!(app.state.selected(), Some(1));
+    assert_some_eq!(app.state.selected(), 1);
     app.prepare_rename_action();
     assert_eq!(app.input_handler.text, "beta");
 }
