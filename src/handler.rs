@@ -1,8 +1,10 @@
 use crate::{
     app::{App, InputMode, action::Action},
     error::Result,
+    ui::hit_test::{tab_at, table_row_at},
 };
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
+use ratatui::{layout::Position, text::Line};
 use thiserror::Error;
 use tracing::{debug, info};
 
@@ -126,6 +128,54 @@ pub async fn update(app: &mut App, action: Action) -> Result<()> {
         }
     }
     Ok(())
+}
+
+/// Handles mouse events of [`App`].
+///
+/// Scrolling over the table moves the highlight, and a left click highlights a torrent row or
+/// switches to a tab. Ignored while a popup or input dialog is open.
+pub fn handle_mouse(mouse_event: MouseEvent, app: &mut App) {
+    if app.show_help || app.input_mode != InputMode::None {
+        return;
+    }
+
+    let position = Position::new(mouse_event.column, mouse_event.row);
+    match mouse_event.kind {
+        MouseEventKind::ScrollDown if app.areas.table.contains(position) => app.next(),
+        MouseEventKind::ScrollUp if app.areas.table.contains(position) => app.previous(),
+        MouseEventKind::Down(MouseButton::Left) => click(app, position),
+        _ => {}
+    }
+}
+
+fn click(app: &mut App, position: Position) {
+    let areas = &app.areas;
+    if let Some(row) = table_row_at(
+        areas.table,
+        areas.table_offset,
+        areas.table_rows.len(),
+        position,
+    ) {
+        // Highlight the torrent that was displayed in that row, wherever it is now. Ignore the
+        // click if a refresh since the last render removed it.
+        let index = areas.table_rows[row].and_then(|id| {
+            app.filtered_torrents()
+                .iter()
+                .position(|torrent| torrent.id == Some(id))
+        });
+        if index.is_some() {
+            app.state.select(index);
+        }
+        return;
+    }
+
+    let title_widths = app
+        .tabs()
+        .iter()
+        .map(|tab| Line::from(tab.to_string()).width());
+    if let Some(tab) = tab_at(app.areas.tabs, title_widths, position) {
+        app.switch_tab(tab);
+    }
 }
 
 /// Check if a [`KeyEvent`] matches a configured keybind string
