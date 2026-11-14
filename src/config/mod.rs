@@ -128,77 +128,28 @@ fn deep_merge(base: &mut Value, other: Value) {
 
 #[cfg(test)]
 mod tests {
-    use super::Config;
-    use color_eyre::Result;
-    use toml::Value;
+    use super::*;
+    use claims::{assert_err, assert_ok};
 
-    fn config_value(input: &str) -> Result<Value> {
-        toml::from_str(input).map_err(Into::into)
+    /// Parses the embedded defaults and merges `overrides` on top, as `Config::load` does
+    /// with user config. Arrays such as `tabs` replace the defaults entirely.
+    fn defaults_with(overrides: &str) -> Result<Value> {
+        let mut value: Value = toml::from_str(DEFAULT_CONFIG)?;
+        deep_merge(&mut value, toml::from_str(overrides)?);
+        Ok(value)
     }
 
     #[test]
     fn rejects_invalid_tab_column() -> Result<()> {
-        let value = config_value(
-            r##"
-            [keybinds]
-            prev_torrent = "k"
-            next_torrent = "j"
-            prev_tab = "h"
-            next_tab = "l"
-            switch_tab_1 = "1"
-            switch_tab_2 = "2"
-            switch_tab_3 = "3"
-            switch_tab_4 = "4"
-            switch_tab_5 = "5"
-            switch_tab_6 = "6"
-            switch_tab_7 = "7"
-            switch_tab_8 = "8"
-            switch_tab_9 = "9"
-            switch_tab_10 = "0"
-            toggle_torrent = "enter"
-            toggle_all = "a"
-            select = " "
-            move_torrent = "m"
-            rename_torrent = "r"
-            delete = "d"
-            delete_force = "D"
-            filter = "/"
-            clear_filter = "escape"
-            toggle_help = "?"
-            quit = "q"
-
-            [colors]
-            highlight_background = "#3a3a5a"
-            highlight_foreground = "white"
-            selected_background = "#245d5a"
-            selected_foreground = "white"
-            header_foreground = "yellow"
-            info_foreground = "blue"
-            status_downloading = "cyan"
-            status_seeding = "white"
-            status_stopped = "dark_gray"
-            status_verifying = "yellow"
-            status_queued = "light_blue"
-
-            [log]
-            traxor = "info"
-            ratatui = "warn"
-            transmission_rpc = "warn"
-
-            [time]
-            date_format = "%Y-%m-%d %H:%M"
-            eta_format = "compact"
-
+        let value = defaults_with(
+            r#"
             [[tabs]]
             name = "Broken"
             columns = ["name", "bogus"]
-            "##,
+            "#,
         )?;
 
-        let err = match Config::from_value(value) {
-            Ok(_) => panic!("invalid tab column should fail validation"),
-            Err(err) => err.to_string(),
-        };
+        let err = assert_err!(Config::from_value(value)).to_string();
         assert!(err.contains("invalid columns"));
         assert!(err.contains("bogus"));
         Ok(())
@@ -206,68 +157,16 @@ mod tests {
 
     #[test]
     fn rejects_invalid_tab_status() -> Result<()> {
-        let value = config_value(
-            r##"
-            [keybinds]
-            prev_torrent = "k"
-            next_torrent = "j"
-            prev_tab = "h"
-            next_tab = "l"
-            switch_tab_1 = "1"
-            switch_tab_2 = "2"
-            switch_tab_3 = "3"
-            switch_tab_4 = "4"
-            switch_tab_5 = "5"
-            switch_tab_6 = "6"
-            switch_tab_7 = "7"
-            switch_tab_8 = "8"
-            switch_tab_9 = "9"
-            switch_tab_10 = "0"
-            toggle_torrent = "enter"
-            toggle_all = "a"
-            select = " "
-            move_torrent = "m"
-            rename_torrent = "r"
-            delete = "d"
-            delete_force = "D"
-            filter = "/"
-            clear_filter = "escape"
-            toggle_help = "?"
-            quit = "q"
-
-            [colors]
-            highlight_background = "#3a3a5a"
-            highlight_foreground = "white"
-            selected_background = "#245d5a"
-            selected_foreground = "white"
-            header_foreground = "yellow"
-            info_foreground = "blue"
-            status_downloading = "cyan"
-            status_seeding = "white"
-            status_stopped = "dark_gray"
-            status_verifying = "yellow"
-            status_queued = "light_blue"
-
-            [log]
-            traxor = "info"
-            ratatui = "warn"
-            transmission_rpc = "warn"
-
-            [time]
-            date_format = "%Y-%m-%d %H:%M"
-            eta_format = "compact"
-
+        let value = defaults_with(
+            r#"
             [[tabs]]
             name = "Broken"
             columns = ["name"]
             statuses = ["Flying"]
-            "##,
+            "#,
         )?;
 
-        let err = match Config::from_value(value) {
-            Ok(_) => panic!("invalid tab status should fail validation"),
-            Err(err) => err.to_string(),
-        };
+        let err = assert_err!(Config::from_value(value)).to_string();
         assert!(err.contains("invalid statuses"));
         assert!(err.contains("Flying"));
         Ok(())
@@ -275,71 +174,21 @@ mod tests {
 
     #[test]
     fn rejects_invalid_eta_format() -> Result<()> {
-        let value = config_value(
-            r##"
-            [keybinds]
-            prev_torrent = "k"
-            next_torrent = "j"
-            prev_tab = "h"
-            next_tab = "l"
-            switch_tab_1 = "1"
-            switch_tab_2 = "2"
-            switch_tab_3 = "3"
-            switch_tab_4 = "4"
-            switch_tab_5 = "5"
-            switch_tab_6 = "6"
-            switch_tab_7 = "7"
-            switch_tab_8 = "8"
-            switch_tab_9 = "9"
-            switch_tab_10 = "0"
-            toggle_torrent = "enter"
-            toggle_all = "a"
-            select = " "
-            move_torrent = "m"
-            rename_torrent = "r"
-            delete = "d"
-            delete_force = "D"
-            filter = "/"
-            clear_filter = "escape"
-            toggle_help = "?"
-            quit = "q"
-
-            [colors]
-            highlight_background = "#3a3a5a"
-            highlight_foreground = "white"
-            selected_background = "#245d5a"
-            selected_foreground = "white"
-            header_foreground = "yellow"
-            info_foreground = "blue"
-            status_downloading = "cyan"
-            status_seeding = "white"
-            status_stopped = "dark_gray"
-            status_verifying = "yellow"
-            status_queued = "light_blue"
-
-            [log]
-            traxor = "info"
-            ratatui = "warn"
-            transmission_rpc = "warn"
-
+        let value = defaults_with(
+            r#"
             [time]
-            date_format = "%Y-%m-%d %H:%M"
             eta_format = "verbose"
-            "##,
+            "#,
         )?;
 
-        let err = match Config::from_value(value) {
-            Ok(_) => panic!("invalid eta format should fail validation"),
-            Err(err) => err.to_string(),
-        };
+        let err = assert_err!(Config::from_value(value)).to_string();
         assert!(err.contains("time.eta_format"));
         Ok(())
     }
 
     #[test]
-    fn accepts_valid_config() -> Result<()> {
-        let value: Value = toml::from_str(include_str!("../../config/default.toml"))?;
-        Config::from_value(value)?;
+    fn accepts_default_config() -> Result<()> {
+        assert_ok!(Config::from_value(defaults_with("")?));
         Ok(())
     }
 }
