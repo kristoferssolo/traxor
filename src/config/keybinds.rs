@@ -219,7 +219,116 @@ fn parse_keybind(key_str: &str) -> Result<KeyEvent, ParseKeybindError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use claims::{assert_err, assert_ok_eq};
+    use claims::{assert_err, assert_none, assert_ok, assert_ok_eq, assert_some_eq};
+    use crossterm::event::{KeyEventKind, KeyEventState};
+    use toml::Table;
+
+    /// Default keybinds with `overrides` applied
+    fn keybinds(overrides: &[(&str, &str)]) -> KeybindsConfig {
+        let config: Table = assert_ok!(toml::from_str(include_str!("../../config/default.toml")));
+        let mut keybinds = assert_ok!(Table::try_from(config["keybinds"].clone()));
+        for (name, value) in overrides {
+            keybinds.insert((*name).to_owned(), (*value).into());
+        }
+        assert_ok!(keybinds.try_into())
+    }
+
+    fn keymap(overrides: &[(&str, &str)]) -> Keymap {
+        assert_ok!(keybinds(overrides).keymap())
+    }
+
+    fn key(code: char, modifiers: KeyModifiers) -> KeyEvent {
+        KeyEvent::new(KeyCode::Char(code), modifiers)
+    }
+
+    #[test]
+    fn uppercase_binding_matches_shifted_event() {
+        let keymap = keymap(&[]);
+
+        assert_some_eq!(
+            keymap.action(&key('D', KeyModifiers::SHIFT)),
+            Action::Delete(true)
+        );
+        assert_some_eq!(
+            keymap.action(&key('d', KeyModifiers::SHIFT)),
+            Action::Delete(true)
+        );
+        assert_some_eq!(
+            keymap.action(&key('d', KeyModifiers::NONE)),
+            Action::Delete(false)
+        );
+    }
+
+    /// crossterm only normalizes SHIFT for ASCII letters, so a punctuation
+    /// binding matches only the modifiers the terminal reports
+    #[test]
+    fn shifted_punctuation_requires_exact_modifiers() {
+        let keymap = keymap(&[]);
+
+        assert_some_eq!(
+            keymap.action(&key('?', KeyModifiers::NONE)),
+            Action::ToggleHelp
+        );
+        assert_none!(keymap.action(&key('?', KeyModifiers::SHIFT)));
+    }
+
+    #[test]
+    fn modifier_combos_match_exactly() {
+        let keymap = keymap(&[
+            ("quit", "ctrl+c"),
+            ("filter", "alt+x"),
+            ("delete", "ctrl+D"),
+        ]);
+
+        assert_some_eq!(
+            keymap.action(&key('c', KeyModifiers::CONTROL)),
+            Action::Quit
+        );
+        assert_none!(keymap.action(&key('c', KeyModifiers::NONE)));
+        assert_none!(keymap.action(&key('c', KeyModifiers::CONTROL | KeyModifiers::ALT)));
+        assert_some_eq!(keymap.action(&key('x', KeyModifiers::ALT)), Action::Filter);
+        assert_some_eq!(
+            keymap.action(&key('d', KeyModifiers::CONTROL | KeyModifiers::SHIFT)),
+            Action::Delete(false)
+        );
+        assert_none!(keymap.action(&key('d', KeyModifiers::CONTROL)));
+    }
+
+    /// Bindings are parsed as presses without state flags, and crossterm
+    /// compares kind and state, so only plain presses match
+    #[test]
+    fn only_plain_presses_match() {
+        let keymap = keymap(&[]);
+        let quit = |kind, state| {
+            keymap.action(&KeyEvent::new_with_kind_and_state(
+                KeyCode::Char('q'),
+                KeyModifiers::NONE,
+                kind,
+                state,
+            ))
+        };
+
+        assert_some_eq!(quit(KeyEventKind::Press, KeyEventState::NONE), Action::Quit);
+        assert_none!(quit(KeyEventKind::Repeat, KeyEventState::NONE));
+        assert_none!(quit(KeyEventKind::Release, KeyEventState::NONE));
+        assert_none!(quit(KeyEventKind::Press, KeyEventState::CAPS_LOCK));
+    }
+
+    #[test]
+    fn rejects_case_equivalent_duplicates() {
+        for (first, second) in [("D", "shift+d"), ("ctrl+D", "ctrl+shift+d")] {
+            let config = keybinds(&[("delete", first), ("delete_force", second)]);
+
+            std::assert_matches!(
+                config.keymap(),
+                Err(KeybindError::Duplicate {
+                    first: "delete",
+                    second: "delete_force",
+                    ..
+                })
+            );
+        }
+    }
 
     #[test]
     fn parses_keybind_syntax() {
