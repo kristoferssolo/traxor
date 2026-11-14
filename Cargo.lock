@@ -2547,6 +2547,7 @@ dependencies = [
  "tracing-bunyan-formatter",
  "tracing-subscriber",
  "transmission-rpc",
+ "unicode-width",
  "url",
 ]
 
