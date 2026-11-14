@@ -10,21 +10,21 @@ pub mod utils;
 use crate::{app::input::InputHandler, config::Config, error::Result};
 use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
 use ratatui::{layout::Rect, widgets::TableState};
-use std::{cmp::Reverse, path::PathBuf};
+use std::{cmp::Reverse, collections::HashSet, path::PathBuf};
 use transmission_rpc::types::Torrent;
-use types::Selected;
+use types::{DeleteTarget, Selected};
 pub use {tab::Tab, torrent::Torrents};
 
 /// Input mode type for the application.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum InputMode {
     #[default]
     None,
     Move,
     Rename,
     Filter,
-    /// Confirm delete dialog. Bool indicates whether to delete local data.
-    ConfirmDelete(bool),
+    /// Confirm delete dialog for the torrents captured when it opened.
+    ConfirmDelete(DeleteTarget),
 }
 
 /// Screen areas from the last render, used for mouse hit-testing.
@@ -336,9 +336,24 @@ impl App {
         scored.into_iter().map(|(t, _)| t).collect()
     }
 
-    /// Prepare delete confirmation dialog.
-    pub const fn prepare_delete(&mut self, delete_local_data: bool) {
-        self.input_mode = InputMode::ConfirmDelete(delete_local_data);
+    /// Open the delete confirmation for the selected or highlighted torrent(s).
+    ///
+    /// Targets are captured now, so a refresh before confirming cannot change what gets
+    /// deleted. The dialog does not open when no target is visible.
+    pub fn prepare_delete(&mut self, delete_local_data: bool) {
+        let ids: HashSet<i64> = self.selected(false).into();
+        let torrents = self
+            .filtered_torrents()
+            .into_iter()
+            .filter_map(|t| {
+                let id = t.id.filter(|id| ids.contains(id))?;
+                let name = t.name.clone().unwrap_or_else(|| format!("#{id}"));
+                Some((id, name))
+            })
+            .collect();
+        if let Some(target) = DeleteTarget::new(torrents, delete_local_data) {
+            self.input_mode = InputMode::ConfirmDelete(target);
+        }
     }
 
     /// Execute the confirmed delete action.
@@ -347,11 +362,12 @@ impl App {
     ///
     /// Returns an error if the RPC call fails.
     pub async fn confirm_delete(&mut self) -> Result<()> {
-        let InputMode::ConfirmDelete(delete_local_data) = self.input_mode else {
+        let InputMode::ConfirmDelete(target) = &self.input_mode else {
             return Ok(());
         };
-        let ids = self.selected(false);
-        self.torrents.delete(ids, delete_local_data).await?;
+        self.torrents
+            .delete(target.ids(), target.delete_local_data())
+            .await?;
         self.clear_input();
         Ok(())
     }

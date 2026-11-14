@@ -9,6 +9,7 @@ use traxor::{
     app::App,
     app::InputMode,
     app::action::Action,
+    app::types::DeleteTarget,
     config::Config,
     handler::{get_action, handle_key_event, handle_mouse},
     ui::render,
@@ -121,7 +122,8 @@ async fn get_action_input_mode() {
 async fn get_action_confirm_delete() {
     let config = assert_ok!(Config::load());
     let mut app = assert_ok!(App::new(config));
-    app.input_mode = InputMode::ConfirmDelete(false);
+    let target = assert_some!(DeleteTarget::new(vec![(1, "alpha".into())], false));
+    app.input_mode = InputMode::ConfirmDelete(target);
 
     for key_code in [KeyCode::Enter, KeyCode::Char('y'), KeyCode::Char('Y')] {
         assert_some_eq!(assert_action!(&mut app, key_code), Action::ConfirmYes);

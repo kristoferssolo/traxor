@@ -1,6 +1,9 @@
 use claims::assert_ok;
 use transmission_rpc::types::{Torrent, TorrentGetField, TorrentStatus};
-use traxor::{app::App, config::Config};
+use traxor::{
+    app::{App, InputMode, types::DeleteTarget},
+    config::Config,
+};
 
 #[test]
 fn app_creation() {
@@ -141,6 +144,66 @@ fn app_filtered_torrents_respects_active_tab_statuses() {
     let queued = app.filtered_torrents();
     assert_eq!(queued.len(), 1);
     assert_eq!(queued[0].name.as_deref(), Some("queued"));
+}
+
+#[test]
+fn app_prepare_delete_keeps_captured_targets_across_refresh() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "beta"), torrent(3, "gamma")];
+    app.next();
+    app.next();
+
+    app.prepare_delete(true);
+    app.torrents.torrents = vec![
+        torrent(4, "delta"),
+        torrent(1, "alpha"),
+        torrent(3, "gamma"),
+    ];
+
+    let target = delete_target(&app);
+    assert_eq!(target.ids().collect::<Vec<_>>(), [2]);
+    assert_eq!(target.names().collect::<Vec<_>>(), ["beta"]);
+    assert!(target.delete_local_data());
+}
+
+#[test]
+fn app_prepare_delete_captures_visible_selection_in_row_order() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "beta"), torrent(3, "gamma")];
+    app.torrents.selected = [3, 1].into();
+    app.next();
+
+    app.prepare_delete(false);
+
+    let target = delete_target(&app);
+    assert_eq!(target.ids().collect::<Vec<_>>(), [1, 3]);
+    assert_eq!(target.names().collect::<Vec<_>>(), ["alpha", "gamma"]);
+    assert!(!target.delete_local_data());
+}
+
+#[test]
+fn app_prepare_delete_does_not_open_without_visible_targets() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "beta")];
+
+    app.prepare_delete(false);
+    assert_eq!(app.input_mode, InputMode::None);
+
+    app.torrents.selected = [2].into();
+    app.filter_text = "alpha".into();
+    app.next();
+    app.prepare_delete(false);
+    assert_eq!(app.input_mode, InputMode::None);
+}
+
+fn delete_target(app: &App) -> &DeleteTarget {
+    match &app.input_mode {
+        InputMode::ConfirmDelete(target) => target,
+        other => panic!("expected delete confirmation, got {other:?}"),
+    }
 }
 
 fn torrent(id: i64, name: &str) -> Torrent {
