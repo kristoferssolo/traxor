@@ -20,8 +20,12 @@ use crate::{
 use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
 use ratatui::{layout::Rect, widgets::TableState};
 use std::{cmp::Reverse, collections::HashSet, path::PathBuf};
+use tracing::warn;
 use transmission_rpc::types::Torrent;
-pub use {tab::Tab, torrent::Torrents};
+pub use {
+    tab::Tab,
+    torrent::{TorrentFetcher, Torrents},
+};
 
 /// Input mode type for the application.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -134,6 +138,17 @@ impl App {
             .collect::<Vec<_>>()
             .join(" ");
         self.status_message = Some(StatusMessage { text });
+    }
+
+    /// Applies the outcome of a background torrent list fetch.
+    ///
+    /// A successful fetch replaces the torrent list. A failed one is logged and keeps
+    /// the last known list.
+    pub fn apply_refresh(&mut self, refresh: Result<Vec<Torrent>>) {
+        match refresh {
+            Ok(torrents) => self.torrents.torrents = torrents,
+            Err(error) => warn!("Failed to update torrents: {error}"),
+        }
     }
 
     /// Removes the current status bar message, if any.

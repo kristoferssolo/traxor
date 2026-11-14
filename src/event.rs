@@ -1,10 +1,10 @@
-use color_eyre::Result;
+use color_eyre::{Result, eyre::eyre};
 use crossterm::event::{self, Event as CrosstermEvent, KeyEvent, MouseEvent};
 use std::{
-    sync::mpsc,
     thread,
     time::{Duration, Instant},
 };
+use tokio::sync::mpsc;
 use tracing::error;
 
 /// Terminal events.
@@ -21,11 +21,12 @@ pub enum Event {
 }
 
 /// Terminal event handler.
+///
+/// A dedicated thread polls the terminal and forwards events over a channel, so
+/// async code can await them with [`Self::next`].
 #[derive(Debug)]
 pub struct EventHandler {
-    receiver: mpsc::Receiver<Event>,
-    #[allow(dead_code)]
-    handler: thread::JoinHandle<()>,
+    receiver: mpsc::UnboundedReceiver<Event>,
 }
 
 impl EventHandler {
@@ -39,9 +40,9 @@ impl EventHandler {
     #[must_use]
     pub fn new(tick_rate_ms: u64) -> Self {
         let tick_rate = Duration::from_millis(tick_rate_ms);
-        let (sender, receiver) = mpsc::channel();
+        let (sender, receiver) = mpsc::unbounded_channel();
 
-        let handler = thread::spawn(move || {
+        thread::spawn(move || {
             let mut last_tick = Instant::now();
             loop {
                 let timeout = tick_rate.saturating_sub(last_tick.elapsed());
@@ -71,18 +72,59 @@ impl EventHandler {
             }
         });
 
-        Self { receiver, handler }
+        Self { receiver }
     }
 
-    /// Receive the next event from the handler thread.
+    /// Waits for the next event from the handler thread.
     ///
-    /// This function will always block the current thread if
-    /// there is no data available and it's possible for more data to be sent.
+    /// Waiting yields to the async runtime instead of blocking its worker thread.
     ///
     /// # Errors
     ///
-    /// Returns an error if the sender is disconnected.
-    pub fn next(&self) -> Result<Event> {
-        Ok(self.receiver.recv()?)
+    /// Returns an error once the handler thread has stopped and every queued event
+    /// has been received.
+    pub async fn next(&mut self) -> Result<Event> {
+        self.receiver
+            .recv()
+            .await
+            .ok_or_else(|| eyre!("terminal event thread stopped"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use claims::{assert_err, assert_ok, assert_ok_eq};
+    use crossterm::event::{KeyCode, KeyModifiers};
+    use tokio::time::timeout;
+
+    const ENTER: Event = Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+
+    /// `#[tokio::test]` runs on one thread, so a blocking receive would never let the
+    /// sending task run.
+    #[tokio::test]
+    async fn next_waits_without_blocking_the_runtime() {
+        let (sender, receiver) = mpsc::unbounded_channel();
+        let mut events = EventHandler { receiver };
+        let sending = tokio::spawn(async move { sender.send(ENTER) });
+
+        let event = assert_ok!(timeout(Duration::from_secs(5), events.next()).await);
+
+        assert_ok_eq!(event, ENTER);
+        assert_ok!(assert_ok!(sending.await));
+    }
+
+    #[tokio::test]
+    async fn next_drains_queued_events_before_failing_on_disconnect() {
+        let (sender, receiver) = mpsc::unbounded_channel();
+        let mut events = EventHandler { receiver };
+        assert_ok!(sender.send(ENTER));
+        assert_ok!(sender.send(Event::Tick));
+        drop(sender);
+
+        assert_ok_eq!(events.next().await, ENTER);
+        assert_ok_eq!(events.next().await, Event::Tick);
+        let error = assert_err!(events.next().await);
+        assert_eq!(error.to_string(), "terminal event thread stopped");
     }
 }
