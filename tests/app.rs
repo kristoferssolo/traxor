@@ -111,7 +111,7 @@ fn app_prepare_rename_action_uses_filtered_selection() {
     let mut app = assert_ok!(App::new(config));
     app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "beta")];
     app.filter_text = "beta".into();
-    app.state.select(Some(0));
+    app.next();
 
     app.prepare_rename_action();
 
@@ -197,6 +197,42 @@ fn app_prepare_delete_does_not_open_without_visible_targets() {
     app.next();
     app.prepare_delete(false);
     assert_eq!(app.input_mode, InputMode::None);
+}
+
+#[test]
+fn app_highlight_follows_torrent_across_reorder() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "beta"), torrent(3, "gamma")];
+    app.next();
+    app.next();
+
+    app.torrents.torrents = vec![torrent(2, "beta"), torrent(3, "gamma"), torrent(1, "alpha")];
+    app.prepare_rename_action();
+    assert_eq!(app.input_handler.text, "beta");
+
+    app.sync_highlight();
+    assert_eq!(app.state.selected(), Some(0));
+}
+
+#[test]
+fn app_highlight_clamps_when_torrent_disappears() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "beta"), torrent(3, "gamma")];
+    app.next();
+    app.next();
+    app.next();
+
+    app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "beta")];
+    app.prepare_rename_action();
+    assert_eq!(app.input_handler.text, "");
+
+    app.input_handler.clear();
+    app.sync_highlight();
+    assert_eq!(app.state.selected(), Some(1));
+    app.prepare_rename_action();
+    assert_eq!(app.input_handler.text, "beta");
 }
 
 fn delete_target(app: &App) -> &DeleteTarget {

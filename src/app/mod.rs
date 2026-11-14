@@ -57,6 +57,9 @@ pub struct App {
     pub running: bool,
     index: usize,
     tabs: Vec<Tab>,
+    /// Id of the highlighted torrent. Actions resolve the highlight through it.
+    highlighted: Option<i64>,
+    /// Row of the highlighted torrent, kept in sync by [`App::sync_highlight`] for rendering.
     pub state: TableState,
     pub torrents: Torrents,
     pub show_help: bool,
@@ -82,6 +85,7 @@ impl App {
             running: true,
             tabs,
             index: 0,
+            highlighted: None,
             state: TableState::default(),
             torrents,
             show_help: false,
@@ -128,6 +132,7 @@ impl App {
     }
 
     pub fn next(&mut self) {
+        self.sync_highlight();
         let len = self.filtered_torrents().len();
         if len == 0 {
             return;
@@ -137,10 +142,11 @@ impl App {
             .selected()
             .map_or(0, |i| if i >= len - 1 { 0 } else { i + 1 });
         self.close_help();
-        self.state.select(Some(i));
+        self.highlight_row(i);
     }
 
     pub fn previous(&mut self) {
+        self.sync_highlight();
         let len = self.filtered_torrents().len();
         if len == 0 {
             return;
@@ -150,7 +156,32 @@ impl App {
             .selected()
             .map_or(0, |i| if i == 0 { len - 1 } else { i - 1 });
         self.close_help();
-        self.state.select(Some(i));
+        self.highlight_row(i);
+    }
+
+    /// Moves [`App::state`] to the highlighted torrent's current row.
+    ///
+    /// Call after the visible rows may have changed (refresh, filter, tab switch). If the
+    /// highlighted torrent is no longer visible, the previous row is clamped to the visible
+    /// rows and the torrent there becomes the highlight.
+    pub fn sync_highlight(&mut self) {
+        let rows = self.filtered_torrents();
+        let row = self
+            .highlighted
+            .and_then(|id| rows.iter().position(|t| t.id == Some(id)));
+        if let Some(row) = row {
+            self.state.select(Some(row));
+            return;
+        }
+        let (Some(row), Some(last)) = (self.state.selected(), rows.len().checked_sub(1)) else {
+            return;
+        };
+        self.highlight_row(row.min(last));
+    }
+
+    fn highlight_row(&mut self, row: usize) {
+        self.highlighted = self.filtered_torrents().get(row).and_then(|t| t.id);
+        self.state.select(Some(row));
     }
 
     /// Switches to the next tab.
@@ -286,7 +317,7 @@ impl App {
         self.filter_text = self.input_handler.text.clone();
         self.input_handler.clear();
         self.input_mode = InputMode::None;
-        self.state.select(Some(0));
+        self.highlight_row(0);
     }
 
     /// Clear the active filter.
@@ -387,9 +418,8 @@ impl App {
         let torrents = self.filtered_torrents();
         if (self.torrents.selected.is_empty() || highlighted)
             && let Some(id) = self
-                .state
-                .selected()
-                .and_then(|idx| torrents.get(idx).and_then(|t| t.id))
+                .highlighted
+                .filter(|id| torrents.iter().any(|t| t.id == Some(*id)))
         {
             return Selected::Current(id);
         }
@@ -412,8 +442,10 @@ impl App {
     }
 
     fn get_current_torrent(&self) -> Option<Torrent> {
-        self.state
-            .selected()
-            .and_then(|idx| self.filtered_torrents().get(idx).copied().cloned())
+        let id = self.highlighted?;
+        self.filtered_torrents()
+            .into_iter()
+            .find(|t| t.id == Some(id))
+            .cloned()
     }
 }
