@@ -185,6 +185,17 @@ impl App {
         self.highlight_row(row.min(last));
     }
 
+    /// Highlights the visible torrent with `id`. Does nothing if it is not visible.
+    pub fn highlight_torrent(&mut self, id: i64) {
+        if let Some(row) = self
+            .filtered_torrents()
+            .iter()
+            .position(|t| t.id == Some(id))
+        {
+            self.highlight_row(row);
+        }
+    }
+
     fn highlight_row(&mut self, row: usize) {
         self.highlighted = self.filtered_torrents().get(row).and_then(|t| t.id);
         self.state.select(Some(row));
