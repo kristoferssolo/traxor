@@ -58,7 +58,6 @@ pub fn render(app: &mut App, frame: &mut Frame) {
 
     frame.render_widget(tabs, chunks[0]); // renders tab
 
-    app.torrents.set_fields(None);
     let torrents = app.filtered_torrents();
     let table_rows = torrents.iter().map(|torrent| torrent.id).collect();
     let selected = &app.torrents.selected;

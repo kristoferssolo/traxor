@@ -2,6 +2,21 @@ use crate::config::tabs::TabConfig;
 use std::fmt::Display;
 use transmission_rpc::types::{Torrent, TorrentGetField, TorrentStatus};
 
+/// Fields the app reads regardless of the configured columns: `id` for selection and
+/// RPC actions, `name` for filtering and renaming, `status` for tab matching, row
+/// colors, and toggling, `downloadDir` for the move prefill, and the rate and
+/// transfer totals for the status bar.
+const APP_FIELDS: [TorrentGetField; 8] = [
+    TorrentGetField::Id,
+    TorrentGetField::Name,
+    TorrentGetField::Status,
+    TorrentGetField::DownloadDir,
+    TorrentGetField::RateDownload,
+    TorrentGetField::RateUpload,
+    TorrentGetField::DownloadedEver,
+    TorrentGetField::UploadedEver,
+];
+
 /// A tab with name and column configuration.
 #[derive(Debug, Clone)]
 pub struct Tab {
@@ -48,5 +63,106 @@ impl Tab {
 impl Display for Tab {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.config.name)
+    }
+}
+
+/// Returns the deduplicated torrent fields to request from Transmission: the app's own
+/// fields plus every column of every tab, so switching tabs never shows empty columns.
+#[must_use]
+pub fn required_fields(tabs: &[Tab]) -> Vec<TorrentGetField> {
+    let columns = tabs.iter().flat_map(|tab| tab.fields().iter().copied());
+    APP_FIELDS
+        .into_iter()
+        .chain(columns)
+        .fold(Vec::new(), |mut fields, field| {
+            if !fields.contains(&field) {
+                fields.push(field);
+            }
+            fields
+        })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{app::App, config::Config};
+    use claims::{assert_ok, assert_some};
+
+    fn default_config() -> Config {
+        assert_ok!(toml::from_str(include_str!("../../config/default.toml")))
+    }
+
+    fn default_tabs() -> Vec<Tab> {
+        default_config().tabs.into_iter().map(Tab::new).collect()
+    }
+
+    #[test]
+    fn required_fields_include_every_tab_column() {
+        let tabs = default_tabs();
+        let fields = required_fields(&tabs);
+
+        for field in tabs.iter().flat_map(Tab::fields) {
+            assert!(fields.contains(field), "missing {}", field.to_str());
+        }
+    }
+
+    #[test]
+    fn app_requests_fields_it_reads_outside_columns() {
+        let mut config = default_config();
+        config.tabs = vec![TabConfig {
+            name: "Minimal".to_owned(),
+            columns: vec!["eta".to_owned()],
+            statuses: Vec::new(),
+        }];
+        let app = assert_ok!(App::new(config));
+        let fields = assert_some!(app.torrents.fields.as_ref());
+
+        // Listed independently of `APP_FIELDS`: selection and RPC actions need `id`,
+        // filtering and rename need `name`, tab matching and row colors need `status`,
+        // move prefill needs `downloadDir`, and the status bar needs the totals.
+        for field in [
+            TorrentGetField::Id,
+            TorrentGetField::Name,
+            TorrentGetField::Status,
+            TorrentGetField::DownloadDir,
+            TorrentGetField::RateDownload,
+            TorrentGetField::RateUpload,
+            TorrentGetField::DownloadedEver,
+            TorrentGetField::UploadedEver,
+            TorrentGetField::Eta,
+        ] {
+            assert!(fields.contains(&field), "missing {}", field.to_str());
+        }
+    }
+
+    #[test]
+    fn required_fields_are_deduplicated() {
+        let fields = required_fields(&default_tabs());
+
+        for (idx, field) in fields.iter().enumerate() {
+            assert!(
+                !fields[idx + 1..].contains(field),
+                "duplicate {}",
+                field.to_str()
+            );
+        }
+    }
+
+    #[test]
+    fn required_fields_exclude_unused_heavy_fields() {
+        let fields = required_fields(&default_tabs());
+
+        for heavy in [
+            TorrentGetField::Files,
+            TorrentGetField::FileStats,
+            TorrentGetField::Peers,
+            TorrentGetField::Pieces,
+            TorrentGetField::TrackerStats,
+            TorrentGetField::Trackers,
+            TorrentGetField::Priorities,
+            TorrentGetField::Wanted,
+        ] {
+            assert!(!fields.contains(&heavy), "unexpected {}", heavy.to_str());
+        }
     }
 }
