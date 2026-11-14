@@ -81,7 +81,7 @@ impl<B: Backend<Error: Send + Sync + 'static>> Tui<B> {
     /// Returns an error if terminal reset fails.
     fn reset() -> Result<()> {
         terminal::disable_raw_mode()?;
-        crossterm::execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture)?;
+        crossterm::execute!(io::stderr(), LeaveAlternateScreen, DisableMouseCapture)?;
         Ok(())
     }
 
