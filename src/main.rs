@@ -92,7 +92,7 @@ async fn repeat_with_pause<T>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use claims::assert_some;
+    use claims::{assert_ok, assert_some};
     use std::time::Instant;
 
     #[tokio::test]
@@ -123,6 +123,8 @@ mod tests {
 
         let task = tokio::spawn(repeat_with_pause(async || {}, sender, Duration::ZERO));
 
-        assert!(time::timeout(Duration::from_secs(5), task).await.is_ok());
+        assert_ok!(assert_ok!(
+            time::timeout(Duration::from_secs(5), task).await
+        ));
     }
 }
