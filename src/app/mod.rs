@@ -65,13 +65,15 @@ impl App {
     ///
     /// TODO: add error types
     pub fn new(config: Config) -> Result<Self> {
-        let tabs = config.tabs.iter().cloned().map(Tab::new).collect();
+        let tabs: Vec<_> = config.tabs.iter().cloned().map(Tab::new).collect();
+        let mut torrents = Torrents::new()?;
+        torrents.set_fields(Some(tab::required_fields(&tabs)));
         Ok(Self {
             running: true,
             tabs,
             index: 0,
             state: TableState::default(),
-            torrents: Torrents::new()?,
+            torrents,
             show_help: false,
             config,
             input_handler: InputHandler::new(),
