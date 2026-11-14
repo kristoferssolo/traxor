@@ -1,9 +1,9 @@
-use color_eyre::{Result, eyre::eyre};
 use crossterm::event::{self, Event as CrosstermEvent, KeyEvent, MouseEvent};
 use std::{
     thread,
     time::{Duration, Instant},
 };
+use thiserror::Error;
 use tokio::sync::mpsc;
 use tracing::error;
 
@@ -18,6 +18,14 @@ pub enum Event {
     Mouse(MouseEvent),
     /// Terminal resize.
     Resize(u16, u16),
+}
+
+/// Errors from waiting on terminal events.
+#[derive(Debug, Error)]
+pub enum EventError {
+    /// The terminal event thread stopped and every queued event was received.
+    #[error("terminal event thread stopped")]
+    ThreadStopped,
 }
 
 /// Terminal event handler.
@@ -83,11 +91,8 @@ impl EventHandler {
     ///
     /// Returns an error once the handler thread has stopped and every queued event
     /// has been received.
-    pub async fn next(&mut self) -> Result<Event> {
-        self.receiver
-            .recv()
-            .await
-            .ok_or_else(|| eyre!("terminal event thread stopped"))
+    pub async fn next(&mut self) -> Result<Event, EventError> {
+        self.receiver.recv().await.ok_or(EventError::ThreadStopped)
     }
 }
 
