@@ -59,11 +59,10 @@ pub struct App {
 
 impl App {
     /// Constructs a new instance of [`App`].
-    /// Returns instance of `Self`.
     ///
     /// # Errors
     ///
-    /// TODO: add error types
+    /// Returns an error if the default RPC URL is invalid.
     pub fn new(config: Config) -> Result<Self> {
         let tabs = config.tabs.iter().cloned().map(Tab::new).collect();
         Ok(Self {
@@ -81,9 +80,11 @@ impl App {
         })
     }
 
+    /// Completes the input as a directory path, cycling matches on repeated calls.
+    ///
     /// # Errors
     ///
-    /// TODO: add error types
+    /// Returns an error if the parent directory cannot be read.
     pub async fn complete_input(&mut self) -> Result<()> {
         self.input_handler.complete().await
     }
@@ -175,9 +176,11 @@ impl App {
         self.show_help = true;
     }
 
+    /// Toggle selected or highlighted torrent(s) between started and stopped.
+    ///
     /// # Errors
     ///
-    /// TODO: add error types
+    /// Returns an error if the RPC call fails.
     pub async fn toggle_torrents(&mut self) -> Result<()> {
         let ids = self.selected(false);
         self.torrents.toggle(ids).await?;

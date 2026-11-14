@@ -24,11 +24,6 @@ const TAB_DIVIDER: &str = "|";
 
 /// Renders the user interface widgets.
 pub fn render(app: &mut App, frame: &mut Frame) {
-    // This is where you add new widgets.
-    // See the following resources:
-    // - https://docs.rs/ratatui/latest/ratatui/widgets/index.html
-    // - https://github.com/ratatui-org/ratatui/tree/master/examples
-
     let size = frame.area();
     let tab_style = tab_style(&app.config.colors);
     let highlighted_tab_style = highlighted_tab_style(&app.config.colors);
@@ -56,7 +51,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         .padding(TAB_PADDING, TAB_PADDING)
         .divider(TAB_DIVIDER);
 
-    frame.render_widget(tabs, chunks[0]); // renders tab
+    frame.render_widget(tabs, chunks[0]);
 
     app.torrents.set_fields(None);
     let torrents = app.filtered_torrents();

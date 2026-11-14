@@ -5,9 +5,12 @@ use tracing_appender::rolling;
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
+/// Installs the global JSON file logger with levels from `config.log`.
+///
 /// # Errors
 ///
-/// TODO: add error types
+/// Returns an error if the local data directory cannot be determined or the log
+/// directory cannot be created.
 pub fn setup_logger(config: &Config) -> Result<()> {
     let log_dir_path = if cfg!(debug_assertions) {
         PathBuf::from(".logs")

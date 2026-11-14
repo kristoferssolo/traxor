@@ -29,11 +29,12 @@ pub struct EventHandler {
 }
 
 impl EventHandler {
-    /// Constructs a new instance of [`EventHandler`].
+    /// Spawns a thread that forwards terminal events and sends [`Event::Tick`]
+    /// every `tick_rate_ms`.
     ///
     /// # Panics
     ///
-    /// Panics if event polling or sending fails.
+    /// The spawned thread panics if event polling fails.
     #[must_use]
     pub fn new(tick_rate_ms: u64) -> Self {
         let tick_rate = Duration::from_millis(tick_rate_ms);

@@ -8,7 +8,7 @@ use url::Url;
 
 /// List of torrents.
 pub struct Torrents {
-    /// Constructs a new instance of [`Torrents`].
+    /// Transmission RPC client.
     pub client: TransClient,
     pub torrents: Vec<Torrent>,
     pub selected: HashSet<i64>,
@@ -16,11 +16,11 @@ pub struct Torrents {
 }
 
 impl Torrents {
-    /// Constructs a new instance of [`Torrents`].
+    /// Constructs a new instance of [`Torrents`] for the default RPC URL.
     ///
     /// # Errors
     ///
-    /// TODO: add error types
+    /// Returns an error if the default RPC URL is invalid.
     pub fn new() -> Result<Self> {
         let url = Url::parse(DEFAULT_RPC_URL)?;
         Ok(Self {
@@ -45,27 +45,27 @@ impl Torrents {
         self.torrents.is_empty()
     }
 
-    /// Sets `self.fields`
+    /// Sets the fields that [`Self::update`] requests.
     pub fn set_fields(&mut self, fields: Option<Vec<TorrentGetField>>) -> &mut Self {
         self.fields = fields;
         self
     }
 
-    /// Sets
+    /// Replaces the client with one connected to `url`.
     ///
     /// # Errors
     ///
-    /// TODO: add error types
+    /// Returns an error if `url` is invalid.
     pub fn url(&mut self, url: &str) -> Result<&mut Self> {
         self.client = TransClient::new(Url::parse(url)?);
         Ok(self)
     }
 
-    /// Updates [`Torrent`] values.
+    /// Fetches torrents from the daemon, replacing the cached list.
     ///
     /// # Errors
     ///
-    /// TODO: add error types
+    /// Returns an error if the RPC call fails.
     pub async fn update(&mut self) -> Result<&mut Self> {
         self.torrents = self
             .client
