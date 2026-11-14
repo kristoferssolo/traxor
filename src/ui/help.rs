@@ -1,106 +1,223 @@
-use crate::app::App;
+use crate::{app::App, config::keybinds::KeybindsConfig, ui::default_block};
 use ratatui::{
+    layout::Flex,
     prelude::*,
-    style::Modifier,
-    widgets::{Block, BorderType, Borders, Cell, Clear, Row, Table},
+    widgets::{Padding, Paragraph},
 };
 
-pub fn render_help(frame: &mut Frame, app: &App) {
-    let kb = app.config.keybinds();
+/// Minimum width of the key column, including the gap before the description.
+const KEY_MIN_WIDTH: u16 = 7;
+/// Blank cells between page columns.
+const COLUMN_GAP: u16 = 2;
+
+/// A titled group of `(keys, description)` rows on the help page.
+struct Section {
+    title: &'static str,
+    rows: Vec<(String, &'static str)>,
+}
+
+impl Section {
+    const fn new(title: &'static str, rows: Vec<(String, &'static str)>) -> Self {
+        Self { title, rows }
+    }
+
+    /// Rows taken by the title and the key rows.
+    const fn height(&self) -> usize {
+        1 + self.rows.len()
+    }
+}
+
+/// Help page content as columns of sections, left to right.
+///
+/// This is the only place that lists keys for the help page: adding a keybind means adding one
+/// `(keys, description)` row to a section here. Configurable keys are read from `kb` so custom
+/// bindings show up; keys that cannot be configured are literal strings.
+fn help_columns(kb: &KeybindsConfig) -> Vec<Vec<Section>> {
+    let key = display_key;
+    let pair = |first: &str, second: &str| format!("{}/{}", key(first), key(second));
+    let literal = |value: &str| value.to_owned();
+
+    vec![
+        vec![
+            Section::new(
+                "Navigation",
+                vec![
+                    (pair(&kb.prev_torrent, &kb.next_torrent), "Up/down"),
+                    (pair(&kb.first_torrent, &kb.last_torrent), "First/last"),
+                    (pair(&kb.page_up, &kb.page_down), "Page"),
+                    (pair(&kb.prev_tab, &kb.next_tab), "Prev/next tab"),
+                    (literal("1-9, 0"), "Switch tab"),
+                ],
+            ),
+            Section::new(
+                "Search",
+                vec![
+                    (key(&kb.filter), "Filter"),
+                    (key(&kb.clear_filter), "Clear filter"),
+                ],
+            ),
+            Section::new(
+                "General",
+                vec![
+                    (key(&kb.toggle_help), "Close help"),
+                    (key(&kb.quit), "Quit"),
+                ],
+            ),
+        ],
+        vec![Section::new(
+            "Actions",
+            vec![
+                (key(&kb.toggle_torrent), "Start/stop"),
+                (key(&kb.toggle_all), "Start/stop all"),
+                (key(&kb.select), "Multi-select"),
+                (key(&kb.select_all), "Select visible"),
+                (key(&kb.clear_selection), "Clear selection"),
+                (key(&kb.move_torrent), "Move"),
+                (key(&kb.rename_torrent), "Rename"),
+                (key(&kb.delete), "Remove"),
+                (key(&kb.delete_force), "Delete with data"),
+            ],
+        )],
+        vec![Section::new(
+            "In prompts",
+            vec![
+                (literal("←/→"), "Move cursor"),
+                (literal("^A/^E"), "Start/end"),
+                (literal("Del"), "Delete forward"),
+                (literal("^W"), "Delete word"),
+                (literal("^U"), "Delete to start"),
+                (literal("Tab"), "Complete path"),
+                (literal("Enter"), "Submit"),
+                (literal("Esc"), "Cancel"),
+            ],
+        )],
+    ]
+}
+
+/// Renders the full help page into `area`.
+///
+/// Uses as many of the designed columns as fit side by side. On narrower areas adjacent columns
+/// are stacked, and whatever still does not fit is clipped.
+pub fn render_help(frame: &mut Frame, app: &App, area: Rect) {
+    let block = default_block().padding(Padding::horizontal(1));
+    let inner = block.inner(area);
+    frame.render_widget(block, area);
+
+    let columns = help_columns(app.config.keybinds());
+    let layout = (1..=columns.len())
+        .rev()
+        .map(|count| stack(&columns, count))
+        .find(|layout| total_width(layout) <= inner.width)
+        .unwrap_or_else(|| stack(&columns, 1));
+
+    let constraints = layout.iter().map(|column| Constraint::Length(column.width));
+    let rects = Layout::horizontal(constraints)
+        .spacing(COLUMN_GAP)
+        .flex(Flex::Start)
+        .split(inner);
+
+    for (column, rect) in layout.into_iter().zip(rects.iter()) {
+        frame.render_widget(Paragraph::new(column.lines), *rect);
+    }
+}
+
+/// A rendered page column: its lines and the width they need.
+struct PageColumn {
+    lines: Vec<Line<'static>>,
+    width: u16,
+}
+
+fn total_width(layout: &[PageColumn]) -> u16 {
+    let gaps = u16::try_from(layout.len().saturating_sub(1)).unwrap_or(u16::MAX);
+    layout
+        .iter()
+        .map(|column| column.width)
+        .fold(gaps.saturating_mul(COLUMN_GAP), u16::saturating_add)
+}
+
+/// Stacks adjacent `columns` into `count` page columns, keeping their order and choosing the
+/// split with the shortest tallest column.
+fn stack(columns: &[Vec<Section>], count: usize) -> Vec<PageColumn> {
+    split(columns, count)
+        .into_iter()
+        .map(|group| page_column(&group.iter().flatten().collect::<Vec<_>>()))
+        .collect()
+}
+
+fn split(columns: &[Vec<Section>], count: usize) -> Vec<&[Vec<Section>]> {
+    if count <= 1 || columns.len() <= 1 {
+        return vec![columns];
+    }
+    (1..columns.len())
+        .map(|at| {
+            let (head, tail) = columns.split_at(at);
+            let mut groups = vec![head];
+            groups.extend(split(tail, count - 1));
+            groups
+        })
+        .min_by_key(|groups| groups.iter().map(|group| group_height(group)).max())
+        .unwrap_or_else(|| vec![columns])
+}
+
+/// Rows taken by `group` stacked as one column, with a blank row between sections.
+fn group_height(group: &[Vec<Section>]) -> usize {
+    let sections = group.iter().flatten();
+    let count = sections.clone().count();
+    sections.map(Section::height).sum::<usize>() + count.saturating_sub(1)
+}
+
+fn page_column(sections: &[&Section]) -> PageColumn {
     let key_style = Style::default().fg(Color::Yellow).bold();
-    let select_key = display_key(&kb.select);
-    let filter_key = display_key(&kb.filter);
-    let jump_keys = format!("{}/{}", kb.first_torrent, kb.last_torrent);
-    let page_keys = format!(
-        "{}/{}",
-        display_key(&kb.page_up),
-        display_key(&kb.page_down)
-    );
+    let title_style = Style::default().fg(Color::Magenta).bold();
+    let desc_style = Style::default().fg(Color::White);
 
-    let rows = vec![
-        section_row("Navigation"),
-        key_row(&kb.prev_torrent, "Move up", key_style),
-        key_row(&kb.next_torrent, "Move down", key_style),
-        key_row(&jump_keys, "First/last torrent", key_style),
-        key_row(&page_keys, "Page up/down", key_style),
-        key_row(&kb.prev_tab, "Previous tab", key_style),
-        key_row(&kb.next_tab, "Next tab", key_style),
-        key_row("1-9, 0", "Switch to tab", key_style),
-        Row::default(),
-        section_row("Actions"),
-        key_row(&kb.toggle_torrent, "Start/stop torrent", key_style),
-        key_row(&kb.toggle_all, "Start/stop all", key_style),
-        key_row(&select_key, "Multi-select", key_style),
-        key_row(&kb.select_all, "Select all visible", key_style),
-        key_row(&kb.clear_selection, "Clear selection", key_style),
-        key_row(&kb.move_torrent, "Move torrent", key_style),
-        key_row(&kb.rename_torrent, "Rename torrent", key_style),
-        key_row(&kb.delete, "Remove torrent", key_style),
-        key_row(&kb.delete_force, "Delete with data", key_style),
-        Row::default(),
-        section_row("Search"),
-        key_row(&filter_key, "Search/filter", key_style),
-        key_row("Esc", "Clear filter", key_style),
-        Row::default(),
-        section_row("Input"),
-        key_row("Left/Right", "Move cursor", key_style),
-        key_row("Home/End", "Line start/end", key_style),
-        key_row("^A/^E", "Line start/end", key_style),
-        key_row("Del", "Delete forward", key_style),
-        key_row("^W/^U", "Delete word/to start", key_style),
-        Row::default(),
-        section_row("General"),
-        key_row(&kb.toggle_help, "Toggle help", key_style),
-        key_row(&kb.quit, "Quit", key_style),
-    ];
+    let rows = sections.iter().flat_map(|section| &section.rows);
+    let key_width = rows
+        .clone()
+        .map(|(keys, _)| Span::raw(keys.as_str()).width() + 1)
+        .max()
+        .map_or(KEY_MIN_WIDTH, |width| {
+            u16::try_from(width).unwrap_or(u16::MAX).max(KEY_MIN_WIDTH)
+        });
+    let desc_width = rows
+        .map(|(_, desc)| Span::raw(*desc).width())
+        .max()
+        .unwrap_or_default();
+    let title_width = sections
+        .iter()
+        .map(|section| Span::raw(section.title).width())
+        .max()
+        .unwrap_or_default();
+    let width = (usize::from(key_width) + desc_width).max(title_width);
 
-    #[allow(clippy::cast_possible_truncation)]
-    let height = rows.len() as u16 + 4;
-    let width = 44;
+    let mut lines = Vec::new();
+    for (index, section) in sections.iter().enumerate() {
+        if index > 0 {
+            lines.push(Line::default());
+        }
+        lines.push(Line::styled(section.title, title_style));
+        lines.extend(section.rows.iter().map(|(keys, desc)| {
+            let padding = usize::from(key_width).saturating_sub(Span::raw(keys.as_str()).width());
+            Line::from(vec![
+                Span::styled(keys.clone(), key_style),
+                Span::raw(" ".repeat(padding)),
+                Span::styled(*desc, desc_style),
+            ])
+        }));
+    }
 
-    let block = Block::default()
-        .title(" Keybindings ")
-        .title_style(Style::default().fg(Color::Cyan).bold())
-        .title_alignment(Alignment::Center)
-        .borders(Borders::ALL)
-        .border_type(BorderType::Rounded)
-        .border_style(Style::default().fg(Color::Cyan));
-
-    let table = Table::new(rows, [Constraint::Length(14), Constraint::Fill(1)]).block(block);
-
-    let area = frame.area();
-    let popup_area = Rect::new(
-        (area.width.saturating_sub(width)) / 2,
-        (area.height.saturating_sub(height)) / 2,
-        width.min(area.width),
-        height.min(area.height),
-    );
-
-    frame.render_widget(Clear, popup_area);
-    frame.render_widget(table, popup_area);
+    PageColumn {
+        lines,
+        width: u16::try_from(width).unwrap_or(u16::MAX),
+    }
 }
 
-fn key_row<'a>(key: &'a str, desc: &'a str, key_style: Style) -> Row<'a> {
-    Row::new(vec![
-        Cell::from(format!("  {key}")).style(key_style),
-        Cell::from(desc).style(Style::default().fg(Color::White)),
-    ])
-}
-
-fn section_row(title: &str) -> Row<'_> {
-    Row::new(vec![
-        Cell::from(format!(" {title}")).style(
-            Style::default()
-                .fg(Color::Magenta)
-                .add_modifier(Modifier::BOLD),
-        ),
-    ])
-    .top_margin(1)
-}
-
-fn display_key(key: &str) -> String {
+/// Formats a configured key string for display, e.g. `" "` as `Space`.
+pub fn display_key(key: &str) -> String {
     match key.to_ascii_lowercase().as_str() {
         " " => "Space".to_string(),
+        "enter" => "Enter".to_string(),
+        "esc" | "escape" => "Esc".to_string(),
         "pageup" | "page_up" => "PgUp".to_string(),
         "pagedown" | "page_down" => "PgDn".to_string(),
         _ => key.to_string(),

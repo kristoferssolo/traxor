@@ -1,5 +1,6 @@
 use claims::{assert_ok, assert_some};
 use ratatui::{Terminal, backend::TestBackend, style::Color};
+use toml::Table;
 use traxor::{app::App, config::Config, ui};
 
 #[test]
@@ -84,4 +85,162 @@ fn assert_stats_visible(status_line: &str) {
     assert!(inner.contains(" │ ↓"), "{status_line:?}");
     let uploaded = assert_some!(inner.rsplit_once("U:")).1;
     assert!(uploaded.ends_with('B'), "{status_line:?}");
+}
+
+const DEFAULT_CONFIG: &str = include_str!("../config/default.toml");
+
+const ACTION_LABELS: [&str; 26] = [
+    "Up/down",
+    "First/last",
+    "Page",
+    "Prev/next tab",
+    "Switch tab",
+    "Filter",
+    "Clear filter",
+    "Close help",
+    "Quit",
+    "Start/stop",
+    "Start/stop all",
+    "Multi-select",
+    "Select visible",
+    "Clear selection",
+    "Move",
+    "Rename",
+    "Remove",
+    "Delete with data",
+    "Move cursor",
+    "Start/end",
+    "Delete forward",
+    "Delete word",
+    "Delete to start",
+    "Complete path",
+    "Submit",
+    "Cancel",
+];
+
+/// App built from the embedded defaults with `keybinds` overrides, ignoring user config.
+fn app_with_keybinds(keybinds: &[(&str, &str)]) -> App {
+    let mut config: Table = assert_ok!(toml::from_str(DEFAULT_CONFIG));
+    let table = assert_some!(config.get_mut("keybinds").and_then(|v| v.as_table_mut()));
+    for (name, value) in keybinds {
+        table.insert((*name).to_owned(), (*value).into());
+    }
+    let config: Config = assert_ok!(config.try_into());
+    assert_ok!(App::new(config))
+}
+
+fn help_app() -> App {
+    let mut app = app_with_keybinds(&[]);
+    app.open_help();
+    app
+}
+
+/// Renders `app` at `width`x`height` and returns the screen as text rows.
+fn render(app: &mut App, width: u16, height: u16) -> Vec<String> {
+    let mut terminal = assert_ok!(Terminal::new(TestBackend::new(width, height)));
+    assert_ok!(terminal.draw(|frame| ui::render(app, frame)));
+    let buffer = terminal.backend().buffer();
+    (0..height)
+        .map(|y| (0..width).map(|x| buffer[(x, y)].symbol()).collect())
+        .collect()
+}
+
+/// Row and column where `text` first appears on `screen`.
+fn find(screen: &[String], text: &str) -> (usize, usize) {
+    let found = screen.iter().enumerate().find_map(|(row, line)| {
+        line.find(text)
+            .map(|byte| (row, line[..byte].chars().count()))
+    });
+    assert_some!(found, "{text:?} not on screen:\n{}", screen.join("\n"))
+}
+
+fn contains(screen: &[String], text: &str) -> bool {
+    screen.iter().any(|line| line.contains(text))
+}
+
+#[test]
+fn help_page_shows_every_action_at_80x24() {
+    let screen = render(&mut help_app(), 80, 24);
+
+    for label in ACTION_LABELS {
+        find(&screen, label);
+    }
+    let (nav_row, nav_col) = find(&screen, "Navigation");
+    let (actions_row, actions_col) = find(&screen, "Actions");
+    let (prompts_row, prompts_col) = find(&screen, "In prompts");
+    assert_eq!(nav_row, actions_row);
+    assert_eq!(nav_row, prompts_row);
+    assert!(nav_col < actions_col && actions_col < prompts_col);
+}
+
+#[test]
+fn help_page_replaces_table() {
+    let mut app = app_with_keybinds(&[]);
+    assert!(contains(&render(&mut app, 80, 24), "Status"));
+
+    app.open_help();
+    let screen = render(&mut app, 80, 24);
+
+    assert!(!contains(&screen, "Status"));
+    find(&screen, "Overview");
+}
+
+#[test]
+fn status_bar_shows_help_mode() {
+    let screen = render(&mut help_app(), 80, 24);
+    let status = &screen[21..];
+
+    find(status, "? Close help");
+    find(status, " HELP ");
+}
+
+#[test]
+fn help_page_shows_configured_keys() {
+    let mut app = app_with_keybinds(&[
+        ("prev_torrent", "up"),
+        ("next_torrent", "down"),
+        ("move_torrent", "ctrl+o"),
+        ("toggle_help", "F1"),
+    ]);
+    app.open_help();
+    let screen = render(&mut app, 80, 24);
+
+    find(&screen, "up/down");
+    find(&screen, "ctrl+o Move");
+    find(&screen, "F1 Close help");
+    assert!(!contains(&screen, "k/j"));
+    assert!(!contains(&screen, "m      Move"));
+}
+
+#[test]
+fn help_page_stacks_into_two_columns() {
+    let screen = render(&mut help_app(), 64, 32);
+
+    for label in ACTION_LABELS {
+        find(&screen, label);
+    }
+    let (nav_row, nav_col) = find(&screen, "Navigation");
+    let (actions_row, actions_col) = find(&screen, "Actions");
+    let (prompts_row, prompts_col) = find(&screen, "In prompts");
+    assert_eq!(nav_row, actions_row);
+    assert!(nav_col < actions_col);
+    assert_eq!(actions_col, prompts_col);
+    assert!(actions_row < prompts_row);
+}
+
+#[test]
+fn help_page_stacks_into_one_column_when_narrow() {
+    let screen = render(&mut help_app(), 40, 20);
+
+    let (nav_row, nav_col) = find(&screen, "Navigation");
+    let (search_row, search_col) = find(&screen, "Search");
+    assert_eq!(nav_col, search_col);
+    assert!(nav_row < search_row);
+    assert!(!screen[nav_row].contains("Actions"));
+}
+
+#[test]
+fn help_page_survives_tiny_terminal() {
+    render(&mut help_app(), 10, 5);
+    render(&mut help_app(), 1, 1);
 }
