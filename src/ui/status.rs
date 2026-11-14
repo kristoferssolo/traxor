@@ -3,6 +3,7 @@ use crate::app::{
     utils::{filesize::FileSize, netspeed::NetSpeed},
 };
 use ratatui::{
+    buffer::CellWidth,
     prelude::*,
     text::Span,
     widgets::{Block, BorderType, Borders, Paragraph},
@@ -179,8 +180,10 @@ fn rendered_width(span: &Span<'_>) -> usize {
         .sum()
 }
 
+/// Cells ratatui's buffer gives `symbol`, which adjusts some graphemes (e.g. halfwidth
+/// katakana sound marks) that plain Unicode width measures differently.
 fn grapheme_width(symbol: &str) -> usize {
-    Span::raw(symbol).width()
+    usize::from(symbol.cell_width())
 }
 
 /// Shortens `spans` to at most `max_width` terminal columns.

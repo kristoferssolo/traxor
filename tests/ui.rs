@@ -48,6 +48,15 @@ fn status_bar_truncates_ligature_error_and_keeps_stats() {
     assert_stats_visible(&status_line);
 }
 
+#[test]
+fn status_bar_truncates_halfwidth_kana_error_and_keeps_stats() {
+    // Halfwidth sound marks take a cell of their own when rendered.
+    let status_line = render_status_line_with_error(&"ｶﾞ".repeat(40));
+
+    assert!(status_line.contains('…'), "{status_line:?}");
+    assert_stats_visible(&status_line);
+}
+
 const WIDTH: u16 = 80;
 const STATUS_ROW: u16 = 8;
 
