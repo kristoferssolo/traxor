@@ -7,6 +7,13 @@ use ratatui::{
     text::Span,
     widgets::{Block, BorderType, Borders, Paragraph},
 };
+use unicode_width::UnicodeWidthStr;
+
+/// Blank column before the left-side text.
+const LEADING_SPACE: usize = 1;
+/// Minimum blank columns between the left-side text and the stats.
+const MIN_GAP: usize = 1;
+const ELLIPSIS: &str = "…";
 
 #[allow(clippy::too_many_lines)]
 pub fn render(frame: &mut Frame, app: &App, area: Rect) {
@@ -73,6 +80,14 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
         ],
     };
 
+    // An error notice takes the place of the keybind hints until the next key press.
+    let left_spans = app.status_message.as_ref().map_or(keybinds, |message| {
+        vec![Span::styled(
+            message.text.as_str(),
+            Style::default().fg(Color::Red),
+        )]
+    });
+
     let count_style = if selected_count > 0 {
         Style::default().fg(Color::Magenta).bold()
     } else if !active_filter.is_empty() {
@@ -114,22 +129,23 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
         Span::raw(format!("{uploaded} ")),
     ];
 
-    let available_width = area.width.saturating_sub(2) as usize;
-    let left_len = keybinds
-        .iter()
-        .map(|s| s.content.chars().count())
-        .sum::<usize>()
-        + 1;
-    let right_len = right_spans
-        .iter()
-        .map(|s| s.content.chars().count())
-        .sum::<usize>();
+    // Stats keep their width; the hints or error get the rest of the line.
+    let available_width = usize::from(area.width.saturating_sub(2));
+    let right_width = spans_width(&right_spans);
+    let stats_fit = LEADING_SPACE + MIN_GAP + right_width <= available_width;
+    let left_max_width = if stats_fit {
+        available_width - LEADING_SPACE - MIN_GAP - right_width
+    } else {
+        available_width.saturating_sub(LEADING_SPACE)
+    };
+    let left_spans = truncate_spans(left_spans, left_max_width);
+    let left_width = spans_width(&left_spans);
 
     let mut spans = vec![Span::raw(" ")];
-    spans.extend(keybinds);
+    spans.extend(left_spans);
 
-    if left_len + right_len < available_width {
-        let padding = available_width.saturating_sub(left_len + right_len);
+    if stats_fit {
+        let padding = available_width - LEADING_SPACE - left_width - right_width;
         spans.push(Span::raw(" ".repeat(padding)));
         spans.extend(right_spans);
     }
@@ -148,4 +164,93 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
     let paragraph = Paragraph::new(Line::from(spans)).block(block);
 
     frame.render_widget(paragraph, area);
+}
+
+/// Total display width of `spans` in terminal columns.
+fn spans_width(spans: &[Span<'_>]) -> usize {
+    spans.iter().map(Span::width).sum()
+}
+
+/// Shortens `spans` to at most `max_width` terminal columns.
+///
+/// Cuts at grapheme boundaries and ends with `…` in the style of the cut span
+/// when anything was removed.
+fn truncate_spans(spans: Vec<Span<'_>>, max_width: usize) -> Vec<Span<'_>> {
+    if spans_width(&spans) <= max_width {
+        return spans;
+    }
+    let Some(mut remaining) = max_width.checked_sub(ELLIPSIS.width()) else {
+        return Vec::new();
+    };
+
+    let mut truncated = Vec::new();
+    for span in spans {
+        let span_width = span.width();
+        if span_width <= remaining {
+            remaining -= span_width;
+            truncated.push(span);
+            continue;
+        }
+
+        let mut content = String::new();
+        for grapheme in span.styled_graphemes(Style::default()) {
+            let grapheme_width = grapheme.symbol.width();
+            if grapheme_width > remaining {
+                break;
+            }
+            remaining -= grapheme_width;
+            content.push_str(grapheme.symbol);
+        }
+        truncated.push(Span::styled(content, span.style));
+        truncated.push(Span::styled(ELLIPSIS, span.style));
+        break;
+    }
+    truncated
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn text(spans: &[Span<'_>]) -> String {
+        spans.iter().map(|span| span.content.as_ref()).collect()
+    }
+
+    #[test]
+    fn truncate_spans_keeps_text_that_fits() {
+        let spans = vec![Span::raw("ab"), Span::raw("cd")];
+
+        let truncated = truncate_spans(spans.clone(), 4);
+
+        assert_eq!(truncated, spans);
+    }
+
+    #[test]
+    fn truncate_spans_cuts_across_spans_with_ellipsis() {
+        let red = Style::default().fg(Color::Red);
+        let spans = vec![Span::raw("ab"), Span::styled("cdef", red)];
+
+        let truncated = truncate_spans(spans, 5);
+
+        assert_eq!(text(&truncated), "abcd…");
+        assert_eq!(spans_width(&truncated), 5);
+        assert_eq!(truncated.last().map(|span| span.style), Some(red));
+    }
+
+    #[test]
+    fn truncate_spans_never_splits_wide_characters() {
+        let spans = vec![Span::raw("错误信息")];
+
+        let truncated = truncate_spans(spans, 6);
+
+        assert_eq!(text(&truncated), "错误…");
+        assert_eq!(spans_width(&truncated), 5);
+    }
+
+    #[test]
+    fn truncate_spans_returns_nothing_without_room_for_ellipsis() {
+        let truncated = truncate_spans(vec![Span::raw("ab")], 0);
+
+        assert_eq!(truncated, Vec::<Span<'_>>::new());
+    }
 }

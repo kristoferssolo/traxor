@@ -142,7 +142,19 @@ fn split_path_components(path: &Path) -> (&Path, &OsStr) {
 
 async fn find_matching_directories(base_path: &Path, partial_name: &OsStr) -> Result<Vec<PathBuf>> {
     let partial_lower = partial_name.to_string_lossy().to_lowercase();
-    let mut entries = fs::read_dir(base_path).await?;
+    let mut entries = match fs::read_dir(base_path).await {
+        Ok(entries) => entries,
+        // A base that is missing, unreadable, or not a directory has nothing to suggest.
+        Err(error)
+            if matches!(
+                error.kind(),
+                ErrorKind::NotFound | ErrorKind::PermissionDenied | ErrorKind::NotADirectory
+            ) =>
+        {
+            return Ok(Vec::new());
+        }
+        Err(error) => return Err(error.into()),
+    };
     let mut matches = Vec::new();
 
     while let Some(entry) = entries.next_entry().await? {
@@ -183,8 +195,9 @@ async fn is_suggestable_directory(entry: &fs::DirEntry) -> Result<bool> {
 #[cfg(test)]
 mod tests {
     use super::InputHandler;
+    use claims::{assert_none, assert_ok};
     #[cfg(unix)]
-    use std::os::unix::fs::symlink;
+    use std::os::unix::fs::{PermissionsExt, symlink};
     use std::{fs, path::PathBuf};
     use tempfile::TempDir;
 
@@ -312,6 +325,50 @@ mod tests {
         assert_eq!(input.text, format!("{}/li", dir.path().display()));
         assert_eq!(input.completions(), Vec::<PathBuf>::new());
         assert_eq!(input.completion_idx(), None);
+    }
+
+    #[tokio::test]
+    async fn complete_with_missing_base_dir_keeps_text() {
+        let dir = temp_dir();
+        let text = format!("{}/missing/sub", dir.path().display());
+        let mut input = InputHandler::new();
+        input.set_text(text.clone());
+
+        assert_ok!(input.complete().await);
+
+        assert_eq!(input.text, text);
+        assert_eq!(input.completions(), Vec::<PathBuf>::new());
+        assert_none!(input.completion_idx());
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn complete_with_unreadable_base_dir_keeps_text() {
+        let dir = temp_dir();
+        let locked = dir.path().join("locked");
+        create_dir(&locked);
+        assert_ok!(fs::set_permissions(
+            &locked,
+            fs::Permissions::from_mode(0o000)
+        ));
+        let readable_anyway = fs::read_dir(&locked).is_ok();
+        let text = format!("{}/a", locked.display());
+        let mut input = InputHandler::new();
+        input.set_text(text.clone());
+
+        let result = input.complete().await;
+        assert_ok!(fs::set_permissions(
+            &locked,
+            fs::Permissions::from_mode(0o755)
+        ));
+
+        assert_ok!(result);
+        if readable_anyway {
+            // Privileges that bypass permission checks leave nothing to test.
+            return;
+        }
+        assert_eq!(input.text, text);
+        assert_eq!(input.completions(), Vec::<PathBuf>::new());
     }
 
     fn temp_dir() -> TempDir {

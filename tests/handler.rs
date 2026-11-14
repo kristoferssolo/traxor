@@ -1,15 +1,16 @@
 use claims::{assert_none, assert_ok, assert_some, assert_some_eq};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 use ratatui::{Terminal, backend::TestBackend, layout::Rect, text::Line};
-use std::fs;
+use std::{fs, time::Duration};
 use tempfile::TempDir;
+use tokio::{net::TcpListener, time::timeout};
 use transmission_rpc::types::Torrent;
 use traxor::{
     app::App,
     app::InputMode,
     app::action::Action,
     config::Config,
-    handler::{get_action, handle_mouse},
+    handler::{get_action, handle_key_event, handle_mouse},
     ui::render,
 };
 
@@ -239,6 +240,55 @@ const fn left_click(column: u16, row: u16) -> MouseEvent {
 /// Builds a torrent with only `id` and `name` set; every other field deserializes to `None`.
 fn torrent(id: i64, name: &str) -> Torrent {
     assert_ok!(toml::from_str(&format!("id = {id}\nname = {name:?}")))
+}
+
+#[tokio::test]
+async fn handle_key_event_reports_failed_action_and_keeps_running() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    assert_ok!(app.torrents.url(&failing_rpc_url().await));
+    app.torrents.torrents = vec![assert_ok!(toml::from_str::<Torrent>(
+        "id = 1\nname = \"old\""
+    ))];
+    app.state.select(Some(0));
+    app.prepare_rename_action();
+    app.input_handler.set_text("new".to_owned());
+
+    assert_ok!(
+        timeout(
+            Duration::from_secs(10),
+            handle_key_event(KeyEvent::from(KeyCode::Enter), &mut app),
+        )
+        .await
+    );
+
+    assert!(app.running);
+    assert_eq!(app.input_mode, InputMode::Rename);
+    assert_eq!(app.input_handler.text, "new");
+    let message = assert_some!(app.status_message.as_ref());
+    assert!(message.text.starts_with("Transmission RPC error"));
+
+    handle_key_event(KeyEvent::from(KeyCode::Esc), &mut app).await;
+
+    assert_none!(app.status_message);
+    assert_eq!(app.input_mode, InputMode::None);
+}
+
+/// Starts a local server that closes every connection without answering, so
+/// RPC requests to the returned URL fail.
+///
+/// The server task keeps the port bound until the test's runtime shuts down,
+/// so no other process can take the port and answer instead.
+async fn failing_rpc_url() -> String {
+    let listener = assert_ok!(TcpListener::bind("127.0.0.1:0").await);
+    let port = assert_ok!(listener.local_addr()).port();
+    assert_ne!(port, 9091, "must not reach a real Transmission daemon");
+    tokio::spawn(async move {
+        while let Ok((stream, _)) = listener.accept().await {
+            drop(stream);
+        }
+    });
+    format!("http://127.0.0.1:{port}/transmission/rpc")
 }
 
 fn temp_dir() -> TempDir {
