@@ -1,10 +1,11 @@
 mod help;
+pub mod hit_test;
 mod input;
 mod status;
 mod table;
 
 use crate::{
-    app::{App, InputMode},
+    app::{App, InputMode, RenderedAreas},
     config::color::ColorConfig,
 };
 use help::render_help;
@@ -15,6 +16,11 @@ use ratatui::{
 };
 use std::str::FromStr;
 use table::build_table;
+
+/// Padding on each side of a tab title.
+const TAB_PADDING: &str = " ";
+/// Separator between tab titles.
+const TAB_DIVIDER: &str = "|";
 
 /// Renders the user interface widgets.
 pub fn render(app: &mut App, frame: &mut Frame) {
@@ -47,9 +53,14 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         .select(app.index())
         .style(tab_style)
         .highlight_style(highlighted_tab_style)
-        .divider("|");
+        .padding(TAB_PADDING, TAB_PADDING)
+        .divider(TAB_DIVIDER);
 
     frame.render_widget(tabs, chunks[0]); // renders tab
+    app.areas = RenderedAreas {
+        tabs: chunks[0],
+        table: chunks[1],
+    };
 
     app.torrents.set_fields(None);
     let torrents = app.filtered_torrents();

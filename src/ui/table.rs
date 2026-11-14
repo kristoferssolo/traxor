@@ -11,6 +11,9 @@ use ratatui::{
 use std::collections::HashSet;
 use transmission_rpc::types::{Torrent, TorrentGetField, TorrentStatus};
 
+/// Blank rows between the header and the first torrent row.
+pub const HEADER_BOTTOM_MARGIN: u16 = 1;
+
 pub fn build_table(
     torrents: &[&Torrent],
     selected: &HashSet<i64>,
@@ -34,7 +37,7 @@ pub fn build_table(
 
     let header = Row::new(fields.iter().map(|&field| field.title()))
         .style(header_style)
-        .bottom_margin(1);
+        .bottom_margin(HEADER_BOTTOM_MARGIN);
 
     Table::new(rows, widths)
         .block(default_block())

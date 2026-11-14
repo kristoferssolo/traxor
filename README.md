@@ -5,6 +5,7 @@ A terminal UI for managing Transmission torrents.
 ## Features
 
 - Vim-style navigation (`hjkl`)
+- Mouse support: click to select a torrent or tab, scroll to move the highlight
 - Live fuzzy search/filter
 - Custom tab layouts with configurable columns
 - Multi-select for batch operations

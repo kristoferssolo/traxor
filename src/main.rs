@@ -13,7 +13,7 @@ use traxor::{
     },
     config::Config,
     event::{Event, EventHandler},
-    handler::{get_action, update},
+    handler::{get_action, handle_mouse, update},
     telemetry::setup_logger,
     tui::Tui,
 };
@@ -41,7 +41,11 @@ async fn main() -> Result<()> {
         tui.draw(&mut app_guard)?;
         drop(app_guard);
 
-        if let Event::Key(key_event) = tui.events.next()? {
+        let event = tui.events.next()?;
+        if let Event::Mouse(mouse_event) = event {
+            handle_mouse(mouse_event, &mut *app.lock().await);
+        }
+        if let Event::Key(key_event) = event {
             let mut app_guard = app.lock().await;
             if let Some(action) = get_action(key_event, &mut app_guard).await? {
                 update(&mut app_guard, action).await?;

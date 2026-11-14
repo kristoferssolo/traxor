@@ -9,7 +9,7 @@ pub mod utils;
 
 use crate::{app::input::InputHandler, config::Config, error::Result};
 use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
-use ratatui::widgets::TableState;
+use ratatui::{layout::Rect, widgets::TableState};
 use std::{cmp::Reverse, path::PathBuf};
 use transmission_rpc::types::Torrent;
 use types::Selected;
@@ -27,6 +27,13 @@ pub enum InputMode {
     ConfirmDelete(bool),
 }
 
+/// Screen areas from the last render, used for mouse hit-testing.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct RenderedAreas {
+    pub tabs: Rect,
+    pub table: Rect,
+}
+
 /// Main Application.
 #[derive(Debug)]
 pub struct App {
@@ -40,6 +47,7 @@ pub struct App {
     pub input_handler: InputHandler,
     pub input_mode: InputMode,
     pub filter_text: String,
+    pub areas: RenderedAreas,
 }
 
 impl App {
@@ -62,6 +70,7 @@ impl App {
             input_handler: InputHandler::new(),
             input_mode: InputMode::None,
             filter_text: String::new(),
+            areas: RenderedAreas::default(),
         })
     }
 

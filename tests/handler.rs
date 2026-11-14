@@ -1,8 +1,15 @@
 use claims::{assert_none, assert_ok, assert_some_eq};
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
+use ratatui::{layout::Rect, text::Line};
 use std::fs;
 use tempfile::TempDir;
-use traxor::{app::App, app::InputMode, app::action::Action, config::Config, handler::get_action};
+use traxor::{
+    app::App,
+    app::InputMode,
+    app::action::Action,
+    config::Config,
+    handler::{get_action, handle_mouse},
+};
 
 macro_rules! assert_action {
     ($app:expr, $key_code:expr) => {
@@ -155,6 +162,45 @@ async fn get_action_tab_does_not_complete_rename_or_filter_input() {
 
         assert_none!(assert_action!(&mut app, KeyCode::Tab));
         assert_eq!(app.input_handler.text, input);
+    }
+}
+
+#[test]
+fn handle_mouse_click_switches_tab() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.areas.tabs = Rect::new(0, 0, 200, 3);
+
+    handle_mouse(click_on_second_tab(&app), &mut app);
+    assert_eq!(app.index(), 1);
+}
+
+#[test]
+fn handle_mouse_ignored_while_dialog_open() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.areas.tabs = Rect::new(0, 0, 200, 3);
+    let click = click_on_second_tab(&app);
+
+    app.show_help = true;
+    handle_mouse(click, &mut app);
+    assert_eq!(app.index(), 0);
+
+    app.show_help = false;
+    app.input_mode = InputMode::Filter;
+    handle_mouse(click, &mut app);
+    assert_eq!(app.index(), 0);
+}
+
+/// Left click on the first title character of the second tab: border, padded first title,
+/// divider, then left padding.
+fn click_on_second_tab(app: &App) -> MouseEvent {
+    let first_title_width = assert_ok!(u16::try_from(Line::from(app.tabs()[0].name()).width()));
+    MouseEvent {
+        kind: MouseEventKind::Down(MouseButton::Left),
+        column: 1 + first_title_width + 2 + 1 + 1,
+        row: 1,
+        modifiers: KeyModifiers::NONE,
     }
 }
 
