@@ -312,7 +312,7 @@ async fn get_action_modified_chars_edit_instead_of_inserting() {
 }
 
 #[tokio::test]
-async fn get_action_ctrl_alt_chars_insert_as_altgr_text() {
+async fn get_action_ctrl_alt_chars_type_altgr_text_only_on_windows() {
     let config = assert_ok!(Config::load());
     let mut app = assert_ok!(App::new(config));
     app.input_mode = InputMode::Rename;
@@ -325,7 +325,13 @@ async fn get_action_ctrl_alt_chars_insert_as_altgr_text() {
         ));
     }
 
-    assert_eq!(app.input_handler.text, "/downloads/shows@aewu");
+    // No Ctrl+Alt char triggers an editing shortcut; only Windows treats them as AltGr text.
+    let expected = if cfg!(windows) {
+        "/downloads/shows@aewu"
+    } else {
+        "/downloads/shows"
+    };
+    assert_eq!(app.input_handler.text, expected);
     assert_eq!(
         app.input_handler.cursor_position,
         app.input_handler.text.len()
