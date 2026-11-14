@@ -11,9 +11,6 @@ pub enum TraxorError {
 
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
-
-    #[error("URL parse error: {0}")]
-    UrlParse(#[from] url::ParseError),
 }
 
 impl From<Box<dyn std::error::Error + Send + Sync>> for TraxorError {
