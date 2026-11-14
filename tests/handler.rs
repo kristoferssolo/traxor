@@ -1,7 +1,8 @@
 use claims::{assert_none, assert_ok, assert_some, assert_some_eq};
 use crossterm::event::{KeyCode, KeyEvent};
-use std::{fs, net::TcpListener};
+use std::{fs, time::Duration};
 use tempfile::TempDir;
+use tokio::{net::TcpListener, time::timeout};
 use transmission_rpc::types::Torrent;
 use traxor::{
     app::App,
@@ -169,7 +170,7 @@ async fn get_action_tab_does_not_complete_rename_or_filter_input() {
 async fn handle_key_event_reports_failed_action_and_keeps_running() {
     let config = assert_ok!(Config::load());
     let mut app = assert_ok!(App::new(config));
-    assert_ok!(app.torrents.url(&unreachable_rpc_url()));
+    assert_ok!(app.torrents.url(&failing_rpc_url().await));
     app.torrents.torrents = vec![assert_ok!(toml::from_str::<Torrent>(
         "id = 1\nname = \"old\""
     ))];
@@ -177,7 +178,13 @@ async fn handle_key_event_reports_failed_action_and_keeps_running() {
     app.prepare_rename_action();
     app.input_handler.set_text("new".to_owned());
 
-    handle_key_event(KeyEvent::from(KeyCode::Enter), &mut app).await;
+    assert_ok!(
+        timeout(
+            Duration::from_secs(10),
+            handle_key_event(KeyEvent::from(KeyCode::Enter), &mut app),
+        )
+        .await
+    );
 
     assert!(app.running);
     assert_eq!(app.input_mode, InputMode::Rename);
@@ -191,10 +198,20 @@ async fn handle_key_event_reports_failed_action_and_keeps_running() {
     assert_eq!(app.input_mode, InputMode::None);
 }
 
-/// Returns an RPC URL on a local port with no listener, so requests fail fast.
-fn unreachable_rpc_url() -> String {
-    let listener = assert_ok!(TcpListener::bind("127.0.0.1:0"));
+/// Starts a local server that closes every connection without answering, so
+/// RPC requests to the returned URL fail.
+///
+/// The server task keeps the port bound until the test's runtime shuts down,
+/// so no other process can take the port and answer instead.
+async fn failing_rpc_url() -> String {
+    let listener = assert_ok!(TcpListener::bind("127.0.0.1:0").await);
     let port = assert_ok!(listener.local_addr()).port();
+    assert_ne!(port, 9091, "must not reach a real Transmission daemon");
+    tokio::spawn(async move {
+        while let Ok((stream, _)) = listener.accept().await {
+            drop(stream);
+        }
+    });
     format!("http://127.0.0.1:{port}/transmission/rpc")
 }
 
