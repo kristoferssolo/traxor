@@ -85,21 +85,53 @@ pub fn required_fields(tabs: &[Tab]) -> Vec<TorrentGetField> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::Config;
-    use claims::assert_ok;
+    use crate::{app::App, config::Config};
+    use claims::{assert_ok, assert_some};
+
+    fn default_config() -> Config {
+        assert_ok!(toml::from_str(include_str!("../../config/default.toml")))
+    }
 
     fn default_tabs() -> Vec<Tab> {
-        let config: Config = assert_ok!(toml::from_str(include_str!("../../config/default.toml")));
-        config.tabs.into_iter().map(Tab::new).collect()
+        default_config().tabs.into_iter().map(Tab::new).collect()
     }
 
     #[test]
-    fn required_fields_include_columns_and_app_fields() {
+    fn required_fields_include_every_tab_column() {
         let tabs = default_tabs();
         let fields = required_fields(&tabs);
 
-        for field in tabs.iter().flat_map(Tab::fields).chain(&APP_FIELDS) {
+        for field in tabs.iter().flat_map(Tab::fields) {
             assert!(fields.contains(field), "missing {}", field.to_str());
+        }
+    }
+
+    #[test]
+    fn app_requests_fields_it_reads_outside_columns() {
+        let mut config = default_config();
+        config.tabs = vec![TabConfig {
+            name: "Minimal".to_owned(),
+            columns: vec!["eta".to_owned()],
+            statuses: Vec::new(),
+        }];
+        let app = assert_ok!(App::new(config));
+        let fields = assert_some!(app.torrents.fields.as_ref());
+
+        // Listed independently of `APP_FIELDS`: selection and RPC actions need `id`,
+        // filtering and rename need `name`, tab matching and row colors need `status`,
+        // move prefill needs `downloadDir`, and the status bar needs the totals.
+        for field in [
+            TorrentGetField::Id,
+            TorrentGetField::Name,
+            TorrentGetField::Status,
+            TorrentGetField::DownloadDir,
+            TorrentGetField::RateDownload,
+            TorrentGetField::RateUpload,
+            TorrentGetField::DownloadedEver,
+            TorrentGetField::UploadedEver,
+            TorrentGetField::Eta,
+        ] {
+            assert!(fields.contains(&field), "missing {}", field.to_str());
         }
     }
 
