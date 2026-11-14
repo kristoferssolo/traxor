@@ -12,7 +12,6 @@ use ratatui::{
 pub fn render(frame: &mut Frame, app: &App, area: Rect) {
     let torrents = &app.torrents.torrents;
 
-    // Aggregate stats
     let total_down_speed = torrents.iter().filter_map(|t| t.rate_download).sum::<i64>();
     let total_up_speed = torrents.iter().filter_map(|t| t.rate_upload).sum::<i64>();
     let total_downloaded = torrents
@@ -74,7 +73,6 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
         ],
     };
 
-    // Build right side with colored spans
     let count_style = if selected_count > 0 {
         Style::default().fg(Color::Magenta).bold()
     } else if !active_filter.is_empty() {
@@ -116,7 +114,6 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
         Span::raw(format!("{uploaded} ")),
     ];
 
-    // Calculate widths
     let available_width = area.width.saturating_sub(2) as usize;
     let left_len = keybinds
         .iter()
