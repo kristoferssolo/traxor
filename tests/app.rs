@@ -388,15 +388,15 @@ fn app_first_and_last_jump_without_wrapping() {
     app.open_help();
 
     app.last();
-    assert_eq!(app.state.selected(), Some(4));
+    assert_some_eq!(app.state.selected(), 4);
     assert!(!app.show_help);
     app.last();
-    assert_eq!(app.state.selected(), Some(4));
+    assert_some_eq!(app.state.selected(), 4);
 
     app.first();
-    assert_eq!(app.state.selected(), Some(0));
+    assert_some_eq!(app.state.selected(), 0);
     app.first();
-    assert_eq!(app.state.selected(), Some(0));
+    assert_some_eq!(app.state.selected(), 0);
 }
 
 #[test]
@@ -406,7 +406,7 @@ fn app_last_uses_filtered_torrents() {
 
     app.last();
 
-    assert_eq!(app.state.selected(), Some(0));
+    assert_some_eq!(app.state.selected(), 0);
 }
 
 #[test]
@@ -415,18 +415,18 @@ fn app_page_moves_by_page_size_and_stops_at_ends() {
     app.set_page_size(10);
 
     app.page_down();
-    assert_eq!(app.state.selected(), Some(10));
+    assert_some_eq!(app.state.selected(), 10);
     app.page_down();
-    assert_eq!(app.state.selected(), Some(20));
+    assert_some_eq!(app.state.selected(), 20);
     app.page_down();
-    assert_eq!(app.state.selected(), Some(24));
+    assert_some_eq!(app.state.selected(), 24);
 
     app.page_up();
-    assert_eq!(app.state.selected(), Some(14));
+    assert_some_eq!(app.state.selected(), 14);
     app.page_up();
-    assert_eq!(app.state.selected(), Some(4));
+    assert_some_eq!(app.state.selected(), 4);
     app.page_up();
-    assert_eq!(app.state.selected(), Some(0));
+    assert_some_eq!(app.state.selected(), 0);
 }
 
 #[test]
@@ -435,9 +435,9 @@ fn app_page_larger_than_list_clamps_to_ends() {
     app.state.select(Some(1));
 
     app.page_down();
-    assert_eq!(app.state.selected(), Some(2));
+    assert_some_eq!(app.state.selected(), 2);
     app.page_up();
-    assert_eq!(app.state.selected(), Some(0));
+    assert_some_eq!(app.state.selected(), 0);
 }
 
 #[test]
@@ -448,7 +448,7 @@ fn app_page_clamps_stale_highlight() {
 
     app.page_up();
 
-    assert_eq!(app.state.selected(), Some(1));
+    assert_some_eq!(app.state.selected(), 1);
 }
 
 #[test]
@@ -459,7 +459,7 @@ fn app_page_size_is_at_least_one_row() {
 
     app.page_down();
 
-    assert_eq!(app.state.selected(), Some(1));
+    assert_some_eq!(app.state.selected(), 1);
 }
 
 #[test]
@@ -472,7 +472,7 @@ fn app_jumps_are_noops_on_empty_list() {
     app.page_down();
     app.page_up();
 
-    assert_eq!(app.state.selected(), None);
+    assert_none!(app.state.selected());
     assert!(app.show_help);
 }
 
@@ -492,7 +492,7 @@ fn app_select_all_selects_only_visible_torrents() {
 
     assert_eq!(app.torrents.selected, HashSet::from([2]));
     assert!(!app.show_help);
-    assert_eq!(app.state.selected(), None);
+    assert_none!(app.state.selected());
 }
 
 #[test]
