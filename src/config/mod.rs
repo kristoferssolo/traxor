@@ -9,7 +9,7 @@ use color_eyre::{
     Result,
     eyre::{Context, ContextCompat, eyre},
 };
-use keybinds::KeybindsConfig;
+use keybinds::{KeybindsConfig, Keymap};
 use log::LogConfig;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -33,6 +33,9 @@ pub struct Config {
     pub time: TimeConfig,
     #[serde(default)]
     pub tabs: Vec<TabConfig>,
+    /// Parsed [`KeybindsConfig`], built by [`Config::load`].
+    #[serde(skip)]
+    pub keymap: Keymap,
 }
 
 impl Config {
@@ -69,10 +72,11 @@ impl Config {
     }
 
     fn from_value(value: Value) -> Result<Self> {
-        let config: Self = value
+        let mut config: Self = value
             .try_into()
             .context("Failed to deserialize merged config")?;
         config.validate()?;
+        config.keymap = config.keybinds.keymap()?;
         Ok(config)
     }
 
@@ -183,6 +187,30 @@ mod tests {
 
         let err = assert_err!(Config::from_value(value)).to_string();
         assert!(err.contains("time.eta_format"));
+        Ok(())
+    }
+
+    fn default_with_keybinds(overrides: &str) -> Result<Value> {
+        defaults_with(&format!("[keybinds]\n{overrides}"))
+    }
+
+    #[test]
+    fn rejects_invalid_keybind() -> Result<()> {
+        let value = default_with_keybinds(r#"move_torrent = "ctrl+bogus""#)?;
+
+        let err = assert_err!(Config::from_value(value)).to_string();
+        assert!(err.contains("keybinds.move_torrent"));
+        assert!(err.contains("ctrl+bogus"));
+        Ok(())
+    }
+
+    #[test]
+    fn rejects_duplicate_keybind() -> Result<()> {
+        let value = default_with_keybinds(r#"rename_torrent = "m""#)?;
+
+        let err = assert_err!(Config::from_value(value)).to_string();
+        assert!(err.contains("keybinds.move_torrent"));
+        assert!(err.contains("keybinds.rename_torrent"));
         Ok(())
     }
 
