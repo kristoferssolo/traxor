@@ -1,9 +1,12 @@
 use crate::app::{App, InputMode};
 use ratatui::{
+    buffer::CellWidth,
     prelude::*,
     text::Line,
     widgets::{Block, BorderType, Borders, Clear, List, ListItem, Paragraph},
 };
+use std::iter;
+use unicode_segmentation::UnicodeSegmentation;
 
 pub fn render(f: &mut Frame, app: &App) {
     match app.input_mode {
@@ -172,37 +175,42 @@ struct InputView<'a> {
 /// Scrolls `text` horizontally so the cursor at byte offset `cursor` fits in `width` display
 /// columns.
 ///
-/// Scrolls only as far as needed, so text that fits stays left-aligned. The cell under the cursor
-/// is kept visible, including a wide character at the cursor.
+/// Text is measured and cropped by whole grapheme clusters, with the cell width ratatui uses
+/// when it draws a cluster, so emoji sequences and variation selectors are never split. A
+/// `cursor` inside a cluster snaps to the start of that cluster, and one past the end of `text`
+/// snaps to the end.
+///
+/// Scrolls only as far as needed, so text that fits stays left-aligned. The cells under the
+/// cursor are kept visible, including a wide cluster at the cursor.
 fn input_view(text: &str, cursor: usize, width: u16) -> InputView<'_> {
     let width = usize::from(width);
-    let cursor = text.floor_char_boundary(cursor);
+    let cursor = grapheme_start(text, cursor);
     let cursor_cell = text[cursor..]
-        .chars()
+        .graphemes(true)
         .next()
-        .map_or(1, |ch| char_width(ch).max(1));
+        .map_or(1, |grapheme| grapheme_width(grapheme).max(1));
     let prefix_budget = width.saturating_sub(cursor_cell);
 
     let mut start = cursor;
     let mut cursor_column = 0;
-    for (index, ch) in text[..cursor].char_indices().rev() {
-        let ch_width = char_width(ch);
-        if cursor_column + ch_width > prefix_budget {
+    for (index, grapheme) in text[..cursor].grapheme_indices(true).rev() {
+        let grapheme_width = grapheme_width(grapheme);
+        if cursor_column + grapheme_width > prefix_budget {
             break;
         }
-        cursor_column += ch_width;
+        cursor_column += grapheme_width;
         start = index;
     }
 
     let mut end = start;
     let mut used = 0;
-    for (index, ch) in text[start..].char_indices() {
-        let ch_width = char_width(ch);
-        if used + ch_width > width {
+    for (index, grapheme) in text[start..].grapheme_indices(true) {
+        let grapheme_width = grapheme_width(grapheme);
+        if used + grapheme_width > width {
             break;
         }
-        used += ch_width;
-        end = start + index + ch.len_utf8();
+        used += grapheme_width;
+        end = start + index + grapheme.len();
     }
 
     InputView {
@@ -211,10 +219,22 @@ fn input_view(text: &str, cursor: usize, width: u16) -> InputView<'_> {
     }
 }
 
-/// Display width of `ch` as ratatui measures it.
-fn char_width(ch: char) -> usize {
-    let mut buf = [0; 4];
-    Span::raw(&*ch.encode_utf8(&mut buf)).width()
+/// Start of the grapheme cluster containing byte offset `cursor`, or `text.len()` past the end.
+fn grapheme_start(text: &str, cursor: usize) -> usize {
+    text.grapheme_indices(true)
+        .map(|(index, _)| index)
+        .chain(iter::once(text.len()))
+        .take_while(|&index| index <= cursor)
+        .last()
+        .unwrap_or_default()
+}
+
+/// Cells ratatui uses to draw `grapheme`. It skips clusters containing control characters.
+fn grapheme_width(grapheme: &str) -> usize {
+    if grapheme.contains(char::is_control) {
+        return 0;
+    }
+    usize::from(grapheme.cell_width())
 }
 
 fn render_confirm_delete(f: &mut Frame, delete_local_data: bool) {
@@ -315,6 +335,34 @@ mod tests {
     #[test]
     fn wide_character_under_cursor_stays_visible() {
         assert_eq!(input_view("ab日", 2, 3), view("b日", 1));
+    }
+
+    #[test]
+    fn zwj_emoji_is_measured_and_cropped_as_one_cluster() {
+        let technologist = "👩\u{200d}💻";
+        assert_eq!(
+            input_view(technologist, technologist.len(), 10),
+            view(technologist, 2)
+        );
+        assert_eq!(
+            input_view(technologist, technologist.len(), 3),
+            view(technologist, 2)
+        );
+        assert_eq!(input_view(technologist, technologist.len(), 2), view("", 0));
+    }
+
+    #[test]
+    fn variation_selector_emoji_is_measured_as_one_cluster() {
+        let heart = "❤\u{fe0f}";
+        assert_eq!(input_view(heart, heart.len(), 10), view(heart, 2));
+        assert_eq!(input_view("a❤\u{fe0f}", 1, 2), view(heart, 0));
+    }
+
+    #[test]
+    fn cursor_inside_a_cluster_snaps_to_its_start() {
+        let text = "a👩\u{200d}💻b";
+        assert_eq!(input_view(text, "a👩".len(), 10), view(text, 1));
+        assert_eq!(input_view(text, "a👩\u{200d}".len() + 1, 10), view(text, 1));
     }
 
     #[test]
