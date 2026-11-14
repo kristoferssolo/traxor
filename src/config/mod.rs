@@ -34,7 +34,7 @@ const DEFAULT_CONFIG: &str = include_str!("../../config/default.toml");
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(try_from = "RawConfig", into = "RawConfig")]
 pub struct Config {
-    pub keybinds: KeybindsConfig,
+    keybinds: KeybindsConfig,
     pub colors: ColorConfig,
     pub log: LogConfig,
     pub time: TimeConfig,
@@ -126,6 +126,14 @@ impl Config {
 
         debug!("Configuration loaded successfully.");
         Ok(config)
+    }
+
+    /// Keybind strings as configured, matching [`Config::keymap`].
+    ///
+    /// Read-only so the strings cannot drift from the keymap built from them.
+    #[must_use]
+    pub const fn keybinds(&self) -> &KeybindsConfig {
+        &self.keybinds
     }
 
     /// Keymap built from [`Config::keybinds`]
