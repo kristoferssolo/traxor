@@ -8,6 +8,10 @@ mod torrent;
 pub mod types;
 pub mod utils;
 
+pub use crate::app::{
+    tab::Tab,
+    torrent::{TorrentFetcher, Torrents},
+};
 use crate::{
     app::{
         constants::DEFAULT_PAGE_SIZE,
@@ -22,10 +26,6 @@ use ratatui::{layout::Rect, widgets::TableState};
 use std::{cmp::Reverse, collections::HashSet, path::PathBuf};
 use tracing::warn;
 use transmission_rpc::types::Torrent;
-pub use {
-    tab::Tab,
-    torrent::{TorrentFetcher, Torrents},
-};
 
 /// Input mode type for the application.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
