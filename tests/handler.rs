@@ -291,6 +291,53 @@ async fn failing_rpc_url() -> String {
     format!("http://127.0.0.1:{port}/transmission/rpc")
 }
 
+#[tokio::test]
+async fn get_action_modified_chars_edit_instead_of_inserting() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.input_mode = InputMode::Rename;
+    app.input_handler.set_text("/downloads/shows".to_owned());
+
+    for (ch, modifiers) in [
+        ('w', KeyModifiers::CONTROL),
+        ('x', KeyModifiers::ALT),
+        ('S', KeyModifiers::SHIFT),
+    ] {
+        assert_none!(assert_ok!(
+            get_action(KeyEvent::new(KeyCode::Char(ch), modifiers), &mut app).await
+        ));
+    }
+
+    assert_eq!(app.input_handler.text, "/downloads/S");
+}
+
+#[tokio::test]
+async fn get_action_ctrl_alt_chars_type_altgr_text_only_on_windows() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.input_mode = InputMode::Rename;
+    app.input_handler.set_text("/downloads/shows".to_owned());
+    let altgr = KeyModifiers::CONTROL | KeyModifiers::ALT;
+
+    for ch in ['@', 'a', 'e', 'w', 'u'] {
+        assert_none!(assert_ok!(
+            get_action(KeyEvent::new(KeyCode::Char(ch), altgr), &mut app).await
+        ));
+    }
+
+    // No Ctrl+Alt char triggers an editing shortcut; only Windows treats them as AltGr text.
+    let expected = if cfg!(windows) {
+        "/downloads/shows@aewu"
+    } else {
+        "/downloads/shows"
+    };
+    assert_eq!(app.input_handler.text, expected);
+    assert_eq!(
+        app.input_handler.cursor_position,
+        app.input_handler.text.len()
+    );
+}
+
 fn temp_dir() -> TempDir {
     TempDir::new().expect("temp directory")
 }

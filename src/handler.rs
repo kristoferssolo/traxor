@@ -3,7 +3,7 @@ use crate::{
     error::Result,
     ui::hit_test::{tab_at, table_row_at},
 };
-use crossterm::event::{KeyCode, KeyEvent, MouseButton, MouseEvent, MouseEventKind};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 use ratatui::{layout::Position, text::Line};
 use tracing::{debug, error, info};
 
@@ -18,25 +18,33 @@ async fn handle_input(key_event: KeyEvent, app: &mut App) -> Result<Option<Actio
         };
     }
 
+    let ctrl = key_event.modifiers.contains(KeyModifiers::CONTROL);
+    let alt = key_event.modifiers.contains(KeyModifiers::ALT);
+    // Crossterm reports AltGr as Ctrl+Alt on Windows (crossterm#820), so there a char with
+    // both modifiers is text. Elsewhere Ctrl+Alt is a deliberate chord and types nothing.
+    // Editing shortcuts require Ctrl alone either way.
+    let ctrl_only = ctrl && !alt;
+    let input = &mut app.input_handler;
     match key_event.code {
-        KeyCode::Enter => Ok(Some(Action::Submit)),
-        KeyCode::Tab => {
-            if app.input_mode == InputMode::Move {
-                app.complete_input().await?;
-            }
-            Ok(None)
+        KeyCode::Enter => return Ok(Some(Action::Submit)),
+        KeyCode::Esc => return Ok(Some(Action::Cancel)),
+        KeyCode::Tab if app.input_mode == InputMode::Move => app.complete_input().await?,
+        KeyCode::Char('a') if ctrl_only => input.move_cursor_to_start(),
+        KeyCode::Char('e') if ctrl_only => input.move_cursor_to_end(),
+        KeyCode::Char('w') if ctrl_only => input.delete_word_before_cursor(),
+        KeyCode::Char('u') if ctrl_only => input.delete_to_start(),
+        KeyCode::Char(ch) if (!ctrl && !alt) || (cfg!(windows) && ctrl && alt) => {
+            input.insert_char(ch);
         }
-        KeyCode::Char(ch) => {
-            app.input_handler.insert_char(ch);
-            Ok(None)
-        }
-        KeyCode::Backspace => {
-            app.input_handler.delete_char();
-            Ok(None)
-        }
-        KeyCode::Esc => Ok(Some(Action::Cancel)),
-        _ => Ok(None),
+        KeyCode::Backspace => input.delete_char(),
+        KeyCode::Delete => input.delete_char_forward(),
+        KeyCode::Left => input.move_cursor_left(),
+        KeyCode::Right => input.move_cursor_right(),
+        KeyCode::Home => input.move_cursor_to_start(),
+        KeyCode::End => input.move_cursor_to_end(),
+        _ => {}
     }
+    Ok(None)
 }
 
 /// Handles a key press end to end: maps it to an [`Action`] and applies it.
