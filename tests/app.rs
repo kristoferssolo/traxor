@@ -615,6 +615,33 @@ fn app_sort_orders_filtered_torrents() {
     assert_eq!(ids(&app), [4, 2, 3, 1]);
 }
 
+#[tokio::test]
+async fn app_sorted_delete_and_highlight_survive_live_reorder() {
+    let (url, request_body) = capture_rpc_request();
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    assert_ok!(app.torrents.url(&url));
+    app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "beta"), torrent(3, "gamma")];
+    for _ in 0..=name_column(&app) {
+        app.cycle_sort();
+    }
+    app.next();
+    app.next();
+    app.prepare_delete(true);
+
+    // A refresh renames "beta", so the name sort moves it from the middle row to the last.
+    app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "zeta"), torrent(3, "gamma")];
+    app.sync_highlight();
+    assert_some_eq!(app.state.selected(), 2);
+
+    assert_ok!(app.confirm_delete().await);
+    let body = assert_ok!(request_body.recv_timeout(Duration::from_secs(5)));
+    assert_eq!(
+        body,
+        r#"{"method":"torrent-remove","arguments":{"ids":[2],"delete-local-data":true}}"#
+    );
+}
+
 fn name_column(app: &App) -> usize {
     app.tabs()[app.index()]
         .fields()
