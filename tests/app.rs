@@ -400,6 +400,29 @@ fn app_first_and_last_jump_without_wrapping() {
 }
 
 #[test]
+fn app_jump_and_page_survive_highlight_sync() {
+    let mut app = app_with_torrents(5);
+    app.next();
+
+    // Each draw re-syncs the table row from the highlighted torrent's id.
+    app.last();
+    app.sync_highlight();
+    assert_some_eq!(app.state.selected(), 4);
+
+    app.page_up();
+    app.sync_highlight();
+    assert_some_eq!(app.state.selected(), 0);
+
+    app.page_down();
+    app.sync_highlight();
+    assert_some_eq!(app.state.selected(), 4);
+
+    app.first();
+    app.sync_highlight();
+    assert_some_eq!(app.state.selected(), 0);
+}
+
+#[test]
 fn app_last_uses_filtered_torrents() {
     let mut app = app_with_torrents(5);
     app.filter_text = "torrent-3".into();

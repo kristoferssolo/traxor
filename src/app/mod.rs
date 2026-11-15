@@ -249,12 +249,13 @@ impl App {
     ///
     /// Does nothing when no torrent is visible.
     fn jump(&mut self, target: impl FnOnce(usize, usize) -> usize) {
+        self.sync_highlight();
         let Some(last) = self.filtered_torrents().len().checked_sub(1) else {
             return;
         };
         let current = self.state.selected().unwrap_or(0).min(last);
         self.close_help();
-        self.state.select(Some(target(current, last).min(last)));
+        self.highlight_row(target(current, last).min(last));
     }
 
     /// Switches to the next tab.
