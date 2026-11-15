@@ -11,7 +11,8 @@ use traxor::{
     app::action::Action,
     app::types::DeleteTarget,
     config::Config,
-    handler::{get_action, handle_key_event, handle_mouse, update},
+    event::Event,
+    handler::{get_action, handle_event, handle_key_event, handle_mouse, update},
     ui::render,
 };
 
@@ -291,6 +292,24 @@ fn handle_mouse_click_moves_existing_highlight_across_redraws() {
 
     let highlighted = assert_some!(app.state.selected());
     assert_some_eq!(app.filtered_torrents()[highlighted].id, 3);
+}
+
+#[tokio::test]
+async fn handle_event_routes_keys_and_mouse() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.areas.tabs = Rect::new(0, 0, 200, 3);
+
+    handle_event(Event::Tick, &mut app).await;
+    handle_event(Event::Resize(80, 24), &mut app).await;
+    assert_eq!(app.index(), 0);
+    assert!(app.running);
+
+    handle_event(Event::Mouse(click_on_second_tab(&app)), &mut app).await;
+    assert_eq!(app.index(), 1);
+
+    handle_event(Event::Key(KeyEvent::from(KeyCode::Char('q'))), &mut app).await;
+    assert!(!app.running);
 }
 
 /// Left click on the first title character of the second tab: border, padded first title,

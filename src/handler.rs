@@ -1,6 +1,7 @@
 use crate::{
     app::{App, InputMode, action::Action},
     error::Result,
+    event::Event,
     ui::hit_test::{tab_at, table_row_at},
 };
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
@@ -45,6 +46,18 @@ async fn handle_input(key_event: KeyEvent, app: &mut App) -> Result<Option<Actio
         _ => {}
     }
     Ok(None)
+}
+
+/// Routes a terminal event: keys to [`handle_key_event`], mouse input to
+/// [`handle_mouse`].
+///
+/// Ticks and resizes need nothing beyond the redraw that follows every event.
+pub async fn handle_event(event: Event, app: &mut App) {
+    match event {
+        Event::Key(key_event) => handle_key_event(key_event, app).await,
+        Event::Mouse(mouse_event) => handle_mouse(mouse_event, app),
+        Event::Tick | Event::Resize(..) => {}
+    }
 }
 
 /// Handles a key press end to end: maps it to an [`Action`] and applies it.

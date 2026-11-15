@@ -11,6 +11,7 @@ use transmission_rpc::types::{Torrent, TorrentGetField, TorrentStatus};
 use traxor::{
     app::{App, InputMode, types::DeleteTarget},
     config::Config,
+    error::TraxorError,
 };
 
 #[test]
@@ -648,6 +649,44 @@ fn name_column(app: &App) -> usize {
         .iter()
         .position(|&field| field == TorrentGetField::Name)
         .expect("tab shows the name column")
+}
+
+#[test]
+fn app_apply_refresh_replaces_torrents() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.torrents.torrents = vec![torrent(1, "old")];
+
+    app.apply_refresh(Ok(vec![torrent(2, "new"), torrent(3, "newer")]));
+
+    let ids = app
+        .torrents
+        .torrents
+        .iter()
+        .map(|t| t.id)
+        .collect::<Vec<_>>();
+    assert_eq!(ids, [Some(2), Some(3)]);
+}
+
+#[test]
+fn app_apply_refresh_error_keeps_last_known_torrents() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.torrents.torrents = vec![torrent(1, "old")];
+
+    app.apply_refresh(Err(TraxorError::TransmissionRpc(
+        "connection refused".to_owned(),
+    )));
+
+    let ids = app
+        .torrents
+        .torrents
+        .iter()
+        .map(|t| t.id)
+        .collect::<Vec<_>>();
+    assert_eq!(ids, [Some(1)]);
+    assert!(app.running);
+    assert_none!(app.status_message);
 }
 
 fn torrent(id: i64, name: &str) -> Torrent {
