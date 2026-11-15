@@ -9,6 +9,7 @@ pub mod utils;
 
 use crate::{
     app::{
+        constants::DEFAULT_PAGE_SIZE,
         input::InputHandler,
         types::{DeleteTarget, Selected},
     },
@@ -80,6 +81,7 @@ pub struct App {
     pub filter_text: String,
     pub areas: RenderedAreas,
     pub status_message: Option<StatusMessage>,
+    page_size: usize,
 }
 
 impl App {
@@ -107,6 +109,7 @@ impl App {
             filter_text: String::new(),
             areas: RenderedAreas::default(),
             status_message: None,
+            page_size: DEFAULT_PAGE_SIZE,
         })
     }
 
@@ -211,6 +214,48 @@ impl App {
     fn highlight_row(&mut self, row: usize) {
         self.highlighted = self.filtered_torrents().get(row).and_then(|t| t.id);
         self.state.select(Some(row));
+    }
+
+    /// Highlights the first row.
+    pub fn first(&mut self) {
+        self.jump(|_, _| 0);
+    }
+
+    /// Highlights the last row.
+    pub fn last(&mut self) {
+        self.jump(|_, last| last);
+    }
+
+    /// Moves the highlight down by one page, stopping at the last row.
+    pub fn page_down(&mut self) {
+        let page_size = self.page_size;
+        self.jump(|current, _| current.saturating_add(page_size));
+    }
+
+    /// Moves the highlight up by one page, stopping at the first row.
+    pub fn page_up(&mut self) {
+        let page_size = self.page_size;
+        self.jump(|current, _| current.saturating_sub(page_size));
+    }
+
+    /// Sets the number of rows page up/down moves by, at least one.
+    ///
+    /// Rendering calls this with the visible table row count.
+    pub fn set_page_size(&mut self, rows: usize) {
+        self.page_size = rows.max(1);
+    }
+
+    /// Highlights `target(current, last)` clamped to the list, without wrapping.
+    ///
+    /// Does nothing when no torrent is visible.
+    fn jump(&mut self, target: impl FnOnce(usize, usize) -> usize) {
+        self.sync_highlight();
+        let Some(last) = self.filtered_torrents().len().checked_sub(1) else {
+            return;
+        };
+        let current = self.state.selected().unwrap_or(0).min(last);
+        self.close_help();
+        self.highlight_row(target(current, last).min(last));
     }
 
     /// Switches to the next tab.
@@ -452,6 +497,29 @@ impl App {
             }
         }
         self.next();
+    }
+
+    /// Adds every torrent visible in the current tab and filter to the selection.
+    ///
+    /// Does nothing when no torrent is visible.
+    pub fn select_all(&mut self) {
+        let ids = self
+            .filtered_torrents()
+            .iter()
+            .filter_map(|torrent| torrent.id)
+            .collect::<Vec<_>>();
+        if ids.is_empty() {
+            return;
+        }
+        self.torrents.selected.extend(ids);
+        self.close_help();
+    }
+
+    /// Clears the whole selection, including torrents hidden by the current
+    /// tab or filter, so no hidden selection resurfaces later.
+    pub fn clear_selection(&mut self) {
+        self.torrents.selected.clear();
+        self.close_help();
     }
 
     fn selected(&self, highlighted: bool) -> Selected {

@@ -77,6 +77,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         table_offset: app.state.offset(),
         table_rows,
     };
+    app.set_page_size(hit_test::table_body_rows(chunks[1]));
 
     status::render(frame, app, chunks[2]);
 

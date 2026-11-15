@@ -10,11 +10,19 @@ pub fn render_help(frame: &mut Frame, app: &App) {
     let key_style = Style::default().fg(Color::Yellow).bold();
     let select_key = display_key(&kb.select);
     let filter_key = display_key(&kb.filter);
+    let jump_keys = format!("{}/{}", kb.first_torrent, kb.last_torrent);
+    let page_keys = format!(
+        "{}/{}",
+        display_key(&kb.page_up),
+        display_key(&kb.page_down)
+    );
 
     let rows = vec![
         section_row("Navigation"),
         key_row(&kb.prev_torrent, "Move up", key_style),
         key_row(&kb.next_torrent, "Move down", key_style),
+        key_row(&jump_keys, "First/last torrent", key_style),
+        key_row(&page_keys, "Page up/down", key_style),
         key_row(&kb.prev_tab, "Previous tab", key_style),
         key_row(&kb.next_tab, "Next tab", key_style),
         key_row("1-9, 0", "Switch to tab", key_style),
@@ -23,6 +31,8 @@ pub fn render_help(frame: &mut Frame, app: &App) {
         key_row(&kb.toggle_torrent, "Start/stop torrent", key_style),
         key_row(&kb.toggle_all, "Start/stop all", key_style),
         key_row(&select_key, "Multi-select", key_style),
+        key_row(&kb.select_all, "Select all visible", key_style),
+        key_row(&kb.clear_selection, "Clear selection", key_style),
         key_row(&kb.move_torrent, "Move torrent", key_style),
         key_row(&kb.rename_torrent, "Rename torrent", key_style),
         key_row(&kb.delete, "Remove torrent", key_style),
@@ -89,8 +99,10 @@ fn section_row(title: &str) -> Row<'_> {
 }
 
 fn display_key(key: &str) -> String {
-    match key {
+    match key.to_ascii_lowercase().as_str() {
         " " => "Space".to_string(),
-        k => k.to_string(),
+        "pageup" | "page_up" => "PgUp".to_string(),
+        "pagedown" | "page_down" => "PgDn".to_string(),
+        _ => key.to_string(),
     }
 }

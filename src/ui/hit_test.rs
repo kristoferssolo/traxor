@@ -9,6 +9,13 @@ use ratatui::{
 /// Rows between the top border and the first torrent row: the header plus its bottom margin.
 const TABLE_HEADER_ROWS: u16 = 1 + HEADER_BOTTOM_MARGIN;
 
+/// Returns how many torrent rows fit in a bordered table rendered in `area`.
+#[must_use]
+pub fn table_body_rows(area: Rect) -> usize {
+    let inner = area.inner(Margin::new(1, 1));
+    usize::from(inner.height.saturating_sub(TABLE_HEADER_ROWS))
+}
+
 /// Returns the index of the torrent row at `position` in a bordered table rendered in `area`.
 ///
 /// `offset` is the [`TableState`](ratatui::widgets::TableState) scroll offset and `row_count`
@@ -65,6 +72,24 @@ mod tests {
 
     /// Table occupying rows 3..=12: border at 3, header at 4, margin at 5, first row at 6.
     const TABLE_AREA: Rect = Rect::new(0, 3, 40, 10);
+
+    #[test]
+    fn table_body_rows_matches_last_clickable_row() {
+        let rows = table_body_rows(TABLE_AREA);
+
+        assert_eq!(rows, 6);
+        // The bottom inner row (just above the border at 12) is the last row that clicks hit.
+        assert_some_eq!(
+            table_row_at(TABLE_AREA, 0, 100, Position::new(1, 11)),
+            rows - 1
+        );
+        assert_none!(table_row_at(TABLE_AREA, 0, 100, Position::new(1, 12)));
+    }
+
+    #[test]
+    fn table_body_rows_is_zero_without_room_below_header() {
+        assert_eq!(table_body_rows(Rect::new(0, 0, 40, 3)), 0);
+    }
 
     /// Tabs occupying rows 0..=2 with titles on row 1.
     const TABS_AREA: Rect = Rect::new(0, 0, 40, 3);

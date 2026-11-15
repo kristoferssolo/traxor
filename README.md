@@ -46,11 +46,15 @@ traxor
 | Key | Action |
 |-----|--------|
 | `j/k` | Navigate up/down |
+| `g/G` | First/last torrent |
+| `PgUp/PgDn` | Page up/down |
 | `h/l` | Previous/next tab |
 | `1-9, 0` | Switch to tab |
 | `Enter` | Start/stop torrent |
 | `a` | Start/stop all |
 | `Space` | Multi-select |
+| `Ctrl+a` | Select all visible |
+| `Ctrl+u` | Clear selection |
 | `m` | Move torrent |
 | `r` | Rename torrent |
 | `d` | Delete torrent |

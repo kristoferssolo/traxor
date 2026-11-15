@@ -12,6 +12,14 @@ pub enum Action {
     NextTorrent,
     #[display("Previous Torrent")]
     PrevTorrent,
+    #[display("First Torrent")]
+    FirstTorrent,
+    #[display("Last Torrent")]
+    LastTorrent,
+    #[display("Page Down")]
+    PageDown,
+    #[display("Page Up")]
+    PageUp,
     #[display("Switch to Tab {}", _0)]
     SwitchTab(u8),
     #[display("Toggle Help")]
@@ -32,6 +40,10 @@ pub enum Action {
     ClearFilter,
     #[display("Select")]
     Select,
+    #[display("Select All")]
+    SelectAll,
+    #[display("Clear Selection")]
+    ClearSelection,
     #[display("Submit")]
     Submit,
     #[display("Confirm Yes")]

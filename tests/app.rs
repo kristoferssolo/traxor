@@ -1,5 +1,6 @@
 use claims::{assert_err, assert_none, assert_ok, assert_some_eq};
 use std::{
+    collections::HashSet,
     io::{BufRead, BufReader, Read, Write},
     net::TcpListener,
     sync::mpsc::{self, Receiver},
@@ -378,6 +379,186 @@ fn delete_target(app: &App) -> &DeleteTarget {
         InputMode::ConfirmDelete(target) => target,
         other => panic!("expected delete confirmation, got {other:?}"),
     }
+}
+
+#[test]
+fn app_first_and_last_jump_without_wrapping() {
+    let mut app = app_with_torrents(5);
+    app.state.select(Some(2));
+    app.open_help();
+
+    app.last();
+    assert_some_eq!(app.state.selected(), 4);
+    assert!(!app.show_help);
+    app.last();
+    assert_some_eq!(app.state.selected(), 4);
+
+    app.first();
+    assert_some_eq!(app.state.selected(), 0);
+    app.first();
+    assert_some_eq!(app.state.selected(), 0);
+}
+
+#[test]
+fn app_jump_and_page_survive_highlight_sync() {
+    let mut app = app_with_torrents(5);
+    app.next();
+
+    // Each draw re-syncs the table row from the highlighted torrent's id.
+    app.last();
+    app.sync_highlight();
+    assert_some_eq!(app.state.selected(), 4);
+
+    app.page_up();
+    app.sync_highlight();
+    assert_some_eq!(app.state.selected(), 0);
+
+    app.page_down();
+    app.sync_highlight();
+    assert_some_eq!(app.state.selected(), 4);
+
+    app.first();
+    app.sync_highlight();
+    assert_some_eq!(app.state.selected(), 0);
+}
+
+#[test]
+fn app_last_uses_filtered_torrents() {
+    let mut app = app_with_torrents(5);
+    app.filter_text = "torrent-3".into();
+
+    app.last();
+
+    assert_some_eq!(app.state.selected(), 0);
+}
+
+#[test]
+fn app_page_moves_by_page_size_and_stops_at_ends() {
+    let mut app = app_with_torrents(25);
+    app.set_page_size(10);
+
+    app.page_down();
+    assert_some_eq!(app.state.selected(), 10);
+    app.page_down();
+    assert_some_eq!(app.state.selected(), 20);
+    app.page_down();
+    assert_some_eq!(app.state.selected(), 24);
+
+    app.page_up();
+    assert_some_eq!(app.state.selected(), 14);
+    app.page_up();
+    assert_some_eq!(app.state.selected(), 4);
+    app.page_up();
+    assert_some_eq!(app.state.selected(), 0);
+}
+
+#[test]
+fn app_page_larger_than_list_clamps_to_ends() {
+    let mut app = app_with_torrents(3);
+    app.state.select(Some(1));
+
+    app.page_down();
+    assert_some_eq!(app.state.selected(), 2);
+    app.page_up();
+    assert_some_eq!(app.state.selected(), 0);
+}
+
+#[test]
+fn app_page_clamps_stale_highlight() {
+    let mut app = app_with_torrents(3);
+    app.set_page_size(1);
+    app.state.select(Some(10));
+
+    app.page_up();
+
+    assert_some_eq!(app.state.selected(), 1);
+}
+
+#[test]
+fn app_page_size_is_at_least_one_row() {
+    let mut app = app_with_torrents(3);
+    app.set_page_size(0);
+    app.state.select(Some(0));
+
+    app.page_down();
+
+    assert_some_eq!(app.state.selected(), 1);
+}
+
+#[test]
+fn app_jumps_are_noops_on_empty_list() {
+    let mut app = app_with_torrents(0);
+    app.open_help();
+
+    app.first();
+    app.last();
+    app.page_down();
+    app.page_up();
+
+    assert_none!(app.state.selected());
+    assert!(app.show_help);
+}
+
+#[test]
+fn app_select_all_selects_only_visible_torrents() {
+    let mut app = app_with_torrents(0);
+    app.torrents.torrents = vec![
+        torrent_with_status(1, "alpha", TorrentStatus::Downloading),
+        torrent_with_status(2, "beta", TorrentStatus::Downloading),
+        torrent_with_status(3, "gamma", TorrentStatus::Seeding),
+    ];
+    app.switch_tab(1);
+    app.filter_text = "beta".into();
+    app.open_help();
+
+    app.select_all();
+
+    assert_eq!(app.torrents.selected, HashSet::from([2]));
+    assert!(!app.show_help);
+    assert_none!(app.state.selected());
+}
+
+#[test]
+fn app_select_all_keeps_existing_selection() {
+    let mut app = app_with_torrents(3);
+    app.torrents.selected.insert(99);
+
+    app.select_all();
+
+    assert_eq!(app.torrents.selected, HashSet::from([0, 1, 2, 99]));
+}
+
+#[test]
+fn app_select_all_is_noop_on_empty_list() {
+    let mut app = app_with_torrents(0);
+    app.open_help();
+
+    app.select_all();
+
+    assert!(app.torrents.selected.is_empty());
+    assert!(app.show_help);
+}
+
+#[test]
+fn app_clear_selection_clears_hidden_torrents() {
+    let mut app = app_with_torrents(3);
+    app.torrents.selected.extend([0, 1, 2]);
+    app.filter_text = "torrent-1".into();
+    app.open_help();
+
+    app.clear_selection();
+
+    assert!(app.torrents.selected.is_empty());
+    assert!(!app.show_help);
+}
+
+fn app_with_torrents(count: i64) -> App {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.torrents.torrents = (0..count)
+        .map(|id| torrent(id, &format!("torrent-{id}")))
+        .collect();
+    app
 }
 
 fn torrent(id: i64, name: &str) -> Torrent {
