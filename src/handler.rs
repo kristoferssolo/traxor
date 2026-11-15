@@ -77,7 +77,7 @@ pub async fn get_action(key_event: KeyEvent, app: &mut App) -> Result<Option<Act
         return handle_input(key_event, app).await;
     }
 
-    // Close help popup with Esc
+    // Close the help page with Esc
     if app.show_help && key_event.code == KeyCode::Esc {
         return Ok(Some(Action::ToggleHelp));
     }

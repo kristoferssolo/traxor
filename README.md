@@ -61,7 +61,7 @@ traxor
 | `D` | Delete with data |
 | `/` | Search/filter |
 | `Esc` | Close popup / clear filter |
-| `?` | Toggle help |
+| `?` | Open/close the full help page |
 | `q` | Quit |
 
 In move, rename, and filter prompts:

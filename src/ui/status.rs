@@ -1,6 +1,9 @@
-use crate::app::{
-    App, InputMode,
-    utils::{filesize::FileSize, netspeed::NetSpeed},
+use crate::{
+    app::{
+        App, InputMode,
+        utils::{filesize::FileSize, netspeed::NetSpeed},
+    },
+    ui::help::display_key,
 };
 use ratatui::{
     buffer::CellWidth,
@@ -39,6 +42,7 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
     let active_filter = app.active_filter();
 
     let mode_text = match app.input_mode {
+        InputMode::None if app.show_help => Some("HELP".to_string()),
         InputMode::Move => Some("MOVE".to_string()),
         InputMode::Rename => Some("RENAME".to_string()),
         InputMode::Filter => Some(format!("Filter: {active_filter}")),
@@ -48,6 +52,13 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
     };
 
     let keybinds = match app.input_mode {
+        InputMode::None if app.show_help => vec![
+            Span::styled(
+                display_key(&app.config.keybinds().toggle_help),
+                Style::default().fg(Color::Yellow),
+            ),
+            Span::raw(" Close help"),
+        ],
         InputMode::None if !app.filter_text.is_empty() => vec![
             Span::styled("Esc", Style::default().fg(Color::Yellow)),
             Span::raw(" Clear │ "),

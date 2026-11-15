@@ -54,36 +54,37 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     frame.render_widget(tabs, chunks[0]);
 
     app.sync_highlight();
-    let torrents = app.filtered_torrents();
-    let table_rows = torrents.iter().map(|torrent| torrent.id).collect();
-    let selected = &app.torrents.selected;
-    let colors = &app.config.colors;
-    let time = &app.config.time;
-    let fields = app.tabs()[app.index()].fields();
-
-    let table = build_table(
-        &torrents,
-        selected,
-        app.state.selected(),
-        colors,
-        time,
-        fields,
-        chunks[1],
-    );
-    frame.render_stateful_widget(table, chunks[1], &mut app.state);
-    app.areas = RenderedAreas {
-        tabs: chunks[0],
-        table: chunks[1],
-        table_offset: app.state.offset(),
-        table_rows,
-    };
     app.set_page_size(hit_test::table_body_rows(chunks[1]));
 
-    status::render(frame, app, chunks[2]);
-
     if app.show_help {
-        render_help(frame, app);
+        render_help(frame, app, chunks[1]);
+    } else {
+        let torrents = app.filtered_torrents();
+        let table_rows = torrents.iter().map(|torrent| torrent.id).collect();
+        let selected = &app.torrents.selected;
+        let colors = &app.config.colors;
+        let time = &app.config.time;
+        let fields = app.tabs()[app.index()].fields();
+
+        let table = build_table(
+            &torrents,
+            selected,
+            app.state.selected(),
+            colors,
+            time,
+            fields,
+            chunks[1],
+        );
+        frame.render_stateful_widget(table, chunks[1], &mut app.state);
+        app.areas = RenderedAreas {
+            tabs: chunks[0],
+            table: chunks[1],
+            table_offset: app.state.offset(),
+            table_rows,
+        };
     }
+
+    status::render(frame, app, chunks[2]);
 
     if app.input_mode != InputMode::None {
         input::render(frame, app);
