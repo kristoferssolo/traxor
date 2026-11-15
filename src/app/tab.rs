@@ -1,4 +1,4 @@
-use crate::config::tabs::TabConfig;
+use crate::{app::sort::Sort, config::tabs::TabConfig};
 use std::fmt::Display;
 use transmission_rpc::types::{Torrent, TorrentGetField, TorrentStatus};
 
@@ -24,6 +24,7 @@ pub struct Tab {
     config: TabConfig,
     fields: Vec<TorrentGetField>,
     statuses: Vec<TorrentStatus>,
+    sort: Option<Sort>,
 }
 
 impl Tab {
@@ -36,6 +37,7 @@ impl Tab {
             config,
             fields,
             statuses,
+            sort: None,
         }
     }
 
@@ -49,6 +51,28 @@ impl Tab {
     #[must_use]
     pub fn name(&self) -> &str {
         &self.config.name
+    }
+
+    /// Returns the active column sort, or [`None`] for daemon order.
+    #[must_use]
+    pub const fn sort(&self) -> Option<Sort> {
+        self.sort
+    }
+
+    /// Sorts by the next column in its natural direction.
+    ///
+    /// Cycles from daemon order through each column in order, then back to daemon order.
+    pub fn cycle_sort(&mut self) {
+        let column = self.sort.map_or(0, |sort| sort.column + 1);
+        self.sort = self
+            .fields
+            .get(column)
+            .map(|&field| Sort::new(column, field));
+    }
+
+    /// Flips the direction of the active sort. Does nothing in daemon order.
+    pub fn reverse_sort(&mut self) {
+        self.sort = self.sort.map(Sort::reversed);
     }
 
     /// Returns `true` if the torrent belongs in this tab.
@@ -86,8 +110,11 @@ pub fn required_fields(tabs: &[Tab]) -> Vec<TorrentGetField> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{app::App, config::Config};
-    use claims::{assert_ok, assert_some};
+    use crate::{
+        app::{App, sort::SortDirection},
+        config::Config,
+    };
+    use claims::{assert_none, assert_ok, assert_some, assert_some_eq};
 
     fn default_config() -> Config {
         assert_ok!(toml::from_str(include_str!("../../config/default.toml")))
@@ -167,5 +194,77 @@ mod tests {
         ] {
             assert!(!fields.contains(&heavy), "unexpected {}", heavy.to_str());
         }
+    }
+
+    fn tab(columns: &[&str]) -> Tab {
+        Tab::new(TabConfig {
+            name: "Test".into(),
+            columns: columns.iter().map(|&column| column.into()).collect(),
+            statuses: Vec::new(),
+        })
+    }
+
+    #[test]
+    fn cycle_visits_each_column_then_daemon_order() {
+        let mut tab = tab(&["name", "size", "eta"]);
+        assert_none!(tab.sort());
+
+        let mut visited = Vec::new();
+        for _ in 0..3 {
+            tab.cycle_sort();
+            let sort = tab.sort().expect("cycling sorts by a column");
+            visited.push((sort.column, sort.field, sort.direction));
+        }
+        assert_eq!(
+            visited,
+            [
+                (0, TorrentGetField::Name, SortDirection::Ascending),
+                (1, TorrentGetField::TotalSize, SortDirection::Descending),
+                (2, TorrentGetField::Eta, SortDirection::Ascending),
+            ]
+        );
+
+        tab.cycle_sort();
+        assert_none!(tab.sort());
+        tab.cycle_sort();
+        assert_some_eq!(tab.sort(), Sort::new(0, TorrentGetField::Name));
+    }
+
+    #[test]
+    fn reverse_flips_direction_and_cycle_resets_it() {
+        let mut tab = tab(&["size", "name"]);
+        tab.cycle_sort();
+
+        tab.reverse_sort();
+        assert_some_eq!(
+            tab.sort().map(|sort| sort.direction),
+            SortDirection::Ascending
+        );
+        tab.reverse_sort();
+        assert_some_eq!(
+            tab.sort().map(|sort| sort.direction),
+            SortDirection::Descending
+        );
+
+        tab.reverse_sort();
+        tab.cycle_sort();
+        assert_some_eq!(tab.sort(), Sort::new(1, TorrentGetField::Name));
+    }
+
+    #[test]
+    fn reverse_without_sort_keeps_daemon_order() {
+        let mut tab = tab(&["name"]);
+        tab.reverse_sort();
+        assert_none!(tab.sort());
+    }
+
+    #[test]
+    fn duplicate_columns_cycle_by_position() {
+        let mut tab = tab(&["name", "name"]);
+        tab.cycle_sort();
+        tab.cycle_sort();
+        assert_some_eq!(tab.sort().map(|sort| sort.column), 1);
+        tab.cycle_sort();
+        assert_none!(tab.sort());
     }
 }

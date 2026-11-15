@@ -45,6 +45,10 @@ delete_force = "D"
 filter = "/"
 clear_filter = "escape"
 
+# Sorting
+sort_column = "s"
+sort_reverse = "S"
+
 # General
 toggle_help = "?"
 quit = "q"

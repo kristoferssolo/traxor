@@ -36,6 +36,8 @@ pub struct KeybindsConfig {
     pub rename_torrent: String,
     pub filter: String,
     pub clear_filter: String,
+    pub sort_column: String,
+    pub sort_reverse: String,
 }
 
 impl KeybindsConfig {
@@ -87,6 +89,8 @@ impl KeybindsConfig {
             ("rename_torrent", Action::Rename, &self.rename_torrent),
             ("filter", Action::Filter, &self.filter),
             ("clear_filter", Action::ClearFilter, &self.clear_filter),
+            ("sort_column", Action::SortColumn, &self.sort_column),
+            ("sort_reverse", Action::SortReverse, &self.sort_reverse),
         ];
 
         let mut bindings: Vec<(&'static str, KeyEvent, Action)> = Vec::with_capacity(entries.len());

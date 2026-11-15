@@ -38,6 +38,10 @@ pub enum Action {
     Filter,
     #[display("Clear Filter")]
     ClearFilter,
+    #[display("Sort Column")]
+    SortColumn,
+    #[display("Reverse Sort")]
+    SortReverse,
     #[display("Select")]
     Select,
     #[display("Select All")]

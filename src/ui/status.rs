@@ -51,54 +51,6 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
         InputMode::None => None,
     };
 
-    let keybinds = match app.input_mode {
-        InputMode::None if app.show_help => vec![
-            Span::styled(
-                display_key(&app.config.keybinds().toggle_help),
-                Style::default().fg(Color::Yellow),
-            ),
-            Span::raw(" Close help"),
-        ],
-        InputMode::None if !app.filter_text.is_empty() => vec![
-            Span::styled("Esc", Style::default().fg(Color::Yellow)),
-            Span::raw(" Clear │ "),
-            Span::styled("?", Style::default().fg(Color::Yellow)),
-            Span::raw(" Help"),
-        ],
-        InputMode::None => vec![
-            Span::styled("?", Style::default().fg(Color::Yellow)),
-            Span::raw(" Help │ "),
-            Span::styled("/", Style::default().fg(Color::Yellow)),
-            Span::raw(" Search"),
-        ],
-        InputMode::Move | InputMode::Rename => vec![
-            Span::styled("Enter", Style::default().fg(Color::Yellow)),
-            Span::raw(" Submit │ "),
-            Span::styled("Esc", Style::default().fg(Color::Yellow)),
-            Span::raw(" Cancel"),
-        ],
-        InputMode::Filter => vec![
-            Span::styled("Enter", Style::default().fg(Color::Yellow)),
-            Span::raw(" Confirm │ "),
-            Span::styled("Esc", Style::default().fg(Color::Yellow)),
-            Span::raw(" Cancel"),
-        ],
-        InputMode::ConfirmDelete(_) => vec![
-            Span::styled("y", Style::default().fg(Color::Green)),
-            Span::raw(" Confirm │ "),
-            Span::styled("n", Style::default().fg(Color::Red)),
-            Span::raw(" Cancel"),
-        ],
-    };
-
-    // An error notice takes the place of the keybind hints until the next key press.
-    let left_spans = app.status_message.as_ref().map_or(keybinds, |message| {
-        vec![Span::styled(
-            message.text.as_str(),
-            Style::default().fg(Color::Red),
-        )]
-    });
-
     let count_style = if selected_count > 0 {
         Style::default().fg(Color::Magenta).bold()
     } else if !active_filter.is_empty() {
@@ -149,6 +101,16 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
     } else {
         available_width.saturating_sub(LEADING_SPACE)
     };
+    // An error notice takes the place of the keybind hints until the next key press.
+    let left_spans = app.status_message.as_ref().map_or_else(
+        || keybind_hints(app, if stats_fit { left_max_width } else { 0 }),
+        |message| {
+            vec![Span::styled(
+                message.text.as_str(),
+                Style::default().fg(Color::Red),
+            )]
+        },
+    );
     let left_spans = truncate_spans(left_spans, left_max_width);
     let left_width = spans_width(&left_spans);
 
@@ -232,6 +194,66 @@ fn truncate_spans(spans: Vec<Span<'_>>, max_width: usize) -> Vec<Span<'_>> {
         break;
     }
     truncated
+}
+
+/// Keybind hints for the left side of the status bar.
+///
+/// `room` is the width left beside the stats, or zero when the stats do not fit. In normal
+/// mode the sort hints replace the search hint when they fit.
+fn keybind_hints(app: &App, room: usize) -> Vec<Span<'_>> {
+    match app.input_mode {
+        InputMode::None if app.show_help => vec![
+            Span::styled(
+                display_key(&app.config.keybinds().toggle_help),
+                Style::default().fg(Color::Yellow),
+            ),
+            Span::raw(" Close help"),
+        ],
+        InputMode::None if !app.filter_text.is_empty() => vec![
+            Span::styled("Esc", Style::default().fg(Color::Yellow)),
+            Span::raw(" Clear │ "),
+            Span::styled("?", Style::default().fg(Color::Yellow)),
+            Span::raw(" Help"),
+        ],
+        InputMode::None => {
+            let kb = app.config.keybinds();
+            let sort_hints = vec![
+                Span::styled(kb.sort_column.as_str(), Style::default().fg(Color::Yellow)),
+                Span::raw(" Sort │ "),
+                Span::styled(kb.sort_reverse.as_str(), Style::default().fg(Color::Yellow)),
+                Span::raw(" Reverse │ "),
+                Span::styled("?", Style::default().fg(Color::Yellow)),
+                Span::raw(" Help"),
+            ];
+            if spans_width(&sort_hints) <= room {
+                return sort_hints;
+            }
+            vec![
+                Span::styled("?", Style::default().fg(Color::Yellow)),
+                Span::raw(" Help │ "),
+                Span::styled("/", Style::default().fg(Color::Yellow)),
+                Span::raw(" Search"),
+            ]
+        }
+        InputMode::Move | InputMode::Rename => vec![
+            Span::styled("Enter", Style::default().fg(Color::Yellow)),
+            Span::raw(" Submit │ "),
+            Span::styled("Esc", Style::default().fg(Color::Yellow)),
+            Span::raw(" Cancel"),
+        ],
+        InputMode::Filter => vec![
+            Span::styled("Enter", Style::default().fg(Color::Yellow)),
+            Span::raw(" Confirm │ "),
+            Span::styled("Esc", Style::default().fg(Color::Yellow)),
+            Span::raw(" Cancel"),
+        ],
+        InputMode::ConfirmDelete(_) => vec![
+            Span::styled("y", Style::default().fg(Color::Green)),
+            Span::raw(" Confirm │ "),
+            Span::styled("n", Style::default().fg(Color::Red)),
+            Span::raw(" Cancel"),
+        ],
+    }
 }
 
 #[cfg(test)]

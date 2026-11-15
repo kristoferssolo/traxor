@@ -561,6 +561,95 @@ fn app_with_torrents(count: i64) -> App {
     app
 }
 
+#[test]
+fn app_sort_state_is_per_tab() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+
+    app.cycle_sort();
+    app.cycle_sort();
+    app.reverse_sort();
+    app.switch_tab(1);
+    assert_none!(app.tabs()[1].sort());
+
+    app.cycle_sort();
+    app.switch_tab(0);
+    let overview = app.tabs()[0].sort().expect("overview keeps its sort");
+    assert_eq!(overview.column, 1);
+    assert_eq!(overview.field, app.tabs()[0].fields()[1]);
+    assert_some_eq!(app.tabs()[1].sort().map(|sort| sort.column), 0);
+}
+
+#[test]
+fn app_sort_orders_filtered_torrents() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.torrents.torrents = vec![
+        torrent(1, "ubuntu-desktop"),
+        torrent(2, "Debian"),
+        torrent(3, "Kubuntu"),
+        torrent(4, "Arch"),
+    ];
+    app.filter_text = "ubuntu".into();
+    let ids = |app: &App| {
+        app.filtered_torrents()
+            .iter()
+            .filter_map(|torrent| torrent.id)
+            .collect::<Vec<_>>()
+    };
+
+    // Unsorted, the filter ranks the prefix match first.
+    assert_eq!(ids(&app), [1, 3]);
+
+    let name_column = name_column(&app);
+    for _ in 0..=name_column {
+        app.cycle_sort();
+    }
+    assert_eq!(ids(&app), [3, 1]);
+    app.reverse_sort();
+    assert_eq!(ids(&app), [1, 3]);
+
+    app.filter_text.clear();
+    assert_eq!(ids(&app), [1, 3, 2, 4]);
+    app.reverse_sort();
+    assert_eq!(ids(&app), [4, 2, 3, 1]);
+}
+
+#[tokio::test]
+async fn app_sorted_delete_and_highlight_survive_live_reorder() {
+    let (url, request_body) = capture_rpc_request();
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    assert_ok!(app.torrents.url(&url));
+    app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "beta"), torrent(3, "gamma")];
+    for _ in 0..=name_column(&app) {
+        app.cycle_sort();
+    }
+    app.next();
+    app.next();
+    app.prepare_delete(true);
+
+    // A refresh renames "beta", so the name sort moves it from the middle row to the last.
+    app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "zeta"), torrent(3, "gamma")];
+    app.sync_highlight();
+    assert_some_eq!(app.state.selected(), 2);
+
+    assert_ok!(app.confirm_delete().await);
+    let body = assert_ok!(request_body.recv_timeout(Duration::from_secs(5)));
+    assert_eq!(
+        body,
+        r#"{"method":"torrent-remove","arguments":{"ids":[2],"delete-local-data":true}}"#
+    );
+}
+
+fn name_column(app: &App) -> usize {
+    app.tabs()[app.index()]
+        .fields()
+        .iter()
+        .position(|&field| field == TorrentGetField::Name)
+        .expect("tab shows the name column")
+}
+
 fn torrent(id: i64, name: &str) -> Torrent {
     torrent_with_status(id, name, TorrentStatus::Stopped)
 }

@@ -2,6 +2,7 @@ pub mod action;
 mod command;
 pub mod constants;
 mod input;
+pub mod sort;
 mod tab;
 mod torrent;
 pub mod types;
@@ -291,6 +292,18 @@ impl App {
         self.index
     }
 
+    /// Sorts the current tab by its next column, or back to daemon order after the last.
+    pub fn cycle_sort(&mut self) {
+        self.close_help();
+        self.tabs[self.index].cycle_sort();
+    }
+
+    /// Flips the sort direction of the current tab.
+    pub fn reverse_sort(&mut self) {
+        self.close_help();
+        self.tabs[self.index].reverse_sort();
+    }
+
     /// Returns [`Tab`] slice
     #[inline]
     #[must_use]
@@ -421,35 +434,42 @@ impl App {
         }
     }
 
-    /// Get filtered torrents based on current filter text using fuzzy matching.
+    /// Get the current tab's torrents that match the filter text.
+    ///
+    /// With a column sort active, the matches follow the sort. Otherwise, filtered torrents
+    /// come best fuzzy match first and unfiltered torrents keep daemon order.
     #[must_use]
     pub fn filtered_torrents(&self) -> Vec<&Torrent> {
         let filter = self.active_filter();
         let tab = &self.tabs[self.index];
-        if filter.is_empty() {
-            return self
-                .torrents
-                .torrents
-                .iter()
-                .filter(|torrent| tab.matches(torrent))
-                .collect();
-        }
-
-        let matcher = SkimMatcherV2::default();
-        let mut scored = self
+        let sort = tab.sort();
+        let in_tab = self
             .torrents
             .torrents
             .iter()
-            .filter(|torrent| tab.matches(torrent))
-            .filter_map(|t| {
-                t.name
-                    .as_ref()
-                    .and_then(|name| matcher.fuzzy_match(name, filter).map(|score| (t, score)))
-            })
-            .collect::<Vec<_>>();
-        // Sort by score descending (best matches first)
-        scored.sort_by_key(|(_, score)| Reverse(*score));
-        scored.into_iter().map(|(t, _)| t).collect()
+            .filter(|torrent| tab.matches(torrent));
+
+        let torrents = if filter.is_empty() {
+            in_tab.collect()
+        } else {
+            let matcher = SkimMatcherV2::default();
+            let mut scored = in_tab
+                .filter_map(|t| {
+                    t.name
+                        .as_ref()
+                        .and_then(|name| matcher.fuzzy_match(name, filter).map(|score| (t, score)))
+                })
+                .collect::<Vec<_>>();
+            if sort.is_none() {
+                scored.sort_by_key(|(_, score)| Reverse(*score));
+            }
+            scored.into_iter().map(|(t, _)| t).collect()
+        };
+
+        match sort {
+            Some(sort) => sort.apply(torrents),
+            None => torrents,
+        }
     }
 
     /// Open the delete confirmation for the selected or highlighted torrent(s).
