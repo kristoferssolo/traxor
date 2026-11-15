@@ -5,7 +5,7 @@ use crate::{
 };
 use crossterm::event::{KeyCode, KeyEvent, MouseButton, MouseEvent, MouseEventKind};
 use ratatui::{layout::Position, text::Line};
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 
 #[tracing::instrument(name = "Handling input", skip(app))]
 async fn handle_input(key_event: KeyEvent, app: &mut App) -> Result<Option<Action>> {
@@ -36,6 +36,25 @@ async fn handle_input(key_event: KeyEvent, app: &mut App) -> Result<Option<Actio
         }
         KeyCode::Esc => Ok(Some(Action::Cancel)),
         _ => Ok(None),
+    }
+}
+
+/// Handles a key press end to end: maps it to an [`Action`] and applies it.
+///
+/// Clears the previous status message first. Errors are logged and shown via
+/// [`App::show_error`] instead of being returned, so a failed action or input
+/// never ends the app.
+#[tracing::instrument(name = "Handling key event", skip(app))]
+pub async fn handle_key_event(key_event: KeyEvent, app: &mut App) {
+    app.clear_status_message();
+    let result = match get_action(key_event, app).await {
+        Ok(Some(action)) => update(app, action).await,
+        Ok(None) => Ok(()),
+        Err(error) => Err(error),
+    };
+    if let Err(error) = result {
+        error!("Failed to handle key event: {error}");
+        app.show_error(error.to_string());
     }
 }
 

@@ -41,6 +41,16 @@ pub struct RenderedAreas {
     pub table_rows: Vec<Option<i64>>,
 }
 
+/// Transient error notice shown in the status bar.
+///
+/// Set with [`App::show_error`]. [`crate::handler::handle_key_event`] clears it
+/// at the start of every key press, so it stays visible until the next one.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StatusMessage {
+    /// Single-line message text.
+    pub text: String,
+}
+
 /// Main Application.
 #[derive(Debug)]
 pub struct App {
@@ -55,6 +65,7 @@ pub struct App {
     pub input_mode: InputMode,
     pub filter_text: String,
     pub areas: RenderedAreas,
+    pub status_message: Option<StatusMessage>,
 }
 
 impl App {
@@ -79,6 +90,7 @@ impl App {
             input_mode: InputMode::None,
             filter_text: String::new(),
             areas: RenderedAreas::default(),
+            status_message: None,
         })
     }
 
@@ -89,6 +101,24 @@ impl App {
     /// Returns an error if reading the parent directory or an entry's metadata fails.
     pub async fn complete_input(&mut self) -> Result<()> {
         self.input_handler.complete().await
+    }
+
+    /// Shows `text` as an error in the status bar until it is cleared.
+    ///
+    /// Whitespace runs, including newlines, are collapsed so the message
+    /// fits on the single status bar line.
+    pub fn show_error(&mut self, text: impl AsRef<str>) {
+        let text = text
+            .as_ref()
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ");
+        self.status_message = Some(StatusMessage { text });
+    }
+
+    /// Removes the current status bar message, if any.
+    pub fn clear_status_message(&mut self) {
+        self.status_message = None;
     }
 
     /// Set running to false to quit the application.

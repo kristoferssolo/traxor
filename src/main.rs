@@ -1,6 +1,9 @@
 use color_eyre::Result;
 use ratatui::{Terminal, backend::CrosstermBackend};
-use std::{io, sync::Arc};
+use std::{
+    io::{self, Stderr},
+    sync::Arc,
+};
 use tokio::{
     sync::Mutex,
     time::{self, Duration},
@@ -13,7 +16,7 @@ use traxor::{
     },
     config::Config,
     event::{Event, EventHandler},
-    handler::{get_action, handle_mouse, update},
+    handler::{handle_key_event, handle_mouse},
     telemetry::setup_logger,
     tui::Tui,
 };
@@ -31,12 +34,21 @@ async fn main() -> Result<()> {
     let terminal = Terminal::new(backend)?;
     let events = EventHandler::new(DEFAULT_TICK_RATE_MS);
     let mut tui = Tui::new(terminal, events);
-    tui.init()?;
 
+    let run_result = run(&mut tui, &app).await;
+    let exit_result = tui.exit();
+    run_result.and(exit_result)
+}
+
+/// Initializes the terminal and runs the event loop until the app quits.
+///
+/// The caller restores the terminal afterwards, whether this succeeds or fails.
+async fn run(tui: &mut Tui<CrosstermBackend<Stderr>>, app: &Mutex<App>) -> Result<()> {
+    tui.init()?;
     loop {
         let mut app_guard = app.lock().await;
         if !app_guard.running {
-            break;
+            return Ok(());
         }
         tui.draw(&mut app_guard)?;
         drop(app_guard);
@@ -47,13 +59,9 @@ async fn main() -> Result<()> {
         }
         if let Event::Key(key_event) = event {
             let mut app_guard = app.lock().await;
-            if let Some(action) = get_action(key_event, &mut app_guard).await? {
-                update(&mut app_guard, action).await?;
-            }
+            handle_key_event(key_event, &mut app_guard).await;
         }
     }
-
-    tui.exit()
 }
 
 fn spawn_torrent_updater(app: Arc<Mutex<App>>) {
