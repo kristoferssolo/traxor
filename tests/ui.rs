@@ -1,4 +1,4 @@
-use claims::{assert_ok, assert_some};
+use claims::{assert_none, assert_ok, assert_some};
 use ratatui::{
     Terminal,
     backend::TestBackend,
@@ -324,7 +324,7 @@ totalSize = 1000"#,
     let (x, y) = find_in_buffer(&buffer, "Status").expect("status header");
     assert_eq!(buffer[(x, y)].fg, Color::Yellow);
     assert_ne!(buffer[(x, y)].bg, Color::Yellow);
-    assert!(find_in_buffer(&buffer, "▲").is_none());
+    assert_none!(find_in_buffer(&buffer, "▲"));
 
     let large = find_in_buffer(&buffer, "large").expect("large row");
     let small = find_in_buffer(&buffer, "small").expect("small row");
@@ -332,7 +332,7 @@ totalSize = 1000"#,
 
     app.reverse_sort();
     let buffer = draw(&mut app, 200);
-    assert!(find_in_buffer(&buffer, "Total Size ▲").is_some());
+    assert_some!(find_in_buffer(&buffer, "Total Size ▲"));
 }
 
 #[test]
@@ -340,9 +340,9 @@ fn status_bar_shows_sort_hints_only_when_they_fit() {
     let mut app = app();
 
     let wide = draw(&mut app, 200);
-    assert!(find_in_buffer(&wide, "s Sort │ S Reverse │ ? Help").is_some());
+    assert_some!(find_in_buffer(&wide, "s Sort │ S Reverse │ ? Help"));
 
     let narrow = draw(&mut app, 30);
-    assert!(find_in_buffer(&narrow, "? Help │ / Search").is_some());
-    assert!(find_in_buffer(&narrow, "Sort").is_none());
+    assert_some!(find_in_buffer(&narrow, "? Help │ / Search"));
+    assert_none!(find_in_buffer(&narrow, "Sort"));
 }

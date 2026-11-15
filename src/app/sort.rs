@@ -260,7 +260,7 @@ fn ratio(value: Option<f32>) -> Option<SortKey> {
 mod tests {
     use super::*;
     use chrono::TimeZone;
-    use claims::assert_ok;
+    use claims::{assert_none, assert_ok, assert_some_eq};
 
     /// Torrent with `fields` set from TOML; every other field deserializes to [`None`].
     fn torrent(id: i64, fields: &str) -> Torrent {
@@ -391,8 +391,8 @@ mod tests {
         let mut unset = torrent(2, "");
         unset.added_date = Some(DateTime::<Utc>::UNIX_EPOCH);
 
-        assert_eq!(key(&added), Some(SortKey::Integer(1_704_164_645)));
-        assert_eq!(key(&unset), None);
+        assert_some_eq!(key(&added), SortKey::Integer(1_704_164_645));
+        assert_none!(key(&unset));
     }
 
     #[test]
