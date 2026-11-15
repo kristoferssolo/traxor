@@ -1,6 +1,6 @@
 use crate::{
     app::{
-        App, InputMode,
+        App, ConnectionState, InputMode,
         utils::{filesize::FileSize, netspeed::NetSpeed},
     },
     ui::help::display_key,
@@ -17,6 +17,8 @@ const LEADING_SPACE: usize = 1;
 /// Minimum blank columns between the left-side text and the stats.
 const MIN_GAP: usize = 1;
 const ELLIPSIS: &str = "…";
+/// Status bar marker shown while the daemon is unreachable.
+const OFFLINE_MARKER: &str = "offline";
 
 #[allow(clippy::too_many_lines)]
 pub fn render(frame: &mut Frame, app: &App, area: Rect) {
@@ -101,16 +103,23 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
     } else {
         available_width.saturating_sub(LEADING_SPACE)
     };
-    // An error notice takes the place of the keybind hints until the next key press.
-    let left_spans = app.status_message.as_ref().map_or_else(
-        || keybind_hints(app, if stats_fit { left_max_width } else { 0 }),
-        |message| {
-            vec![Span::styled(
-                message.text.as_str(),
-                Style::default().fg(Color::Red),
-            )]
-        },
-    );
+    // Errors take the place of the keybind hints. While the daemon is unreachable the
+    // `offline` marker stays until a refresh succeeds; a newer action error replaces the
+    // connection error after it until the next key press.
+    let error_style = Style::default().fg(Color::Red);
+    let action_error = app
+        .status_message
+        .as_ref()
+        .map(|message| message.text.as_str());
+    let left_spans = match (&app.connection, action_error) {
+        (ConnectionState::Disconnected { error }, action_error) => vec![
+            Span::styled(OFFLINE_MARKER, error_style.bold()),
+            Span::raw(" "),
+            Span::styled(action_error.unwrap_or(error), error_style),
+        ],
+        (_, Some(action_error)) => vec![Span::styled(action_error, error_style)],
+        (_, None) => keybind_hints(app, if stats_fit { left_max_width } else { 0 }),
+    };
     let left_spans = truncate_spans(left_spans, left_max_width);
     let left_width = spans_width(&left_spans);
 

@@ -41,6 +41,8 @@ Make sure Transmission daemon is running, then:
 traxor
 ```
 
+While the daemon is unreachable, the status bar shows `offline` with the last error and keeps the last known torrent list until a refresh succeeds.
+
 ### Keybinds
 
 | Key | Action |
