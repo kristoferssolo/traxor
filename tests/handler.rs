@@ -276,7 +276,7 @@ async fn handle_key_event_reports_failed_action_and_keeps_running() {
     app.torrents.torrents = vec![assert_ok!(toml::from_str::<Torrent>(
         "id = 1\nname = \"old\""
     ))];
-    app.state.select(Some(0));
+    app.next();
     app.prepare_rename_action();
     app.input_handler.set_text("new".to_owned());
 
