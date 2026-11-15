@@ -90,10 +90,10 @@ impl App {
     ///
     /// # Errors
     ///
-    /// Returns an error if the default RPC URL is invalid.
+    /// Returns an error if the RPC URL or credentials are invalid.
     pub fn new(config: Config) -> Result<Self> {
         let tabs: Vec<_> = config.tabs.iter().cloned().map(Tab::new).collect();
-        let mut torrents = Torrents::new()?;
+        let mut torrents = Torrents::new(&config.rpc)?;
         torrents.set_fields(Some(tab::required_fields(&tabs)));
         Ok(Self {
             running: true,

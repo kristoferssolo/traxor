@@ -265,9 +265,9 @@ fn app_highlight_clears_when_visible_rows_become_empty() {
 #[tokio::test]
 async fn app_confirm_delete_sends_captured_targets() {
     let (url, request_body) = capture_rpc_request();
-    let config = assert_ok!(Config::load());
+    let mut config = assert_ok!(Config::load());
+    config.rpc.url = url;
     let mut app = assert_ok!(App::new(config));
-    assert_ok!(app.torrents.url(&url));
     app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "beta"), torrent(3, "gamma")];
     app.next();
     app.next();
@@ -291,9 +291,9 @@ async fn app_confirm_delete_sends_captured_targets() {
 #[tokio::test]
 async fn app_rename_does_not_retarget_when_its_torrent_disappears() {
     let (url, request_body) = capture_rpc_request();
-    let config = assert_ok!(Config::load());
+    let mut config = assert_ok!(Config::load());
+    config.rpc.url = url;
     let mut app = assert_ok!(App::new(config));
-    assert_ok!(app.torrents.url(&url));
     app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "beta")];
     app.next();
     app.next();
@@ -313,9 +313,9 @@ async fn app_rename_does_not_retarget_when_its_torrent_disappears() {
 #[tokio::test]
 async fn app_move_sends_targets_captured_when_prompt_opened() {
     let (url, request_body) = capture_rpc_request();
-    let config = assert_ok!(Config::load());
+    let mut config = assert_ok!(Config::load());
+    config.rpc.url = url;
     let mut app = assert_ok!(App::new(config));
-    assert_ok!(app.torrents.url(&url));
     app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "beta")];
     app.next();
     app.next();

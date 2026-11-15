@@ -1,6 +1,7 @@
 pub mod color;
 pub mod keybinds;
 pub mod log;
+pub mod rpc;
 pub mod tabs;
 pub mod time;
 
@@ -8,6 +9,7 @@ use crate::config::{
     color::ColorConfig,
     keybinds::{KeybindError, KeybindsConfig, Keymap},
     log::LogConfig,
+    rpc::{RpcConfig, RpcConfigError},
     tabs::TabConfig,
     time::TimeConfig,
 };
@@ -37,6 +39,7 @@ pub struct Config {
     keybinds: KeybindsConfig,
     pub colors: ColorConfig,
     pub log: LogConfig,
+    pub rpc: RpcConfig,
     pub time: TimeConfig,
     pub tabs: Vec<TabConfig>,
     keymap: Keymap,
@@ -49,6 +52,8 @@ struct RawConfig {
     colors: ColorConfig,
     log: LogConfig,
     #[serde(default)]
+    rpc: RpcConfig,
+    #[serde(default)]
     time: TimeConfig,
     #[serde(default)]
     tabs: Vec<TabConfig>,
@@ -60,12 +65,15 @@ pub enum ConfigError {
     Invalid(String),
     #[error(transparent)]
     Keybind(#[from] KeybindError),
+    #[error(transparent)]
+    Rpc(#[from] RpcConfigError),
 }
 
 impl TryFrom<RawConfig> for Config {
     type Error = ConfigError;
 
     fn try_from(raw: RawConfig) -> Result<Self, Self::Error> {
+        raw.rpc.validate()?;
         raw.time.validate().map_err(ConfigError::Invalid)?;
         for (idx, tab) in raw.tabs.iter().enumerate() {
             tab.validate(idx).map_err(ConfigError::Invalid)?;
@@ -76,6 +84,7 @@ impl TryFrom<RawConfig> for Config {
             keybinds: raw.keybinds,
             colors: raw.colors,
             log: raw.log,
+            rpc: raw.rpc,
             time: raw.time,
             tabs: raw.tabs,
             keymap,
@@ -89,6 +98,7 @@ impl From<Config> for RawConfig {
             keybinds: config.keybinds,
             colors: config.colors,
             log: config.log,
+            rpc: config.rpc,
             time: config.time,
             tabs: config.tabs,
         }
@@ -194,7 +204,7 @@ fn deep_merge(base: &mut Value, other: Value) {
 mod tests {
     use super::*;
     use crate::app::action::Action;
-    use claims::{assert_err, assert_ok, assert_some_eq};
+    use claims::{assert_err, assert_ok, assert_some, assert_some_eq};
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
     /// Parses the embedded defaults and merges `overrides` on top, as `Config::load` does
@@ -318,6 +328,51 @@ mod tests {
 
         let err = assert_err!(toml::from_str::<Config>(&input)).to_string();
         assert!(err.contains("keybinds.rename_torrent"));
+        Ok(())
+    }
+
+    #[test]
+    fn rejects_invalid_rpc_url() -> Result<()> {
+        let value = defaults_with(
+            r#"
+            [rpc]
+            url = "not a url"
+            "#,
+        )?;
+
+        let err = format!("{:#}", assert_err!(Config::from_value(value)));
+        assert!(err.contains("rpc.url"));
+        assert!(err.contains("not a url"));
+        Ok(())
+    }
+
+    #[test]
+    fn rejects_rpc_username_without_password() -> Result<()> {
+        let value = defaults_with(
+            r#"
+            [rpc]
+            username = "user"
+            "#,
+        )?;
+
+        let err = format!("{:#}", assert_err!(Config::from_value(value)));
+        assert!(err.contains("rpc.password is missing"));
+        Ok(())
+    }
+
+    #[test]
+    fn merges_rpc_credentials_over_default_url() -> Result<()> {
+        let value = defaults_with(
+            r#"
+            [rpc]
+            username = "user"
+            password = "secret"
+            "#,
+        )?;
+
+        let config = Config::from_value(value)?;
+        assert_eq!(config.rpc.url, "http://localhost:9091/transmission/rpc");
+        assert_some!(config.rpc.basic_auth()?);
         Ok(())
     }
 }

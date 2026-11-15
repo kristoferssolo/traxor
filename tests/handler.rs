@@ -316,9 +316,9 @@ fn torrent(id: i64, name: &str) -> Torrent {
 
 #[tokio::test]
 async fn handle_key_event_reports_failed_action_and_keeps_running() {
-    let config = assert_ok!(Config::load());
+    let mut config = assert_ok!(Config::load());
+    config.rpc.url = failing_rpc_url().await;
     let mut app = assert_ok!(App::new(config));
-    assert_ok!(app.torrents.url(&failing_rpc_url().await));
     app.torrents.torrents = vec![assert_ok!(toml::from_str::<Torrent>(
         "id = 1\nname = \"old\""
     ))];

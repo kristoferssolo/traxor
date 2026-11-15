@@ -82,6 +82,19 @@ Configuration file: `~/.config/traxor/config.toml`
 
 Only specify values you want to override. See [config/default.toml](config/default.toml) for all options.
 
+### RPC
+
+```toml
+[rpc]
+url = "http://localhost:9091/transmission/rpc"
+username = "transmission"
+password = "secret"
+```
+
+`url` defaults to `http://localhost:9091/transmission/rpc` and must use `http` or `https`. `username` and `password` enable HTTP basic auth and must be set together.
+
+While credentials are set, `[log] transmission_rpc` is capped at `info`, because transmission-rpc logs the password at `debug`.
+
 ### Custom Tabs
 
 ```toml
