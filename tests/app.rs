@@ -1,6 +1,16 @@
-use claims::assert_ok;
+use claims::{assert_err, assert_none, assert_ok, assert_some_eq};
+use std::{
+    io::{BufRead, BufReader, Read, Write},
+    net::TcpListener,
+    sync::mpsc::{self, Receiver},
+    thread,
+    time::Duration,
+};
 use transmission_rpc::types::{Torrent, TorrentGetField, TorrentStatus};
-use traxor::{app::App, config::Config};
+use traxor::{
+    app::{App, InputMode, types::DeleteTarget},
+    config::Config,
+};
 
 #[test]
 fn app_creation() {
@@ -108,7 +118,7 @@ fn app_prepare_rename_action_uses_filtered_selection() {
     let mut app = assert_ok!(App::new(config));
     app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "beta")];
     app.filter_text = "beta".into();
-    app.state.select(Some(0));
+    app.next();
 
     app.prepare_rename_action();
 
@@ -141,6 +151,233 @@ fn app_filtered_torrents_respects_active_tab_statuses() {
     let queued = app.filtered_torrents();
     assert_eq!(queued.len(), 1);
     assert_eq!(queued[0].name.as_deref(), Some("queued"));
+}
+
+#[test]
+fn app_prepare_delete_keeps_captured_targets_across_refresh() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "beta"), torrent(3, "gamma")];
+    app.next();
+    app.next();
+
+    app.prepare_delete(true);
+    app.torrents.torrents = vec![
+        torrent(4, "delta"),
+        torrent(1, "alpha"),
+        torrent(3, "gamma"),
+    ];
+
+    let target = delete_target(&app);
+    assert_eq!(target.ids().collect::<Vec<_>>(), [2]);
+    assert_eq!(target.names().collect::<Vec<_>>(), ["beta"]);
+    assert!(target.delete_local_data());
+}
+
+#[test]
+fn app_prepare_delete_captures_visible_selection_in_row_order() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "beta"), torrent(3, "gamma")];
+    app.torrents.selected = [3, 1].into();
+    app.next();
+
+    app.prepare_delete(false);
+
+    let target = delete_target(&app);
+    assert_eq!(target.ids().collect::<Vec<_>>(), [1, 3]);
+    assert_eq!(target.names().collect::<Vec<_>>(), ["alpha", "gamma"]);
+    assert!(!target.delete_local_data());
+}
+
+#[test]
+fn app_prepare_delete_does_not_open_without_visible_targets() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "beta")];
+
+    app.prepare_delete(false);
+    assert_eq!(app.input_mode, InputMode::None);
+
+    app.torrents.selected = [2].into();
+    app.filter_text = "alpha".into();
+    app.next();
+    app.prepare_delete(false);
+    assert_eq!(app.input_mode, InputMode::None);
+}
+
+#[test]
+fn app_highlight_follows_torrent_across_reorder() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "beta"), torrent(3, "gamma")];
+    app.next();
+    app.next();
+
+    app.torrents.torrents = vec![torrent(2, "beta"), torrent(3, "gamma"), torrent(1, "alpha")];
+    app.prepare_rename_action();
+    assert_eq!(app.input_handler.text, "beta");
+
+    app.sync_highlight();
+    assert_some_eq!(app.state.selected(), 0);
+}
+
+#[test]
+fn app_highlight_clamps_when_torrent_disappears() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "beta"), torrent(3, "gamma")];
+    app.next();
+    app.next();
+    app.next();
+
+    app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "beta")];
+    app.prepare_rename_action();
+    assert_eq!(app.input_handler.text, "");
+
+    app.input_handler.clear();
+    app.sync_highlight();
+    assert_some_eq!(app.state.selected(), 1);
+    app.prepare_rename_action();
+    assert_eq!(app.input_handler.text, "beta");
+}
+
+#[test]
+fn app_highlight_clears_when_visible_rows_become_empty() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.torrents.torrents = vec![torrent_with_status(1, "alpha", TorrentStatus::Downloading)];
+    app.switch_tab(1);
+    app.next();
+
+    app.torrents.torrents = vec![torrent(1, "alpha")];
+    app.sync_highlight();
+    assert_none!(app.state.selected());
+
+    app.torrents.torrents = vec![torrent_with_status(1, "alpha", TorrentStatus::Downloading)];
+    app.prepare_delete(false);
+    assert_eq!(app.input_mode, InputMode::None);
+    app.prepare_rename_action();
+    assert_eq!(app.input_handler.text, "");
+}
+
+#[tokio::test]
+async fn app_confirm_delete_sends_captured_targets() {
+    let (url, request_body) = capture_rpc_request();
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    assert_ok!(app.torrents.url(&url));
+    app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "beta"), torrent(3, "gamma")];
+    app.next();
+    app.next();
+
+    app.prepare_delete(true);
+    app.torrents.torrents = vec![
+        torrent(4, "delta"),
+        torrent(1, "alpha"),
+        torrent(3, "gamma"),
+    ];
+    assert_ok!(app.confirm_delete().await);
+
+    let body = assert_ok!(request_body.recv_timeout(Duration::from_secs(5)));
+    assert_eq!(
+        body,
+        r#"{"method":"torrent-remove","arguments":{"ids":[2],"delete-local-data":true}}"#
+    );
+    assert_eq!(app.input_mode, InputMode::None);
+}
+
+#[tokio::test]
+async fn app_rename_does_not_retarget_when_its_torrent_disappears() {
+    let (url, request_body) = capture_rpc_request();
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    assert_ok!(app.torrents.url(&url));
+    app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "beta")];
+    app.next();
+    app.next();
+    app.prepare_rename_action();
+    app.input_handler.set_text("renamed".to_owned());
+
+    // A refresh drops the torrent being renamed; the highlight falls back to "alpha".
+    app.torrents.torrents = vec![torrent(1, "alpha")];
+    app.sync_highlight();
+    assert_ok!(app.rename_torrent().await);
+
+    // A request would have been answered, and its body sent, before `rename_torrent` returned.
+    assert_err!(request_body.try_recv());
+    assert_eq!(app.input_mode, InputMode::None);
+}
+
+#[tokio::test]
+async fn app_move_sends_targets_captured_when_prompt_opened() {
+    let (url, request_body) = capture_rpc_request();
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    assert_ok!(app.torrents.url(&url));
+    app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "beta")];
+    app.next();
+    app.next();
+    app.prepare_move_action();
+    app.input_handler.set_text("/data".to_owned());
+
+    app.torrents.torrents = vec![torrent(1, "alpha")];
+    app.sync_highlight();
+    assert_ok!(app.move_torrent().await);
+
+    let body = assert_ok!(request_body.recv_timeout(Duration::from_secs(5)));
+    assert!(body.contains(r#""ids":[2]"#), "{body}");
+}
+
+/// Answers one Transmission RPC call on an ephemeral local port.
+///
+/// Returns the RPC URL and a receiver for the request body. The listener stays bound until the
+/// call is served, and reads time out so a stalled client cannot hang the test.
+fn capture_rpc_request() -> (String, Receiver<String>) {
+    let listener = assert_ok!(TcpListener::bind("127.0.0.1:0"));
+    let url = format!(
+        "http://{}/transmission/rpc",
+        assert_ok!(listener.local_addr())
+    );
+    let (sender, receiver) = mpsc::channel();
+    thread::spawn(move || {
+        let (stream, _) = assert_ok!(listener.accept());
+        assert_ok!(stream.set_read_timeout(Some(Duration::from_secs(5))));
+        let mut reader = BufReader::new(&stream);
+        let mut content_length = 0;
+        loop {
+            let mut line = String::new();
+            assert_ok!(reader.read_line(&mut line));
+            let line = line.trim_end();
+            if line.is_empty() {
+                break;
+            }
+            if let Some((name, value)) = line.split_once(':')
+                && name.eq_ignore_ascii_case("content-length")
+            {
+                content_length = assert_ok!(value.trim().parse());
+            }
+        }
+        let mut body = vec![0; content_length];
+        assert_ok!(reader.read_exact(&mut body));
+        assert_ok!(sender.send(assert_ok!(String::from_utf8(body))));
+
+        let response = r#"{"arguments":{},"result":"success"}"#;
+        let mut writer = &stream;
+        assert_ok!(write!(
+            writer,
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{response}",
+            response.len()
+        ));
+    });
+    (url, receiver)
+}
+
+fn delete_target(app: &App) -> &DeleteTarget {
+    match &app.input_mode {
+        InputMode::ConfirmDelete(target) => target,
+        other => panic!("expected delete confirmation, got {other:?}"),
+    }
 }
 
 fn torrent(id: i64, name: &str) -> Torrent {

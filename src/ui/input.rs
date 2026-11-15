@@ -1,4 +1,4 @@
-use crate::app::{App, InputMode};
+use crate::app::{App, InputMode, types::DeleteTarget};
 use ratatui::{
     buffer::CellWidth,
     prelude::*,
@@ -9,10 +9,10 @@ use std::iter;
 use unicode_segmentation::UnicodeSegmentation;
 
 pub fn render(f: &mut Frame, app: &App) {
-    match app.input_mode {
+    match &app.input_mode {
         InputMode::Move | InputMode::Rename => render_text_input(f, app),
         InputMode::Filter => render_filter_input(f, app),
-        InputMode::ConfirmDelete(delete_local_data) => render_confirm_delete(f, delete_local_data),
+        InputMode::ConfirmDelete(target) => render_confirm_delete(f, target),
         InputMode::None => {}
     }
 }
@@ -237,22 +237,52 @@ fn grapheme_width(grapheme: &str) -> usize {
     usize::from(grapheme.cell_width())
 }
 
-fn render_confirm_delete(f: &mut Frame, delete_local_data: bool) {
-    let size = f.area();
-    let dialog_width = 40;
-    let dialog_height = 5;
-    let dialog_area = Rect::new(
-        (size.width.saturating_sub(dialog_width)) / 2,
-        (size.height.saturating_sub(dialog_height)) / 2,
-        dialog_width.min(size.width),
-        dialog_height.min(size.height),
-    );
+/// Names listed in the delete dialog before collapsing the rest into a count.
+const MAX_DELETE_NAMES: usize = 3;
 
-    let title = if delete_local_data {
-        "Delete with data?"
+fn render_confirm_delete(f: &mut Frame, target: &DeleteTarget) {
+    let count = target.names().len();
+    let subject = if count == 1 {
+        "torrent".to_owned()
     } else {
-        "Delete torrent?"
+        format!("{count} torrents")
     };
+    let title = if target.delete_local_data() {
+        format!(" Delete {subject} and local data? ")
+    } else {
+        format!(" Delete {subject}? ")
+    };
+
+    let mut lines = target
+        .names()
+        .take(MAX_DELETE_NAMES)
+        .map(Line::from)
+        .collect::<Vec<_>>();
+    if count > MAX_DELETE_NAMES {
+        lines.push(Line::from(format!("+{} more", count - MAX_DELETE_NAMES)));
+    }
+    lines.push(Line::from("[y]es / [n]o"));
+
+    let content_width = lines
+        .iter()
+        .map(Line::width)
+        .chain([title.len()])
+        .max()
+        .unwrap_or_default();
+    let size = f.area();
+    let dialog_width = u16::try_from(content_width + 4)
+        .unwrap_or(u16::MAX)
+        .max(40)
+        .min(size.width);
+    let dialog_height = u16::try_from(lines.len() + 2)
+        .unwrap_or(u16::MAX)
+        .min(size.height);
+    let dialog_area = Rect::new(
+        (size.width - dialog_width) / 2,
+        (size.height - dialog_height) / 2,
+        dialog_width,
+        dialog_height,
+    );
 
     let block = Block::default()
         .title(title)
@@ -261,23 +291,11 @@ fn render_confirm_delete(f: &mut Frame, delete_local_data: bool) {
         .border_style(Style::default().fg(Color::Red));
 
     f.render_widget(Clear, dialog_area);
-    f.render_widget(block, dialog_area);
-
-    let first_line = if delete_local_data {
-        "This will delete local files!"
-    } else {
-        "Remove from list?"
-    };
-
-    let text = Paragraph::new(vec![Line::from(first_line), Line::from("[y]es / [n]o")])
-        .alignment(Alignment::Center);
-
     f.render_widget(
-        text,
-        dialog_area.inner(Margin {
-            vertical: 1,
-            horizontal: 1,
-        }),
+        Paragraph::new(lines)
+            .alignment(Alignment::Center)
+            .block(block),
+        dialog_area,
     );
 }
 

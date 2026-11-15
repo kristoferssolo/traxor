@@ -5,6 +5,44 @@ use std::{
 };
 use transmission_rpc::types::Id;
 
+/// Torrents captured when a delete is requested.
+///
+/// Confirming deletes exactly these ids, even if a refresh changes the visible rows in between.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DeleteTarget {
+    torrents: Vec<(i64, String)>,
+    delete_local_data: bool,
+}
+
+impl DeleteTarget {
+    /// Creates a target from `(id, name)` pairs in display order.
+    ///
+    /// Returns `None` when there is nothing to delete.
+    #[must_use]
+    pub fn new(torrents: Vec<(i64, String)>, delete_local_data: bool) -> Option<Self> {
+        if torrents.is_empty() {
+            return None;
+        }
+        Some(Self {
+            torrents,
+            delete_local_data,
+        })
+    }
+
+    pub fn ids(&self) -> impl ExactSizeIterator<Item = i64> {
+        self.torrents.iter().map(|(id, _)| *id)
+    }
+
+    pub fn names(&self) -> impl ExactSizeIterator<Item = &str> {
+        self.torrents.iter().map(|(_, name)| name.as_str())
+    }
+
+    #[must_use]
+    pub const fn delete_local_data(&self) -> bool {
+        self.delete_local_data
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Selected {
     Current(i64),

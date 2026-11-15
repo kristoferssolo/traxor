@@ -7,24 +7,30 @@ mod torrent;
 pub mod types;
 pub mod utils;
 
-use crate::{app::input::InputHandler, config::Config, error::Result};
+use crate::{
+    app::{
+        input::InputHandler,
+        types::{DeleteTarget, Selected},
+    },
+    config::Config,
+    error::Result,
+};
 use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
 use ratatui::{layout::Rect, widgets::TableState};
-use std::{cmp::Reverse, path::PathBuf};
+use std::{cmp::Reverse, collections::HashSet, path::PathBuf};
 use transmission_rpc::types::Torrent;
-use types::Selected;
 pub use {tab::Tab, torrent::Torrents};
 
 /// Input mode type for the application.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum InputMode {
     #[default]
     None,
     Move,
     Rename,
     Filter,
-    /// Confirm delete dialog. Bool indicates whether to delete local data.
-    ConfirmDelete(bool),
+    /// Confirm delete dialog for the torrents captured when it opened.
+    ConfirmDelete(DeleteTarget),
 }
 
 /// Screen areas from the last render, used for mouse hit-testing.
@@ -57,7 +63,15 @@ pub struct App {
     pub running: bool,
     index: usize,
     tabs: Vec<Tab>,
+    /// Id of the highlighted torrent. Actions resolve the highlight through it.
+    highlighted: Option<i64>,
+    /// Row of the highlighted torrent, kept in sync by [`App::sync_highlight`] for rendering.
     pub state: TableState,
+    /// Torrents the open Move or Rename prompt acts on, captured when it opened.
+    ///
+    /// A refresh can move the highlight while the prompt is open; submitting acts on these ids
+    /// instead, so it never retargets a different torrent.
+    prompt_targets: Vec<i64>,
     pub torrents: Torrents,
     pub show_help: bool,
     pub config: Config,
@@ -82,7 +96,9 @@ impl App {
             running: true,
             tabs,
             index: 0,
+            highlighted: None,
             state: TableState::default(),
+            prompt_targets: Vec::new(),
             torrents,
             show_help: false,
             config,
@@ -128,6 +144,7 @@ impl App {
     }
 
     pub fn next(&mut self) {
+        self.sync_highlight();
         let len = self.filtered_torrents().len();
         if len == 0 {
             return;
@@ -137,10 +154,11 @@ impl App {
             .selected()
             .map_or(0, |i| if i >= len - 1 { 0 } else { i + 1 });
         self.close_help();
-        self.state.select(Some(i));
+        self.highlight_row(i);
     }
 
     pub fn previous(&mut self) {
+        self.sync_highlight();
         let len = self.filtered_torrents().len();
         if len == 0 {
             return;
@@ -150,7 +168,49 @@ impl App {
             .selected()
             .map_or(0, |i| if i == 0 { len - 1 } else { i - 1 });
         self.close_help();
-        self.state.select(Some(i));
+        self.highlight_row(i);
+    }
+
+    /// Moves [`App::state`] to the highlighted torrent's current row.
+    ///
+    /// Call after the visible rows may have changed (refresh, filter, tab switch). If the
+    /// highlighted torrent is no longer visible, the previous row is clamped to the visible
+    /// rows and the torrent there becomes the highlight. With no visible rows the highlight is
+    /// cleared, so a torrent that reappears later is not acted on before it is drawn highlighted.
+    pub fn sync_highlight(&mut self) {
+        let rows = self.filtered_torrents();
+        let row = self
+            .highlighted
+            .and_then(|id| rows.iter().position(|t| t.id == Some(id)));
+        if let Some(row) = row {
+            self.state.select(Some(row));
+            return;
+        }
+        let Some(last) = rows.len().checked_sub(1) else {
+            self.highlighted = None;
+            self.state.select(None);
+            return;
+        };
+        let Some(row) = self.state.selected() else {
+            return;
+        };
+        self.highlight_row(row.min(last));
+    }
+
+    /// Highlights the visible torrent with `id`. Does nothing if it is not visible.
+    pub fn highlight_torrent(&mut self, id: i64) {
+        if let Some(row) = self
+            .filtered_torrents()
+            .iter()
+            .position(|t| t.id == Some(id))
+        {
+            self.highlight_row(row);
+        }
+    }
+
+    fn highlight_row(&mut self, row: usize) {
+        self.highlighted = self.filtered_torrents().get(row).and_then(|t| t.id);
+        self.state.select(Some(row));
     }
 
     /// Switches to the next tab.
@@ -226,7 +286,7 @@ impl App {
     ///
     /// Returns an error if the RPC call fails.
     pub async fn move_torrent(&mut self) -> Result<()> {
-        let ids = self.selected(false);
+        let ids = Selected::List(self.prompt_targets.iter().copied().collect());
         self.torrents
             .move_torrents(ids, &self.input_handler.text)
             .await?;
@@ -236,6 +296,7 @@ impl App {
 
     /// Prepare move action by pre-filling current download directory.
     pub fn prepare_move_action(&mut self) {
+        self.prompt_targets = self.selected(false).into();
         if let Some(download_dir) = self.get_current_download_dir() {
             self.input_handler
                 .set_text(download_dir.to_string_lossy().into_owned());
@@ -249,7 +310,14 @@ impl App {
     ///
     /// Returns an error if the RPC call fails.
     pub async fn rename_torrent(&mut self) -> Result<()> {
-        let Some(torrent) = self.get_current_torrent() else {
+        let target = self.prompt_targets.first().and_then(|id| {
+            self.torrents
+                .torrents
+                .iter()
+                .find(|t| t.id == Some(*id))
+                .cloned()
+        });
+        let Some(torrent) = target else {
             self.clear_input();
             return Ok(());
         };
@@ -262,7 +330,9 @@ impl App {
 
     /// Prepare rename action by pre-filling current torrent name.
     pub fn prepare_rename_action(&mut self) {
-        if let Some(name) = self.get_current_torrent_name() {
+        let torrent = self.get_current_torrent();
+        self.prompt_targets = torrent.as_ref().and_then(|t| t.id).into_iter().collect();
+        if let Some(name) = torrent.and_then(|t| t.name) {
             self.input_handler.set_text(name);
         }
         self.input_mode = InputMode::Rename;
@@ -271,6 +341,7 @@ impl App {
     /// Clear input and reset input mode.
     fn clear_input(&mut self) {
         self.input_handler.clear();
+        self.prompt_targets.clear();
         self.input_mode = InputMode::None;
         self.close_help();
     }
@@ -286,7 +357,7 @@ impl App {
         self.filter_text = self.input_handler.text.clone();
         self.input_handler.clear();
         self.input_mode = InputMode::None;
-        self.state.select(Some(0));
+        self.highlight_row(0);
     }
 
     /// Clear the active filter.
@@ -336,9 +407,24 @@ impl App {
         scored.into_iter().map(|(t, _)| t).collect()
     }
 
-    /// Prepare delete confirmation dialog.
-    pub const fn prepare_delete(&mut self, delete_local_data: bool) {
-        self.input_mode = InputMode::ConfirmDelete(delete_local_data);
+    /// Open the delete confirmation for the selected or highlighted torrent(s).
+    ///
+    /// Targets are captured now, so a refresh before confirming cannot change what gets
+    /// deleted. The dialog does not open when no target is visible.
+    pub fn prepare_delete(&mut self, delete_local_data: bool) {
+        let ids: HashSet<i64> = self.selected(false).into();
+        let torrents = self
+            .filtered_torrents()
+            .into_iter()
+            .filter_map(|t| {
+                let id = t.id.filter(|id| ids.contains(id))?;
+                let name = t.name.clone().unwrap_or_else(|| format!("#{id}"));
+                Some((id, name))
+            })
+            .collect();
+        if let Some(target) = DeleteTarget::new(torrents, delete_local_data) {
+            self.input_mode = InputMode::ConfirmDelete(target);
+        }
     }
 
     /// Execute the confirmed delete action.
@@ -347,11 +433,12 @@ impl App {
     ///
     /// Returns an error if the RPC call fails.
     pub async fn confirm_delete(&mut self) -> Result<()> {
-        let InputMode::ConfirmDelete(delete_local_data) = self.input_mode else {
+        let InputMode::ConfirmDelete(target) = &self.input_mode else {
             return Ok(());
         };
-        let ids = self.selected(false);
-        self.torrents.delete(ids, delete_local_data).await?;
+        self.torrents
+            .delete(target.ids(), target.delete_local_data())
+            .await?;
         self.clear_input();
         Ok(())
     }
@@ -371,9 +458,8 @@ impl App {
         let torrents = self.filtered_torrents();
         if (self.torrents.selected.is_empty() || highlighted)
             && let Some(id) = self
-                .state
-                .selected()
-                .and_then(|idx| torrents.get(idx).and_then(|t| t.id))
+                .highlighted
+                .filter(|id| torrents.iter().any(|t| t.id == Some(*id)))
         {
             return Selected::Current(id);
         }
@@ -391,13 +477,11 @@ impl App {
             .map(PathBuf::from)
     }
 
-    fn get_current_torrent_name(&self) -> Option<String> {
-        self.get_current_torrent().and_then(|t| t.name)
-    }
-
     fn get_current_torrent(&self) -> Option<Torrent> {
-        self.state
-            .selected()
-            .and_then(|idx| self.filtered_torrents().get(idx).copied().cloned())
+        let id = self.highlighted?;
+        self.filtered_torrents()
+            .into_iter()
+            .find(|t| t.id == Some(id))
+            .cloned()
     }
 }

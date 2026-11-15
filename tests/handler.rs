@@ -9,6 +9,7 @@ use traxor::{
     app::App,
     app::InputMode,
     app::action::Action,
+    app::types::DeleteTarget,
     config::Config,
     handler::{get_action, handle_key_event, handle_mouse},
     ui::render,
@@ -121,7 +122,8 @@ async fn get_action_input_mode() {
 async fn get_action_confirm_delete() {
     let config = assert_ok!(Config::load());
     let mut app = assert_ok!(App::new(config));
-    app.input_mode = InputMode::ConfirmDelete(false);
+    let target = assert_some!(DeleteTarget::new(vec![(1, "alpha".into())], false));
+    app.input_mode = InputMode::ConfirmDelete(target);
 
     for key_code in [KeyCode::Enter, KeyCode::Char('y'), KeyCode::Char('Y')] {
         assert_some_eq!(assert_action!(&mut app, key_code), Action::ConfirmYes);
@@ -218,7 +220,31 @@ fn handle_mouse_click_highlights_rendered_torrent_after_refresh() {
 
     handle_mouse(left_click(column, first_row + 1), &mut app);
     let highlighted = assert_some!(app.state.selected());
-    assert_eq!(app.filtered_torrents()[highlighted].id, Some(2));
+    assert_some_eq!(app.filtered_torrents()[highlighted].id, 2);
+}
+
+#[test]
+fn handle_mouse_click_moves_existing_highlight_across_redraws() {
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    app.torrents.torrents = vec![
+        torrent(1, "alpha"),
+        torrent(2, "bravo"),
+        torrent(3, "charlie"),
+    ];
+    app.next();
+    let mut terminal = assert_ok!(Terminal::new(TestBackend::new(120, 20)));
+    assert_ok!(terminal.draw(|frame| render(&mut app, frame)));
+    let column = app.areas.table.x + 2;
+    // Skip the top border, header, and header margin.
+    let third_row = app.areas.table.y + 3 + 2;
+
+    handle_mouse(left_click(column, third_row), &mut app);
+    // Each draw re-syncs the table row from the highlighted torrent, so the click must move it.
+    assert_ok!(terminal.draw(|frame| render(&mut app, frame)));
+
+    let highlighted = assert_some!(app.state.selected());
+    assert_some_eq!(app.filtered_torrents()[highlighted].id, 3);
 }
 
 /// Left click on the first title character of the second tab: border, padded first title,
@@ -250,7 +276,7 @@ async fn handle_key_event_reports_failed_action_and_keeps_running() {
     app.torrents.torrents = vec![assert_ok!(toml::from_str::<Torrent>(
         "id = 1\nname = \"old\""
     ))];
-    app.state.select(Some(0));
+    app.next();
     app.prepare_rename_action();
     app.input_handler.set_text("new".to_owned());
 

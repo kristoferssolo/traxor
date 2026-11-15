@@ -64,10 +64,13 @@ impl Torrents {
     /// # Errors
     ///
     /// Returns an error if the RPC call fails.
-    pub async fn delete(&mut self, ids: Selected, delete_local_data: bool) -> Result<()> {
-        self.client
-            .torrent_remove(ids.into(), delete_local_data)
-            .await?;
+    pub async fn delete(
+        &mut self,
+        ids: impl IntoIterator<Item = i64>,
+        delete_local_data: bool,
+    ) -> Result<()> {
+        let ids = ids.into_iter().map(Id::Id).collect();
+        self.client.torrent_remove(ids, delete_local_data).await?;
         Ok(())
     }
 

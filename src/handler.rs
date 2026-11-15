@@ -154,13 +154,8 @@ fn click(app: &mut App, position: Position) {
     ) {
         // Highlight the torrent that was displayed in that row, wherever it is now. Ignore the
         // click if a refresh since the last render removed it.
-        let index = areas.table_rows[row].and_then(|id| {
-            app.filtered_torrents()
-                .iter()
-                .position(|torrent| torrent.id == Some(id))
-        });
-        if index.is_some() {
-            app.state.select(index);
+        if let Some(id) = areas.table_rows[row] {
+            app.highlight_torrent(id);
         }
         return;
     }
