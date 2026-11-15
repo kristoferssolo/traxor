@@ -1,4 +1,4 @@
-use claims::{assert_none, assert_ok, assert_some_eq};
+use claims::{assert_err, assert_none, assert_ok, assert_some_eq};
 use std::{
     io::{BufRead, BufReader, Read, Write},
     net::TcpListener,
@@ -285,6 +285,48 @@ async fn app_confirm_delete_sends_captured_targets() {
         r#"{"method":"torrent-remove","arguments":{"ids":[2],"delete-local-data":true}}"#
     );
     assert_eq!(app.input_mode, InputMode::None);
+}
+
+#[tokio::test]
+async fn app_rename_does_not_retarget_when_its_torrent_disappears() {
+    let (url, request_body) = capture_rpc_request();
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    assert_ok!(app.torrents.url(&url));
+    app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "beta")];
+    app.next();
+    app.next();
+    app.prepare_rename_action();
+    app.input_handler.set_text("renamed".to_owned());
+
+    // A refresh drops the torrent being renamed; the highlight falls back to "alpha".
+    app.torrents.torrents = vec![torrent(1, "alpha")];
+    app.sync_highlight();
+    assert_ok!(app.rename_torrent().await);
+
+    // A request would have been answered, and its body sent, before `rename_torrent` returned.
+    assert_err!(request_body.try_recv());
+    assert_eq!(app.input_mode, InputMode::None);
+}
+
+#[tokio::test]
+async fn app_move_sends_targets_captured_when_prompt_opened() {
+    let (url, request_body) = capture_rpc_request();
+    let config = assert_ok!(Config::load());
+    let mut app = assert_ok!(App::new(config));
+    assert_ok!(app.torrents.url(&url));
+    app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "beta")];
+    app.next();
+    app.next();
+    app.prepare_move_action();
+    app.input_handler.set_text("/data".to_owned());
+
+    app.torrents.torrents = vec![torrent(1, "alpha")];
+    app.sync_highlight();
+    assert_ok!(app.move_torrent().await);
+
+    let body = assert_ok!(request_body.recv_timeout(Duration::from_secs(5)));
+    assert!(body.contains(r#""ids":[2]"#), "{body}");
 }
 
 /// Answers one Transmission RPC call on an ephemeral local port.

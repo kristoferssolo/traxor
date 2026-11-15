@@ -67,6 +67,11 @@ pub struct App {
     highlighted: Option<i64>,
     /// Row of the highlighted torrent, kept in sync by [`App::sync_highlight`] for rendering.
     pub state: TableState,
+    /// Torrents the open Move or Rename prompt acts on, captured when it opened.
+    ///
+    /// A refresh can move the highlight while the prompt is open; submitting acts on these ids
+    /// instead, so it never retargets a different torrent.
+    prompt_targets: Vec<i64>,
     pub torrents: Torrents,
     pub show_help: bool,
     pub config: Config,
@@ -93,6 +98,7 @@ impl App {
             index: 0,
             highlighted: None,
             state: TableState::default(),
+            prompt_targets: Vec::new(),
             torrents,
             show_help: false,
             config,
@@ -280,7 +286,7 @@ impl App {
     ///
     /// Returns an error if the RPC call fails.
     pub async fn move_torrent(&mut self) -> Result<()> {
-        let ids = self.selected(false);
+        let ids = Selected::List(self.prompt_targets.iter().copied().collect());
         self.torrents
             .move_torrents(ids, &self.input_handler.text)
             .await?;
@@ -290,6 +296,7 @@ impl App {
 
     /// Prepare move action by pre-filling current download directory.
     pub fn prepare_move_action(&mut self) {
+        self.prompt_targets = self.selected(false).into();
         if let Some(download_dir) = self.get_current_download_dir() {
             self.input_handler
                 .set_text(download_dir.to_string_lossy().into_owned());
@@ -303,7 +310,14 @@ impl App {
     ///
     /// Returns an error if the RPC call fails.
     pub async fn rename_torrent(&mut self) -> Result<()> {
-        let Some(torrent) = self.get_current_torrent() else {
+        let target = self.prompt_targets.first().and_then(|id| {
+            self.torrents
+                .torrents
+                .iter()
+                .find(|t| t.id == Some(*id))
+                .cloned()
+        });
+        let Some(torrent) = target else {
             self.clear_input();
             return Ok(());
         };
@@ -316,7 +330,9 @@ impl App {
 
     /// Prepare rename action by pre-filling current torrent name.
     pub fn prepare_rename_action(&mut self) {
-        if let Some(name) = self.get_current_torrent_name() {
+        let torrent = self.get_current_torrent();
+        self.prompt_targets = torrent.as_ref().and_then(|t| t.id).into_iter().collect();
+        if let Some(name) = torrent.and_then(|t| t.name) {
             self.input_handler.set_text(name);
         }
         self.input_mode = InputMode::Rename;
@@ -325,6 +341,7 @@ impl App {
     /// Clear input and reset input mode.
     fn clear_input(&mut self) {
         self.input_handler.clear();
+        self.prompt_targets.clear();
         self.input_mode = InputMode::None;
         self.close_help();
     }
@@ -458,10 +475,6 @@ impl App {
         self.get_current_torrent()
             .and_then(|t| t.download_dir)
             .map(PathBuf::from)
-    }
-
-    fn get_current_torrent_name(&self) -> Option<String> {
-        self.get_current_torrent().and_then(|t| t.name)
     }
 
     fn get_current_torrent(&self) -> Option<Torrent> {
