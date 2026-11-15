@@ -60,7 +60,15 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     let time = &app.config.time;
     let fields = app.tabs()[app.index()].fields();
 
-    let table = build_table(&torrents, selected, colors, time, fields);
+    let table = build_table(
+        &torrents,
+        selected,
+        app.state.selected(),
+        colors,
+        time,
+        fields,
+        chunks[1],
+    );
     frame.render_stateful_widget(table, chunks[1], &mut app.state);
     app.areas = RenderedAreas {
         tabs: chunks[0],

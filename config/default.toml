@@ -62,6 +62,14 @@ status_stopped = "dark_gray"
 status_verifying = "yellow"
 status_queued = "light_blue"
 
+# Progress fill behind the Name cell, by torrent state. On the highlighted or
+# selected row, hex colors are brightened so the row background stays visible.
+progress_downloading = "#163a40"
+progress_seeding = "#262626"
+progress_stopped = "#1c1c1c"
+progress_verifying = "#3a3220"
+progress_queued = "#1c2a3a"
+
 # ============================================================================
 #                                 LOGGING
 # ============================================================================
