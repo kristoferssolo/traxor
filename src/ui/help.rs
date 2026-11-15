@@ -81,11 +81,6 @@ fn help_columns(kb: &KeybindsConfig) -> Vec<Vec<Section>> {
         vec![Section::new(
             "In prompts",
             vec![
-                (literal("←/→"), "Move cursor"),
-                (literal("^A/^E"), "Start/end"),
-                (literal("Del"), "Delete forward"),
-                (literal("^W"), "Delete word"),
-                (literal("^U"), "Delete to start"),
                 (literal("Tab"), "Complete path"),
                 (literal("Enter"), "Submit"),
                 (literal("Esc"), "Cancel"),

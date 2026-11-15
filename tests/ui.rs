@@ -89,7 +89,7 @@ fn assert_stats_visible(status_line: &str) {
 
 const DEFAULT_CONFIG: &str = include_str!("../config/default.toml");
 
-const ACTION_LABELS: [&str; 26] = [
+const ACTION_LABELS: [&str; 21] = [
     "Up/down",
     "First/last",
     "Page",
@@ -108,11 +108,6 @@ const ACTION_LABELS: [&str; 26] = [
     "Rename",
     "Remove",
     "Delete with data",
-    "Move cursor",
-    "Start/end",
-    "Delete forward",
-    "Delete word",
-    "Delete to start",
     "Complete path",
     "Submit",
     "Cancel",
