@@ -618,9 +618,9 @@ fn app_sort_orders_filtered_torrents() {
 #[tokio::test]
 async fn app_sorted_delete_and_highlight_survive_live_reorder() {
     let (url, request_body) = capture_rpc_request();
-    let config = assert_ok!(Config::load());
+    let mut config = assert_ok!(Config::load());
+    config.rpc.url = url;
     let mut app = assert_ok!(App::new(config));
-    assert_ok!(app.torrents.url(&url));
     app.torrents.torrents = vec![torrent(1, "alpha"), torrent(2, "beta"), torrent(3, "gamma")];
     for _ in 0..=name_column(&app) {
         app.cycle_sort();
