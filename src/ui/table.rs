@@ -10,7 +10,7 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, Cell, Row, Table},
 };
-use std::{collections::HashSet, iter::repeat_n, str::FromStr};
+use std::collections::HashSet;
 use transmission_rpc::types::{Torrent, TorrentGetField, TorrentStatus};
 
 /// Blank rows between the header and the first torrent row.
@@ -25,10 +25,6 @@ const COLUMN_SPACING: u16 = 1;
 /// How the table places columns when their constraints leave width over.
 const COLUMN_FLEX: Flex = Flex::Start;
 
-/// Brightening of RGB progress tints on rows with their own background, as
-/// `(numerator, denominator)`, so the highlight or selection stays visible inside the fill.
-const ROW_BACKGROUND_TINT_SCALE: (u16, u16) = (13, 10);
-
 /// Cells a sort indicator such as ` ▼` adds to a column title.
 const SORT_INDICATOR_WIDTH: u16 = 2;
 
@@ -36,7 +32,7 @@ const SORT_INDICATOR_WIDTH: u16 = 2;
 ///
 /// `highlighted` is the [`TableState`](ratatui::widgets::TableState) selection the table will
 /// be rendered with. It and `area` determine the Name column's rendered width, which the
-/// progress fill needs.
+/// progress underline needs.
 ///
 /// `sort` marks the sorted column's header with its direction.
 pub fn build_table(
@@ -60,8 +56,6 @@ pub fn build_table(
         .map(|&field| column_width(field))
         .collect::<Vec<_>>();
 
-    // `Table` clamps an out-of-range selection to the last row when rendering.
-    let highlighted = highlighted.map(|idx| idx.min(torrents.len().saturating_sub(1)));
     let rendered_widths = rendered_column_widths(
         &widths,
         default_block().inner(area).width,
@@ -70,15 +64,11 @@ pub fn build_table(
 
     let rows = torrents
         .iter()
-        .enumerate()
-        .map(|(idx, torrent)| {
-            let background = if highlighted == Some(idx) {
-                Some(highlight_row_style)
-            } else if torrent.id.is_some_and(|id| selected.contains(&id)) {
-                Some(select_style)
-            } else {
-                None
-            };
+        .map(|torrent| {
+            let background = torrent
+                .id
+                .is_some_and(|id| selected.contains(&id))
+                .then_some(select_style);
             make_row(torrent, fields, &rendered_widths, background, colors, time)
         })
         .collect::<Vec<_>>();
@@ -99,12 +89,7 @@ pub fn build_table(
     Table::new(rows, widths)
         .block(default_block())
         .header(header)
-        // The highlighted row gets its background from its row style, underneath the
-        // progress fill, so the table only re-applies the foreground and modifiers on top.
-        .row_highlight_style(Style {
-            bg: None,
-            ..highlight_row_style
-        })
+        .row_highlight_style(highlight_row_style)
         .highlight_symbol(HIGHLIGHT_SYMBOL)
         .column_spacing(COLUMN_SPACING)
         .flex(COLUMN_FLEX)
@@ -191,7 +176,7 @@ fn highlighted_row_style(cfg: &ColorConfig) -> Style {
 }
 
 /// Builds one torrent row. `widths` are the rendered column widths and `background` the
-/// row's own style, if it is highlighted or selected.
+/// row's own style, if it is selected. The table applies the highlight on top.
 fn make_row(
     torrent: &Torrent,
     fields: &[TorrentGetField],
@@ -201,21 +186,12 @@ fn make_row(
     time: &TimeConfig,
 ) -> Row<'static> {
     let status_style = status_style(torrent.status, colors);
-    let tint = progress_color(torrent.status, colors).map(|color| {
-        if background.is_some() {
-            brighten(color)
-        } else {
-            color
-        }
-    });
     let percent_done = torrent.percent_done.unwrap_or_default();
 
     let cells = fields.iter().zip(widths).map(|(&field, &width)| {
         let value = field.value(torrent, time);
-        match (field, tint) {
-            (TorrentGetField::Name, Some(tint)) => {
-                name_cell(&value, width, percent_done, tint).style(status_style)
-            }
+        match field {
+            TorrentGetField::Name => name_cell(&value, width, percent_done).style(status_style),
             _ => Cell::from(value.set_style(status_style)),
         }
     });
@@ -227,53 +203,60 @@ fn make_row(
     }
 }
 
-/// Builds a Name cell whose background is `tint` across `percent_done` of its `width`.
-fn name_cell(name: &str, width: u16, percent_done: f32, tint: Color) -> Cell<'static> {
-    let (filled, unfilled) = split_progress(name, width, percent_done);
+/// Builds a Name cell that underlines `percent_done` of the name.
+///
+/// The underline takes the text color and draws no background, so the terminal's own
+/// background, including transparency, shows through.
+fn name_cell(name: &str, width: u16, percent_done: f32) -> Cell<'static> {
+    let (done, rest) = split_progress(name, width, percent_done);
     Cell::from(Line::from(vec![
-        Span::styled(filled, Style::default().bg(tint)),
-        Span::raw(unfilled),
+        Span::styled(done, Style::default().add_modifier(Modifier::UNDERLINED)),
+        Span::raw(rest),
     ]))
 }
 
-/// Fits `text` to exactly `width` display columns and splits it into the part covered by a
-/// `ratio` progress fill and the rest.
+/// Cuts `text` to at most `width` display columns and splits it into the part covered by a
+/// `ratio` progress and the rest.
 ///
-/// Graphemes are filtered and measured as `Buffer::set_stringn` renders them. Text that
-/// overflows `width` is cut before the first grapheme that does not fit, and the remainder is
-/// padded with spaces so the fill also covers blank columns. A grapheme belongs to the filled
-/// part when its midpoint is inside the fill, so wide characters are never split; a wide
-/// character straddling the boundary rounds the fill up.
+/// Progress is measured against the cut text's own width, so the underline stays under the
+/// name. Graphemes are filtered and measured as `Buffer::set_stringn` renders them, and text
+/// that overflows `width` is cut before the first grapheme that does not fit. A grapheme
+/// belongs to the covered part when its midpoint is inside it, so wide characters are never
+/// split; a wide character straddling the boundary rounds the covered part up.
 fn split_progress(text: &str, width: u16, ratio: f32) -> (String, String) {
-    let filled_width = usize::from(filled_columns(width, ratio));
-    let width = usize::from(width);
-    let mut filled = String::new();
-    let mut unfilled = String::new();
-    let mut column = 0;
-
     let span = Span::raw(text);
+    let mut graphemes = Vec::new();
+    let mut text_width = 0;
     for grapheme in span.styled_graphemes(Style::default()) {
         let grapheme_width = usize::from(grapheme.symbol.cell_width());
-        if column + grapheme_width > width {
+        if text_width + grapheme_width > usize::from(width) {
             break;
         }
-        let part = if 2 * column + grapheme_width <= 2 * filled_width {
-            &mut filled
-        } else {
-            &mut unfilled
-        };
-        part.push_str(grapheme.symbol);
-        column += grapheme_width;
+        graphemes.push((grapheme.symbol, grapheme_width));
+        text_width += grapheme_width;
     }
 
-    let filled_padding = filled_width.saturating_sub(column);
-    filled.extend(repeat_n(' ', filled_padding));
-    unfilled.extend(repeat_n(' ', width - column - filled_padding));
-    (filled, unfilled)
+    let covered_width = usize::from(filled_columns(
+        u16::try_from(text_width).unwrap_or(u16::MAX),
+        ratio,
+    ));
+    let mut done = String::new();
+    let mut rest = String::new();
+    let mut column = 0;
+    for (symbol, grapheme_width) in graphemes {
+        let part = if 2 * column + grapheme_width <= 2 * covered_width {
+            &mut done
+        } else {
+            &mut rest
+        };
+        part.push_str(symbol);
+        column += grapheme_width;
+    }
+    (done, rest)
 }
 
-/// Returns how many of `width` columns a `ratio` progress fill covers, rounded to the
-/// nearest column. Ratios outside `0.0..=1.0` are clamped and `NaN` fills nothing.
+/// Returns how many of `width` columns a `ratio` progress covers, rounded to the nearest
+/// column. Ratios outside `0.0..=1.0` are clamped and `NaN` covers nothing.
 fn filled_columns(width: u16, ratio: f32) -> u16 {
     if ratio.is_nan() {
         return 0;
@@ -286,35 +269,6 @@ fn filled_columns(width: u16, ratio: f32) -> u16 {
     )]
     let filled = filled as u16;
     filled
-}
-
-/// Scales an RGB color by [`ROW_BACKGROUND_TINT_SCALE`]. Named and indexed colors have no
-/// brighter variant to derive, so they are returned unchanged.
-fn brighten(color: Color) -> Color {
-    let Color::Rgb(red, green, blue) = color else {
-        return color;
-    };
-    let (numerator, denominator) = ROW_BACKGROUND_TINT_SCALE;
-    let scale = |channel: u8| {
-        let scaled = (u16::from(channel) * numerator + denominator / 2) / denominator;
-        u8::try_from(scaled).unwrap_or(u8::MAX)
-    };
-    Color::Rgb(scale(red), scale(green), scale(blue))
-}
-
-/// Returns the progress fill color for `status`, or `None` when the status is unknown or the
-/// configured color is invalid, in which case the Name cell has no fill.
-fn progress_color(status: Option<TorrentStatus>, colors: &ColorConfig) -> Option<Color> {
-    let color = match status? {
-        TorrentStatus::Downloading => &colors.progress_downloading,
-        TorrentStatus::Seeding => &colors.progress_seeding,
-        TorrentStatus::Stopped => &colors.progress_stopped,
-        TorrentStatus::Verifying => &colors.progress_verifying,
-        TorrentStatus::QueuedToDownload
-        | TorrentStatus::QueuedToSeed
-        | TorrentStatus::QueuedToVerify => &colors.progress_queued,
-    };
-    Color::from_str(color).ok()
 }
 
 fn status_style(status: Option<TorrentStatus>, colors: &ColorConfig) -> Style {
@@ -342,8 +296,6 @@ mod tests {
         buffer::Buffer,
         widgets::{StatefulWidget, TableState},
     };
-
-    const DOWNLOADING_TINT: Color = Color::Rgb(0x16, 0x3a, 0x40);
 
     fn default_config() -> Config {
         assert_ok!(toml::from_str(include_str!("../../config/default.toml")))
@@ -420,53 +372,40 @@ mod tests {
     }
 
     #[test]
-    fn split_empty_progress_pads_unfilled_part() {
+    fn split_measures_progress_against_the_text() {
         assert_eq!(
-            split_progress("ubuntu", 10, 0.0),
-            (String::new(), "ubuntu    ".to_owned())
+            split_progress("ubuntu", 20, 0.0),
+            (String::new(), "ubuntu".to_owned())
         );
-    }
-
-    #[test]
-    fn split_full_progress_pads_filled_part() {
         assert_eq!(
-            split_progress("ubuntu", 10, 1.0),
-            ("ubuntu    ".to_owned(), String::new())
+            split_progress("ubuntu", 20, 1.0),
+            ("ubuntu".to_owned(), String::new())
         );
-    }
-
-    #[test]
-    fn split_partial_progress_rounds_to_nearest_column() {
         assert_eq!(
-            split_progress("ubuntu", 10, 0.5),
-            ("ubunt".to_owned(), "u    ".to_owned())
+            split_progress("ubuntu", 20, 0.5),
+            ("ubu".to_owned(), "ntu".to_owned())
         );
-        // 0.34 * 10 = 3.4 rounds down, 0.36 * 10 = 3.6 rounds up.
-        assert_eq!(split_progress("ubuntu", 10, 0.34).0, "ubu");
-        assert_eq!(split_progress("ubuntu", 10, 0.36).0, "ubun");
-        // The fill can extend past the end of the text.
-        assert_eq!(
-            split_progress("ab", 6, 0.5),
-            ("ab ".to_owned(), "   ".to_owned())
-        );
+        // 0.4 * 6 = 2.4 rounds down, 0.6 * 6 = 3.6 rounds up.
+        assert_eq!(split_progress("ubuntu", 20, 0.4).0, "ub");
+        assert_eq!(split_progress("ubuntu", 20, 0.6).0, "ubun");
     }
 
     #[test]
     fn split_never_divides_wide_characters() {
-        // Each character is two columns wide. A fill of 4 columns ends between characters.
+        // Each character is two columns wide. Half of 6 columns ends inside "本", which
+        // rounds the covered part up to 4 columns.
         assert_eq!(
-            split_progress("日本語", 8, 0.5),
-            ("日本".to_owned(), "語  ".to_owned())
+            split_progress("日本語", 10, 0.5),
+            ("日本".to_owned(), "語".to_owned())
         );
-        // A fill of 3 columns ends inside "本", which rounds the fill up to 4 columns.
         assert_eq!(
             split_progress("日本語", 10, 0.3),
-            ("日本".to_owned(), "語    ".to_owned())
+            ("日".to_owned(), "本語".to_owned())
         );
     }
 
     #[test]
-    fn split_truncates_text_longer_than_width() {
+    fn split_cuts_text_longer_than_width() {
         assert_eq!(
             split_progress("abcdefghij", 4, 1.0),
             ("abcd".to_owned(), String::new())
@@ -475,10 +414,10 @@ mod tests {
             split_progress("abcdefghij", 4, 0.5),
             ("ab".to_owned(), "cd".to_owned())
         );
-        // A wide character that would cross the cell edge is replaced by padding.
+        // A wide character that would cross the cell edge is dropped.
         assert_eq!(
-            split_progress("ab日", 3, 0.0),
-            (String::new(), "ab ".to_owned())
+            split_progress("ab日", 3, 1.0),
+            ("ab".to_owned(), String::new())
         );
     }
 
@@ -497,48 +436,36 @@ mod tests {
         assert_eq!(split_progress("ab", 2, f32::NAN).1, "ab");
     }
 
-    #[test]
-    fn brighten_scales_rgb_and_keeps_named_colors() {
-        assert_eq!(brighten(DOWNLOADING_TINT), Color::Rgb(0x1d, 0x4b, 0x53));
-        assert_eq!(
-            brighten(Color::Rgb(0xff, 0x00, 0xc8)),
-            Color::Rgb(0xff, 0x00, 0xff)
-        );
-        assert_eq!(brighten(Color::DarkGray), Color::DarkGray);
+    fn underlined(buf: &Buffer, columns: std::ops::Range<u16>) -> Vec<bool> {
+        columns
+            .map(|x| buf[(x, 3)].modifier.contains(Modifier::UNDERLINED))
+            .collect()
     }
 
     #[test]
-    fn name_cell_background_follows_progress() {
-        let buf = render(&downloading_torrent(0.4), &HashSet::new(), None);
+    fn name_underline_follows_progress_without_background() {
+        let buf = render(&downloading_torrent(0.5), &HashSet::new(), None);
 
-        // Inner width 38 at x = 1: `%` is 10 wide, then a space, so Name spans x 12..39
-        // (27 columns), and 40% of 27 rounds to 11 filled columns.
-        let mut expected = vec![Color::Reset];
-        expected.extend([DOWNLOADING_TINT; 11]);
-        expected.extend([Color::Reset; 16]);
-        assert_eq!(row_backgrounds(&buf, 11..39), expected);
+        // Inner width 38 at x = 1: `%` is 10 wide, then a space, so Name starts at x 12.
+        // "ubuntu.iso" is 10 columns and 50% underlines its first 5.
+        let mut expected = vec![true; 5];
+        expected.extend([false; 10]);
+        assert_eq!(underlined(&buf, 12..27), expected);
+        assert_eq!(row_backgrounds(&buf, 11..39), vec![Color::Reset; 28]);
     }
 
     #[test]
-    fn highlighted_row_brightens_fill_and_keeps_highlight_elsewhere() {
-        let buf = render(&downloading_torrent(0.4), &HashSet::new(), Some(0));
-        let highlight = to_color(&default_config().colors.highlight_background);
+    fn highlighted_and_selected_rows_keep_their_background_across_the_name() {
+        let config = default_config();
 
-        // The highlight symbol takes 2 columns, so Name spans x 14..39 (25 columns), and 40%
-        // of 25 is 10 filled columns.
-        let mut expected = vec![highlight];
-        expected.extend([brighten(DOWNLOADING_TINT); 10]);
-        expected.extend([highlight; 15]);
-        assert_eq!(row_backgrounds(&buf, 13..39), expected);
-    }
+        let buf = render(&downloading_torrent(0.5), &HashSet::new(), Some(0));
+        let highlight = to_color(&config.colors.highlight_background);
+        // The highlight symbol shifts Name to x 14.
+        assert_eq!(row_backgrounds(&buf, 13..39), vec![highlight; 26]);
+        assert_eq!(underlined(&buf, 14..19), vec![true; 5]);
 
-    #[test]
-    fn selected_row_brightens_fill_and_keeps_selection_elsewhere() {
         let buf = render(&downloading_torrent(1.0), &HashSet::from([1]), None);
-        let selection = to_color(&default_config().colors.selected_background);
-
-        let mut expected = vec![selection];
-        expected.extend([brighten(DOWNLOADING_TINT); 27]);
-        assert_eq!(row_backgrounds(&buf, 11..39), expected);
+        let selection = to_color(&config.colors.selected_background);
+        assert_eq!(row_backgrounds(&buf, 11..39), vec![selection; 28]);
     }
 }

@@ -5,7 +5,7 @@ use transmission_rpc::types::{Torrent, TorrentGetField, TorrentStatus};
 /// Fields the app reads regardless of the configured columns: `id` for selection and
 /// RPC actions, `name` for filtering and renaming, `status` for tab matching, row
 /// colors, and toggling, `downloadDir` for the move prefill, `percentDone` for the
-/// progress fill behind the Name cell, and the rate and transfer totals for the status bar.
+/// progress underline under the name, and the rate and transfer totals for the status bar.
 const APP_FIELDS: [TorrentGetField; 9] = [
     TorrentGetField::Id,
     TorrentGetField::Name,
@@ -147,7 +147,7 @@ mod tests {
 
         // Listed independently of `APP_FIELDS`: selection and RPC actions need `id`,
         // filtering and rename need `name`, tab matching and row colors need `status`,
-        // move prefill needs `downloadDir`, the Name cell's progress fill needs
+        // move prefill needs `downloadDir`, the name's progress underline needs
         // `percentDone`, and the status bar needs the totals.
         for field in [
             TorrentGetField::Id,
