@@ -296,6 +296,7 @@ mod tests {
         buffer::Buffer,
         widgets::{StatefulWidget, TableState},
     };
+    use std::ops::Range;
 
     fn default_config() -> Config {
         assert_ok!(toml::from_str(include_str!("../../config/default.toml")))
@@ -329,7 +330,7 @@ mod tests {
         buf
     }
 
-    fn row_backgrounds(buf: &Buffer, columns: std::ops::Range<u16>) -> Vec<Color> {
+    fn row_backgrounds(buf: &Buffer, columns: Range<u16>) -> Vec<Color> {
         columns.map(|x| buf[(x, 3)].bg).collect()
     }
 
@@ -436,7 +437,7 @@ mod tests {
         assert_eq!(split_progress("ab", 2, f32::NAN).1, "ab");
     }
 
-    fn underlined(buf: &Buffer, columns: std::ops::Range<u16>) -> Vec<bool> {
+    fn underlined(buf: &Buffer, columns: Range<u16>) -> Vec<bool> {
         columns
             .map(|x| buf[(x, 3)].modifier.contains(Modifier::UNDERLINED))
             .collect()
