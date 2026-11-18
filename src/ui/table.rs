@@ -10,7 +10,7 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, Cell, Row, Table},
 };
-use std::collections::HashSet;
+use std::{collections::HashSet, iter::repeat_n};
 use transmission_rpc::types::{Torrent, TorrentGetField, TorrentStatus};
 
 /// Blank rows between the header and the first torrent row.
@@ -203,7 +203,7 @@ fn make_row(
     }
 }
 
-/// Builds a Name cell that underlines `percent_done` of the name.
+/// Builds a Name cell that underlines `percent_done` of the column.
 ///
 /// The underline takes the text color and draws no background, so the terminal's own
 /// background, including transparency, shows through.
@@ -215,43 +215,41 @@ fn name_cell(name: &str, width: u16, percent_done: f32) -> Cell<'static> {
     ]))
 }
 
-/// Cuts `text` to at most `width` display columns and splits it into the part covered by a
-/// `ratio` progress and the rest.
+/// Cuts `text` to at most `width` display columns, pads it with spaces to exactly `width`,
+/// and splits it into the part covered by a `ratio` progress and the rest.
 ///
-/// Progress is measured against the cut text's own width, so the underline stays under the
-/// name. Graphemes are filtered and measured as `Buffer::set_stringn` renders them, and text
-/// that overflows `width` is cut before the first grapheme that does not fit. A grapheme
-/// belongs to the covered part when its midpoint is inside it, so wide characters are never
-/// split; a wide character straddling the boundary rounds the covered part up.
+/// Progress is measured against the whole column, so equal progress ends at the same column
+/// on every row, however long the name. Graphemes are filtered and measured as
+/// `Buffer::set_stringn` renders them, and text that overflows `width` is cut before the
+/// first grapheme that does not fit. A grapheme belongs to the covered part when its
+/// midpoint is inside it, so wide characters are never split; a wide character straddling
+/// the boundary rounds the covered part up.
 fn split_progress(text: &str, width: u16, ratio: f32) -> (String, String) {
+    let covered_width = usize::from(filled_columns(width, ratio));
+    let width = usize::from(width);
     let span = Span::raw(text);
-    let mut graphemes = Vec::new();
-    let mut text_width = 0;
-    for grapheme in span.styled_graphemes(Style::default()) {
-        let grapheme_width = usize::from(grapheme.symbol.cell_width());
-        if text_width + grapheme_width > usize::from(width) {
-            break;
-        }
-        graphemes.push((grapheme.symbol, grapheme_width));
-        text_width += grapheme_width;
-    }
-
-    let covered_width = usize::from(filled_columns(
-        u16::try_from(text_width).unwrap_or(u16::MAX),
-        ratio,
-    ));
     let mut done = String::new();
     let mut rest = String::new();
     let mut column = 0;
-    for (symbol, grapheme_width) in graphemes {
+    for grapheme in span.styled_graphemes(Style::default()) {
+        let grapheme_width = usize::from(grapheme.symbol.cell_width());
+        if column + grapheme_width > width {
+            break;
+        }
         let part = if 2 * column + grapheme_width <= 2 * covered_width {
             &mut done
         } else {
             &mut rest
         };
-        part.push_str(symbol);
+        part.push_str(grapheme.symbol);
         column += grapheme_width;
     }
+
+    // `rest` is empty whenever the text ends before the boundary, so padding `done` first
+    // keeps the parts in order.
+    let done_padding = covered_width.saturating_sub(column);
+    done.extend(repeat_n(' ', done_padding));
+    rest.extend(repeat_n(' ', width - column - done_padding));
     (done, rest)
 }
 
@@ -373,22 +371,26 @@ mod tests {
     }
 
     #[test]
-    fn split_measures_progress_against_the_text() {
+    fn split_measures_progress_against_the_column() {
         assert_eq!(
-            split_progress("ubuntu", 20, 0.0),
-            (String::new(), "ubuntu".to_owned())
+            split_progress("ubuntu", 10, 0.0),
+            (String::new(), "ubuntu    ".to_owned())
         );
         assert_eq!(
-            split_progress("ubuntu", 20, 1.0),
-            ("ubuntu".to_owned(), String::new())
+            split_progress("ubuntu", 10, 1.0),
+            ("ubuntu    ".to_owned(), String::new())
         );
         assert_eq!(
-            split_progress("ubuntu", 20, 0.5),
-            ("ubu".to_owned(), "ntu".to_owned())
+            split_progress("ubuntu", 10, 0.5),
+            ("ubunt".to_owned(), "u    ".to_owned())
         );
-        // 0.4 * 6 = 2.4 rounds down, 0.6 * 6 = 3.6 rounds up.
-        assert_eq!(split_progress("ubuntu", 20, 0.4).0, "ub");
-        assert_eq!(split_progress("ubuntu", 20, 0.6).0, "ubun");
+        assert_eq!(
+            split_progress("ubuntu", 10, 0.8),
+            ("ubuntu  ".to_owned(), "  ".to_owned())
+        );
+        // 0.24 * 10 = 2.4 rounds down, 0.36 * 10 = 3.6 rounds up.
+        assert_eq!(split_progress("ubuntu", 10, 0.24).0, "ub");
+        assert_eq!(split_progress("ubuntu", 10, 0.36).0, "ubun");
     }
 
     #[test]
@@ -396,11 +398,11 @@ mod tests {
         // Each character is two columns wide. Half of 6 columns ends inside "本", which
         // rounds the covered part up to 4 columns.
         assert_eq!(
-            split_progress("日本語", 10, 0.5),
+            split_progress("日本語", 6, 0.5),
             ("日本".to_owned(), "語".to_owned())
         );
         assert_eq!(
-            split_progress("日本語", 10, 0.3),
+            split_progress("日本語", 6, 0.3),
             ("日".to_owned(), "本語".to_owned())
         );
     }
@@ -415,10 +417,10 @@ mod tests {
             split_progress("abcdefghij", 4, 0.5),
             ("ab".to_owned(), "cd".to_owned())
         );
-        // A wide character that would cross the cell edge is dropped.
+        // A wide character that would cross the cell edge is dropped and its column padded.
         assert_eq!(
             split_progress("ab日", 3, 1.0),
-            ("ab".to_owned(), String::new())
+            ("ab ".to_owned(), String::new())
         );
     }
 
@@ -447,12 +449,15 @@ mod tests {
     fn name_underline_follows_progress_without_background() {
         let buf = render(&downloading_torrent(0.5), &HashSet::new(), None);
 
-        // Inner width 38 at x = 1: `%` is 10 wide, then a space, so Name starts at x 12.
-        // "ubuntu.iso" is 10 columns and 50% underlines its first 5.
-        let mut expected = vec![true; 5];
-        expected.extend([false; 10]);
-        assert_eq!(underlined(&buf, 12..27), expected);
+        // Inner width 38 at x = 1: `%` is 10 wide, then a space, so Name spans x 12..39.
+        // 50% of its 27 columns rounds to 14, past the end of "ubuntu.iso".
+        let mut expected = vec![true; 14];
+        expected.extend([false; 13]);
+        assert_eq!(underlined(&buf, 12..39), expected);
         assert_eq!(row_backgrounds(&buf, 11..39), vec![Color::Reset; 28]);
+
+        let buf = render(&downloading_torrent(1.0), &HashSet::new(), None);
+        assert_eq!(underlined(&buf, 12..39), vec![true; 27]);
     }
 
     #[test]
@@ -461,9 +466,11 @@ mod tests {
 
         let buf = render(&downloading_torrent(0.5), &HashSet::new(), Some(0));
         let highlight = to_color(&config.colors.highlight_background);
-        // The highlight symbol shifts Name to x 14.
+        // The highlight symbol shifts Name to x 14..39, and 50% of 25 columns rounds to 13.
         assert_eq!(row_backgrounds(&buf, 13..39), vec![highlight; 26]);
-        assert_eq!(underlined(&buf, 14..19), vec![true; 5]);
+        let mut expected = vec![true; 13];
+        expected.extend([false; 12]);
+        assert_eq!(underlined(&buf, 14..39), expected);
 
         let buf = render(&downloading_torrent(1.0), &HashSet::from([1]), None);
         let selection = to_color(&config.colors.selected_background);
