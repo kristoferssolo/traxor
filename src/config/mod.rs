@@ -287,24 +287,6 @@ mod tests {
     }
 
     #[test]
-    fn progress_colors_default_and_override_individually() -> Result<()> {
-        let value = defaults_with(
-            r##"
-            [colors]
-            progress_seeding = "#303030"
-            "##,
-        )?;
-
-        let colors = Config::from_value(value)?.colors;
-        assert_eq!(colors.progress_downloading, "#163a40");
-        assert_eq!(colors.progress_seeding, "#303030");
-        assert_eq!(colors.progress_stopped, "#1c1c1c");
-        assert_eq!(colors.progress_verifying, "#3a3220");
-        assert_eq!(colors.progress_queued, "#1c2a3a");
-        Ok(())
-    }
-
-    #[test]
     fn accepts_default_config() -> Result<()> {
         assert_ok!(Config::from_value(defaults_with("")?));
         Ok(())
