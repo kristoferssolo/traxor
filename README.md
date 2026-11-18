@@ -120,7 +120,7 @@ status_seeding = "white"
 status_stopped = "dark_gray"
 ```
 
-Each row's name is underlined from the left in proportion to the torrent's progress, in the row's text color. No background is drawn, so terminal transparency is kept.
+Each row's Name column is underlined from the left in proportion to the torrent's progress, in the row's text color, so equal progress lines up across rows. No background is drawn, so terminal transparency is kept.
 
 ### Time
 
