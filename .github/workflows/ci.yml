@@ -18,18 +18,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        recipe: [fmt-check, clippy, test, docs]
+        recipe: [fmt-check, clippy, test, doc]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy, rustfmt
+      - name: Install Rust toolchain from rust-toolchain.toml
+        run: rustup toolchain install
       - name: Install just and nextest
-        uses: taiki-e/install-action@v2
+        uses: jdx/mise-action@v5
         with:
-          tool: just@1.59.0,cargo-nextest@0.9.152
+          version: 2026.11.14
+          install_args: --locked just cargo-nextest
       - name: Populate target directory from cache
         uses: Swatinem/rust-cache@v2
       - name: Verify Cargo.lock is up to date

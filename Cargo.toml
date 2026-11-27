@@ -8,6 +8,7 @@ license = "MIT OR Apache-2.0"
 edition = "2024"
 keywords = ["torrent", "transmission", "tui", "terminal"]
 categories = ["command-line-utilities"]
+exclude = [".github/", ".gitignore", "justfile", "clippy.toml", "mise.toml", "mise.lock", "tests/", "assets/"]
 
 [dependencies]
 chrono = "0.4"
