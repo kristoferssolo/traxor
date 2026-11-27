@@ -49,7 +49,8 @@ impl TabConfig {
 
     /// Parse column strings into `TorrentGetField` variants.
     ///
-    /// Unknown columns are skipped; [`Self::validate`] reports them.
+    /// Unknown columns are skipped; [`Self::validate`] reports them, and
+    /// [`crate::app::App::new`] rejects them.
     #[must_use]
     pub fn fields(&self) -> Vec<TorrentGetField> {
         self.columns
@@ -60,7 +61,8 @@ impl TabConfig {
 
     /// Parse status strings into `TorrentStatus` variants.
     ///
-    /// Unknown statuses are skipped; [`Self::validate`] reports them.
+    /// Unknown statuses are skipped; [`Self::validate`] reports them, and
+    /// [`crate::app::App::new`] rejects them.
     #[must_use]
     pub fn statuses(&self) -> Vec<TorrentStatus> {
         self.statuses

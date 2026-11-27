@@ -115,7 +115,7 @@ mod tests {
         app::{App, sort::SortDirection},
         config::Config,
     };
-    use claims::{assert_none, assert_ok, assert_some, assert_some_eq};
+    use claims::{assert_err, assert_none, assert_ok, assert_some, assert_some_eq};
 
     fn default_config() -> Config {
         assert_ok!(toml::from_str(include_str!("../../config/default.toml")))
@@ -133,6 +133,20 @@ mod tests {
         for field in tabs.iter().flat_map(Tab::fields) {
             assert!(fields.contains(field), "missing {}", field.to_str());
         }
+    }
+
+    #[test]
+    fn app_rejects_a_tab_with_an_unknown_status() {
+        let mut config = default_config();
+        config.tabs = vec![TabConfig {
+            name: "Seeding".to_owned(),
+            columns: vec!["name".to_owned()],
+            statuses: vec!["seedng".to_owned()],
+        }];
+
+        let error = assert_err!(App::new(config));
+
+        assert!(error.to_string().contains("seedng"), "{error}");
     }
 
     #[test]

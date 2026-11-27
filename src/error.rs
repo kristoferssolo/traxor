@@ -9,6 +9,9 @@ pub enum TraxorError {
     #[error("Configuration error: {0}")]
     RpcConfig(#[from] RpcConfigError),
 
+    #[error("Configuration error: {0}")]
+    Config(String),
+
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 }

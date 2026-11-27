@@ -19,7 +19,7 @@ use crate::{
         types::{DeleteTarget, Selected},
     },
     config::Config,
-    error::Result,
+    error::{Result, TraxorError},
 };
 use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
 use ratatui::{layout::Rect, widgets::TableState};
@@ -113,8 +113,13 @@ impl App {
     ///
     /// # Errors
     ///
-    /// Returns an error if the RPC URL or credentials are invalid.
+    /// Returns an error if the RPC URL or credentials are invalid, or if a tab names an
+    /// unknown column or status.
     pub fn new(config: Config) -> Result<Self> {
+        // `Config::tabs` is public, so tabs set after deserialization are checked here
+        for (idx, tab) in config.tabs.iter().enumerate() {
+            tab.validate(idx).map_err(TraxorError::Config)?;
+        }
         let tabs: Vec<_> = config.tabs.iter().cloned().map(Tab::new).collect();
         let mut torrents = Torrents::new(&config.rpc)?;
         torrents.set_fields(Some(tab::required_fields(&tabs)));
