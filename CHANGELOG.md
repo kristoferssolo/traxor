@@ -1,0 +1,112 @@
+# Changelog
+
+## Unreleased
+
+### Features
+
+- Add popup ([a8c1602](https://github.com/kristoferssolo/traxor/commit/a8c160222b5efd9fdc736b3af71f450004feb995))
+- **popup:** Position popup ([f347768](https://github.com/kristoferssolo/traxor/commit/f347768aacaf6f5f176d7ad1b0884f8790bb4264))
+- **popup:** Close popup on any key ([b9f4aa1](https://github.com/kristoferssolo/traxor/commit/b9f4aa134329d97d3790e994616064c07757e636))
+- **torrent:** Add torrent toggle ([c199325](https://github.com/kristoferssolo/traxor/commit/c199325d5055284e7d68130829be650ab0163ddf))
+- **toggle:** Add toggle all ([61675c3](https://github.com/kristoferssolo/traxor/commit/61675c34229e60301f1086559b01d259447c3e5c))
+- Add pause/start all torrents ([c3f2b91](https://github.com/kristoferssolo/traxor/commit/c3f2b9113a3950ff2cd085967f9a5dff303a26de))
+- Add delete torrent ([be6e5e1](https://github.com/kristoferssolo/traxor/commit/be6e5e1c4ffa603ad31b1d927f14a978312cd808))
+- Add move ([07eb657](https://github.com/kristoferssolo/traxor/commit/07eb657b95bc5aede851887916c47290ccd5c55a))
+- Add rename ([f3faf43](https://github.com/kristoferssolo/traxor/commit/f3faf432ca996d28a41b7ea034ebc1e5d8090d2f))
+- Display blank `0` ([df62c47](https://github.com/kristoferssolo/traxor/commit/df62c476c7475dfd2ca99a5c0b803eba6a8982d5))
+- Add multiple torrent select option ([e1f6e1f](https://github.com/kristoferssolo/traxor/commit/e1f6e1fd726a40842fae8c57d04de207fc147957))
+- Setup logger ([d1d6157](https://github.com/kristoferssolo/traxor/commit/d1d61577d69ca096b8a6e8285471a557e5eeff33))
+- Delete multiple torrents at once ([747f3ee](https://github.com/kristoferssolo/traxor/commit/747f3ee52777d5c214fd129cabefdd1f41f3d187))
+- Add `Selected` enum ([b7d9a0d](https://github.com/kristoferssolo/traxor/commit/b7d9a0d85d936289e0982372be1d2c70353e1ce5))
+- Impl delete ([db58f28](https://github.com/kristoferssolo/traxor/commit/db58f284ec067e622211695cf532d84aeee03a47))
+- **help:** Add help popup ([67a2250](https://github.com/kristoferssolo/traxor/commit/67a22508b1575619db272cd3af1ed0883636ef13))
+- Add logger env ([5acf165](https://github.com/kristoferssolo/traxor/commit/5acf16584ee7e6d003f32fb659c56caa1e2122d7))
+- **config:** Add config file ([ea01a06](https://github.com/kristoferssolo/traxor/commit/ea01a060155aa6a23ff0c6e8a52241cfeb6b0599))
+- **move:** Add move functionality ([239767c](https://github.com/kristoferssolo/traxor/commit/239767c515b051ed1f5a94866463bb1ef36456e1))
+- **move:** Pre-populate path ([38f37dd](https://github.com/kristoferssolo/traxor/commit/38f37dd4406fee65eebcfebe26e7d102f024f59c))
+- **move:** Make completions case agnostic ([3f83ff6](https://github.com/kristoferssolo/traxor/commit/3f83ff693eac4255a5ace7bd7a8c77e16d569563))
+- Use `filecaster` crate ([8f4d925](https://github.com/kristoferssolo/traxor/commit/8f4d9258d909252ed39db2e77267e1a5d578ecd6))
+- Improve event loop ([5b61eb7](https://github.com/kristoferssolo/traxor/commit/5b61eb7a841e36730c47da93f4e4e11c5cdc58d4))
+- Add torrent rename functionality ([6acc9e1](https://github.com/kristoferssolo/traxor/commit/6acc9e10f0ebdd123c5b7f727d84d723ef6328b8))
+- Add confirmation dialog before deleting torrents ([a01bb22](https://github.com/kristoferssolo/traxor/commit/a01bb2263d26353c07eec0cc013d1e051fb967a2))
+- Add status bar with keybind hints and torrent count ([c80c952](https://github.com/kristoferssolo/traxor/commit/c80c952b3c6b645838a93ac05c5fc06b5ebe2746))
+- Add status-based row colors for torrents ([f3b0644](https://github.com/kristoferssolo/traxor/commit/f3b0644063e79fa6ed63c04003aa66ba61c57eca))
+- Improve help page layout and organization ([cc67676](https://github.com/kristoferssolo/traxor/commit/cc676767e3b3286215f8211b6755ad39fae5bc5d))
+- Add configurable custom tabs with user-defined columns ([c3870d8](https://github.com/kristoferssolo/traxor/commit/c3870d8b8a6c404d2e36916e8d4f8e4c3645ebe2))
+- Add more default tabs (Seeding, Queued) with focused columns ([ffedf8d](https://github.com/kristoferssolo/traxor/commit/ffedf8de2edc761c6f0addf69ade7c8d1b1c59d9))
+- Add keybinds for tabs 1-10 (0 for 10th) ([ae45a62](https://github.com/kristoferssolo/traxor/commit/ae45a62e6457b40acef010bbc4a2867ee76fdb39))
+- Add live fuzzy search/filter for torrents ([52e409a](https://github.com/kristoferssolo/traxor/commit/52e409a182ca788fe9809f121f57529a3f510ac5))
+- **tabs:** Add status-based tab filtering ([4d14c35](https://github.com/kristoferssolo/traxor/commit/4d14c35ee1911f46fc163309889e2bc70df74dc2))
+- **config:** Add configurable time formatting ([700c4c9](https://github.com/kristoferssolo/traxor/commit/700c4c91b1b92329879e2839ca770f2e3d3303c2))
+- **move:** Add directory-only autocomplete suggestions ([bcb9bc1](https://github.com/kristoferssolo/traxor/commit/bcb9bc17cebaabc1437d67f13dde86c52af426f5))
+- **config:** Show download path in overview ([864a29c](https://github.com/kristoferssolo/traxor/commit/864a29cfc10a6ab68a4b8302d13bd84d71f7bd72))
+- **ui:** Handle mouse clicks and scrolling (#10) ([315aeba](https://github.com/kristoferssolo/traxor/commit/315aeba36b8f7de57e83e5060bf020ef838568bb))
+- **ui:** Fill name cell by torrent progress (#19) ([d43b8a7](https://github.com/kristoferssolo/traxor/commit/d43b8a77ff7439b975a1ff3bbcf87af483859199))
+- **input:** Add cursor movement and editing keys (#11) ([d9a2d7a](https://github.com/kristoferssolo/traxor/commit/d9a2d7aed19ac9ff4644ce23fce15e961df890a9))
+- **app:** Add navigation and selection shortcuts (#15) ([913d4d2](https://github.com/kristoferssolo/traxor/commit/913d4d22dd2f5703c883e2794fa7935fb9c64850))
+- **ui:** Replace help popup with full-screen help page (#18) ([b790254](https://github.com/kristoferssolo/traxor/commit/b790254d4a3683e080266a3d40f0fbef9cb5bcfc))
+- Sort torrents by column (#20) ([2a38343](https://github.com/kristoferssolo/traxor/commit/2a38343fef30efc67cfe6667b10e1074927db787))
+- **config:** Configure rpc url and basic auth (#8) ([8bf9481](https://github.com/kristoferssolo/traxor/commit/8bf9481abf5863109915276fa9bec4c06ddea32a))
+- **ui:** Show when the daemon is unreachable (#17) ([7122af6](https://github.com/kristoferssolo/traxor/commit/7122af66615ba75f2d9486d5cdb03c96e040b10a))
+
+### Bug fixes
+
+- Tests ([e5c3b6b](https://github.com/kristoferssolo/traxor/commit/e5c3b6b96cbc5f69564512f7fa4c1b87ab7a6927))
+- **move:** Path pre-population ([483f56d](https://github.com/kristoferssolo/traxor/commit/483f56d0306700f7f76ef09127b00c7688364f1a))
+- **log:** Decrease log size ([c5a059c](https://github.com/kristoferssolo/traxor/commit/c5a059c2c9e79089799045e542be6514911254b9))
+- Ci ([d825e97](https://github.com/kristoferssolo/traxor/commit/d825e97ba08b0be8e346b2f0c33cb8dd382ac06e))
+- Move torrent works with highlighted selection ([469fe45](https://github.com/kristoferssolo/traxor/commit/469fe45904ae7a16910eb4247fb5b8af4484c1fe))
+- Prevent panic when switching to non-existent tab ([ed1cff7](https://github.com/kristoferssolo/traxor/commit/ed1cff722adb1f886b13eded3a11db739c51f358))
+- Make default tabs truthful and more useful ([bb65209](https://github.com/kristoferssolo/traxor/commit/bb65209565fc2d41d53dda6849bf2195307ec81c))
+- Use filtered rows for selection actions ([4ac5fd4](https://github.com/kristoferssolo/traxor/commit/4ac5fd45ccf3f226ca47fd00e541b2fded0cd179))
+- **ui:** Make torrent table use flexible text columns ([e31dfe3](https://github.com/kristoferssolo/traxor/commit/e31dfe3e9d6f3fbaf58cf4e1f6982b65007b99ae))
+- **config:** Validate tab and time settings on load ([ed6d0da](https://github.com/kristoferssolo/traxor/commit/ed6d0daeab12195c9108d496657b8332ee439b8d))
+- **ui:** Style selected torrents as full rows ([c447234](https://github.com/kristoferssolo/traxor/commit/c447234b8e4076f0df521eb0e9c440af0dbabf0d))
+- **move:** Suggest symlinked directories for move completion ([4077330](https://github.com/kristoferssolo/traxor/commit/407733032fa29ad7939c9c33f4332c3b60e977fe))
+- **input:** Accept enter for delete confirmation ([7e54e70](https://github.com/kristoferssolo/traxor/commit/7e54e701917ae988ee200caab27144fb3d7e0ba4))
+- **tui:** Restore terminal on stderr (#2) ([36a2a6f](https://github.com/kristoferssolo/traxor/commit/36a2a6ff8928b286e1bd9bc6a3b2bfc1dd2b78ba))
+- **ui:** Place input cursor by display width and scroll long input (#6) ([0df217a](https://github.com/kristoferssolo/traxor/commit/0df217a37a7d21f8be75ddc3124fdc3ba174382d))
+- Keep running when an action fails (#14) ([6d1bec5](https://github.com/kristoferssolo/traxor/commit/6d1bec5afff4b3e8a8972cd700dee9e0ea942440))
+- Delete confirmed torrents and keep highlight on the same torrent (#13) ([c584b59](https://github.com/kristoferssolo/traxor/commit/c584b5942760b6db86b938b09d5730078c0c7ea9))
+- Refresh torrents without blocking the UI (#16) ([b29d0bb](https://github.com/kristoferssolo/traxor/commit/b29d0bb234924188610e3f42e869738502cf77ae))
+- **ui:** Underline name progress instead of filling its background (#24) ([c547dbf](https://github.com/kristoferssolo/traxor/commit/c547dbfc27c4c6ae042eb7a115f9433fd10231f1))
+- **ui:** Measure name progress underline against the whole column (#25) ([b2cf9be](https://github.com/kristoferssolo/traxor/commit/b2cf9be1fb9810d9283994e9425c80a2e62fc80f))
+
+### Performance
+
+- **app:** Request only torrent fields the app uses (#4) ([a6931d8](https://github.com/kristoferssolo/traxor/commit/a6931d8b918182bc2ecf31f9dcdea8e88466c895))
+
+### Refactoring
+
+- **toggle:** Add `toggle` method to `Torrents` ([95a6d34](https://github.com/kristoferssolo/traxor/commit/95a6d3483a847cfffdea476d92ff2dc39c5cb997))
+- **handler:** Add `Action` enum ([56d637d](https://github.com/kristoferssolo/traxor/commit/56d637d1ed6c13874dce55dcc8b5d75b3a1129a8))
+- Improve rust idiomatic usage and error handling ([f4113b2](https://github.com/kristoferssolo/traxor/commit/f4113b2158fba63ad54972ef3e9e6cef8a32ae00))
+- **utils:** Update NetSpeed and FileSize structs ([fffdd24](https://github.com/kristoferssolo/traxor/commit/fffdd249c9d16f44f3362d41068d27109068d68d))
+- **utils:** Use macros ([4f8dfb4](https://github.com/kristoferssolo/traxor/commit/4f8dfb40e04cc7397157e973c8b526b7118b164c))
+- Use color-eyre ([0c0e8b1](https://github.com/kristoferssolo/traxor/commit/0c0e8b17fb261e3c5dd3dabe4b951f0519c47610))
+- **config:** Remove repetitive code ([45a5642](https://github.com/kristoferssolo/traxor/commit/45a5642deca9aede5067adcce3a1538446e625a4))
+- Use derive macro ([565b456](https://github.com/kristoferssolo/traxor/commit/565b4564cda7dda9c7fd372759a1090fdb2d7b0d))
+- **units:** Use derive macro ([656cc20](https://github.com/kristoferssolo/traxor/commit/656cc2053002cef2553a23557e4212e842f987dc))
+- **units:** Remove macros ([f71a058](https://github.com/kristoferssolo/traxor/commit/f71a058f258969f66fda8497aa43b9d6e0eb0a69))
+- **units:** Remove macros ([62b8d35](https://github.com/kristoferssolo/traxor/commit/62b8d35f92bef93b6dd5a6d806a570cb81f5cb8c))
+- **units:** Implement Formatter trait ([e27500e](https://github.com/kristoferssolo/traxor/commit/e27500ef64ec578e283cc097fa38dade4203254b))
+- **units:** Update format functions ([6378a7f](https://github.com/kristoferssolo/traxor/commit/6378a7f049aa43dd2cbce01a55ef2716fde590e3))
+- **move:** DRY ([9a25ffc](https://github.com/kristoferssolo/traxor/commit/9a25ffc6301cfe81188db17791d33d5468feb90b))
+- **merge:** Use existing `merge` create ([ae1f5d2](https://github.com/kristoferssolo/traxor/commit/ae1f5d2a981e3b18e6450fd4846925de7a65fd4f))
+- **config:** Simplify config reading ([8f68209](https://github.com/kristoferssolo/traxor/commit/8f68209bfe9b0ad471653c1b13584c40132037b7))
+- **clippy:** Fix clippy warning ([8a8691c](https://github.com/kristoferssolo/traxor/commit/8a8691c1c1e415827054a97c76039594daaf8d43))
+- Update key handler ([064d28b](https://github.com/kristoferssolo/traxor/commit/064d28bd397f6e8476a6010ac33871d975fb851b))
+- Add custom error type ([f482d08](https://github.com/kristoferssolo/traxor/commit/f482d082346553f546dd71e52365fe7fe78c9dbd))
+- Improve idiomatic Rust patterns and optimize RPC calls ([704d2b3](https://github.com/kristoferssolo/traxor/commit/704d2b3760e8200ba55ba98294c02585599792cd))
+- Use config file as single source of truth for defaults ([4607dbe](https://github.com/kristoferssolo/traxor/commit/4607dbe85bb5666c1d0966dbb99b6bffaaea5d9b))
+- Update UI ([e818715](https://github.com/kristoferssolo/traxor/commit/e818715dd15cf44a842475f7ceb0eee542d0e855))
+- Remove unused code (#3) ([274a346](https://github.com/kristoferssolo/traxor/commit/274a3461623d2d089183548329582ae5a11cd271))
+- **config:** Parse keybinds once at config load (#9) ([64805c9](https://github.com/kristoferssolo/traxor/commit/64805c944800f2c096d95bd2118113ca926e0ca7))
+
+### Documentation
+
+- Add example images ([d58b9e5](https://github.com/kristoferssolo/traxor/commit/d58b9e5289f69dbfa6c023c70fc22d3af86773be))
+- Replace placeholder and template doc comments (#7) ([04c5ba9](https://github.com/kristoferssolo/traxor/commit/04c5ba9b6daf21f2c58e3d108c4101dbedbf6344))
+
+**Full changelog:** https://github.com/kristoferssolo/traxor/compare/v0.2.0...HEAD
+

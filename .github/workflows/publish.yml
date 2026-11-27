@@ -162,9 +162,10 @@ jobs:
         with:
           fetch-depth: 0
       - name: Install git-cliff
-        uses: taiki-e/install-action@v2
+        uses: jdx/mise-action@v5
         with:
-          tool: git-cliff@2.14.2
+          version: 2026.11.14
+          install_args: --locked git-cliff
       - name: Generate release notes
         env:
           NOTES_PATH: ${{ runner.temp }}/release-notes.md
@@ -173,11 +174,11 @@ jobs:
           set -euo pipefail
 
           # A manual run can release a tag that does not exist yet
-          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
-              git checkout -q --detach "$TAG"
-              git cliff --current --output "$NOTES_PATH"
+          if git rev-parse --quiet --verify "refs/tags/$TAG" >/dev/null; then
+              git checkout --quiet --detach "$TAG"
+              git cliff --current --strip all --output "$NOTES_PATH"
           else
-              git cliff --unreleased --tag "$TAG" --output "$NOTES_PATH"
+              git cliff --unreleased --tag "$TAG" --strip all --output "$NOTES_PATH"
           fi
       - name: Download traxor binaries
         uses: actions/download-artifact@v8
