@@ -64,7 +64,7 @@ impl Tab {
     ///
     /// Cycles from daemon order through each column in order, then back to daemon order.
     pub fn cycle_sort(&mut self) {
-        let column = self.sort.map_or(0, |sort| sort.column + 1);
+        let column = self.sort.map_or(0, |sort| sort.column.saturating_add(1));
         self.sort = self
             .fields
             .get(column)

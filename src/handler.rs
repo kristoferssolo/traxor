@@ -118,7 +118,7 @@ pub async fn update(app: &mut App, action: Action) -> Result<()> {
         Action::LastTorrent => app.last(),
         Action::PageDown => app.page_down(),
         Action::PageUp => app.page_up(),
-        Action::SwitchTab(x) => app.switch_tab(x as usize),
+        Action::SwitchTab(x) => app.switch_tab(usize::from(x)),
         Action::ToggleHelp => app.toggle_help(),
         Action::ToggleTorrent => app.toggle_torrents().await?,
         Action::ToggleAll => app.torrents.toggle_all().await?,
@@ -175,7 +175,7 @@ fn click(app: &mut App, position: Position) {
     ) {
         // Highlight the torrent that was displayed in that row, wherever it is now. Ignore the
         // click if a refresh since the last render removed it.
-        if let Some(id) = areas.table_rows[row] {
+        if let Some(id) = areas.table_rows.get(row).copied().flatten() {
             app.highlight_torrent(id);
         }
         return;

@@ -97,12 +97,13 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
     // Stats keep their width; the hints or error get the rest of the line.
     let available_width = usize::from(area.width.saturating_sub(2));
     let right_width = spans_width(&right_spans);
-    let stats_fit = LEADING_SPACE + MIN_GAP + right_width <= available_width;
-    let left_max_width = if stats_fit {
-        available_width - LEADING_SPACE - MIN_GAP - right_width
-    } else {
-        available_width.saturating_sub(LEADING_SPACE)
-    };
+    let room_beside_stats = available_width
+        .checked_sub(LEADING_SPACE)
+        .and_then(|width| width.checked_sub(MIN_GAP))
+        .and_then(|width| width.checked_sub(right_width));
+    let stats_fit = room_beside_stats.is_some();
+    let left_max_width =
+        room_beside_stats.unwrap_or_else(|| available_width.saturating_sub(LEADING_SPACE));
     // Errors take the place of the keybind hints. While the daemon is unreachable the
     // `offline` marker stays until a refresh succeeds; a newer action error replaces the
     // connection error after it until the next key press.
@@ -127,7 +128,10 @@ pub fn render(frame: &mut Frame, app: &App, area: Rect) {
     spans.extend(left_spans);
 
     if stats_fit {
-        let padding = available_width - LEADING_SPACE - left_width - right_width;
+        let padding = available_width
+            .saturating_sub(LEADING_SPACE)
+            .saturating_sub(left_width)
+            .saturating_sub(right_width);
         spans.push(Span::raw(" ".repeat(padding)));
         spans.extend(right_spans);
     }
@@ -182,20 +186,18 @@ fn truncate_spans(spans: Vec<Span<'_>>, max_width: usize) -> Vec<Span<'_>> {
 
     let mut truncated = Vec::new();
     for span in spans {
-        let span_width = rendered_width(&span);
-        if span_width <= remaining {
-            remaining -= span_width;
+        if let Some(left) = remaining.checked_sub(rendered_width(&span)) {
+            remaining = left;
             truncated.push(span);
             continue;
         }
 
         let mut content = String::new();
         for grapheme in span.styled_graphemes(Style::default()) {
-            let symbol_width = grapheme_width(grapheme.symbol);
-            if symbol_width > remaining {
+            let Some(left) = remaining.checked_sub(grapheme_width(grapheme.symbol)) else {
                 break;
-            }
-            remaining -= symbol_width;
+            };
+            remaining = left;
             content.push_str(grapheme.symbol);
         }
         truncated.push(Span::styled(content, span.style));

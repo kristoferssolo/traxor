@@ -84,18 +84,23 @@ impl Display for UnitDisplay<'_> {
         #[allow(clippy::cast_precision_loss)]
         let value = self.unit.0 as f64;
 
+        let Some((first, larger)) = self.units.split_first() else {
+            return write!(f, "{}", self.unit.0);
+        };
         if value < THRESHOLD {
-            return write!(f, "{} {}", self.unit.0, self.units[0]);
+            return write!(f, "{} {first}", self.unit.0);
         }
 
         let mut size = value;
-        let mut unit_index = 0;
-
-        while size >= THRESHOLD && unit_index < self.units.len() - 1 {
+        let mut unit = first;
+        for next in larger {
+            if size < THRESHOLD {
+                break;
+            }
             size /= THRESHOLD;
-            unit_index += 1;
+            unit = next;
         }
-        write!(f, "{:.2} {}", size, self.units[unit_index])
+        write!(f, "{size:.2} {unit}")
     }
 }
 

@@ -2,7 +2,7 @@
 
 use chrono::{DateTime, Utc};
 use std::cmp::Ordering;
-use transmission_rpc::types::{Torrent, TorrentGetField};
+use transmission_rpc::types::{Priority, Torrent, TorrentGetField};
 
 /// Transmission's `TR_RATIO_INF`, reported when a torrent uploaded without downloading.
 const RATIO_INFINITE: f32 = -2.0;
@@ -143,9 +143,13 @@ impl SortKey {
         match field {
             TorrentGetField::ActivityDate => date(torrent.activity_date),
             TorrentGetField::AddedDate => date(torrent.added_date),
-            TorrentGetField::BandwidthPriority => {
-                torrent.bandwidth_priority.map(|v| Self::Integer(v as i128))
-            }
+            TorrentGetField::BandwidthPriority => torrent.bandwidth_priority.map(|priority| {
+                Self::Integer(match priority {
+                    Priority::Low => -1,
+                    Priority::Normal => 0,
+                    Priority::High => 1,
+                })
+            }),
             TorrentGetField::Comment => text(torrent.comment.as_deref()),
             TorrentGetField::CorruptEver => integer(torrent.corrupt_ever),
             TorrentGetField::Creator => text(torrent.creator.as_deref()),

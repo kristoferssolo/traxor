@@ -56,7 +56,10 @@ fn render_text_input(f: &mut Frame, app: &App) {
     }
 
     if !text_area.is_empty() {
-        f.set_cursor_position(Position::new(text_area.x + view.cursor_column, text_area.y));
+        f.set_cursor_position(Position::new(
+            text_area.x.saturating_add(view.cursor_column),
+            text_area.y,
+        ));
     }
 }
 
@@ -101,7 +104,7 @@ fn render_completion_popup(f: &mut Frame, app: &App, input_area: Rect) {
         input_area.x,
         input_area.bottom(),
         input_area.width,
-        u16::try_from(visible_count + 2).unwrap_or(available_height),
+        u16::try_from(visible_count.saturating_add(2)).unwrap_or(available_height),
     );
     let block = Block::default()
         .borders(Borders::ALL)
@@ -157,7 +160,10 @@ fn render_filter_input(f: &mut Frame, app: &App) {
 
     if text_area.width > prompt_width && text_area.height > 0 {
         f.set_cursor_position(Position::new(
-            text_area.x + prompt_width + view.cursor_column,
+            text_area
+                .x
+                .saturating_add(prompt_width)
+                .saturating_add(view.cursor_column),
             text_area.y,
         ));
     }
@@ -185,36 +191,38 @@ struct InputView<'a> {
 fn input_view(text: &str, cursor: usize, width: u16) -> InputView<'_> {
     let width = usize::from(width);
     let cursor = grapheme_start(text, cursor);
-    let cursor_cell = text[cursor..]
+    let (before, after) = text.split_at_checked(cursor).unwrap_or((text, ""));
+    let cursor_cell = after
         .graphemes(true)
         .next()
         .map_or(1, |grapheme| grapheme_width(grapheme).max(1));
     let prefix_budget = width.saturating_sub(cursor_cell);
 
     let mut start = cursor;
-    let mut cursor_column = 0;
-    for (index, grapheme) in text[..cursor].grapheme_indices(true).rev() {
-        let grapheme_width = grapheme_width(grapheme);
-        if cursor_column + grapheme_width > prefix_budget {
+    let mut cursor_column: usize = 0;
+    for (index, grapheme) in before.grapheme_indices(true).rev() {
+        let column = cursor_column.saturating_add(grapheme_width(grapheme));
+        if column > prefix_budget {
             break;
         }
-        cursor_column += grapheme_width;
+        cursor_column = column;
         start = index;
     }
 
-    let mut end = start;
-    let mut used = 0;
-    for (index, grapheme) in text[start..].grapheme_indices(true) {
-        let grapheme_width = grapheme_width(grapheme);
-        if used + grapheme_width > width {
+    let from_start = text.get(start..).unwrap_or_default();
+    let mut end = 0;
+    let mut used: usize = 0;
+    for (index, grapheme) in from_start.grapheme_indices(true) {
+        let next_used = used.saturating_add(grapheme_width(grapheme));
+        if next_used > width {
             break;
         }
-        used += grapheme_width;
-        end = start + index + grapheme.len();
+        used = next_used;
+        end = index.saturating_add(grapheme.len());
     }
 
     InputView {
-        visible: &text[start..end],
+        visible: from_start.get(..end).unwrap_or_default(),
         cursor_column: u16::try_from(cursor_column).unwrap_or(u16::MAX),
     }
 }
@@ -259,7 +267,10 @@ fn render_confirm_delete(f: &mut Frame, target: &DeleteTarget) {
         .map(Line::from)
         .collect::<Vec<_>>();
     if count > MAX_DELETE_NAMES {
-        lines.push(Line::from(format!("+{} more", count - MAX_DELETE_NAMES)));
+        lines.push(Line::from(format!(
+            "+{} more",
+            count.saturating_sub(MAX_DELETE_NAMES)
+        )));
     }
     lines.push(Line::from("[y]es / [n]o"));
 
@@ -270,16 +281,16 @@ fn render_confirm_delete(f: &mut Frame, target: &DeleteTarget) {
         .max()
         .unwrap_or_default();
     let size = f.area();
-    let dialog_width = u16::try_from(content_width + 4)
+    let dialog_width = u16::try_from(content_width.saturating_add(4))
         .unwrap_or(u16::MAX)
         .max(40)
         .min(size.width);
-    let dialog_height = u16::try_from(lines.len() + 2)
+    let dialog_height = u16::try_from(lines.len().saturating_add(2))
         .unwrap_or(u16::MAX)
         .min(size.height);
     let dialog_area = Rect::new(
-        (size.width - dialog_width) / 2,
-        (size.height - dialog_height) / 2,
+        size.width.saturating_sub(dialog_width) / 2,
+        size.height.saturating_sub(dialog_height) / 2,
         dialog_width,
         dialog_height,
     );

@@ -230,26 +230,32 @@ fn split_progress(text: &str, width: u16, ratio: f32) -> (String, String) {
     let span = Span::raw(text);
     let mut done = String::new();
     let mut rest = String::new();
-    let mut column = 0;
+    let mut column: usize = 0;
     for grapheme in span.styled_graphemes(Style::default()) {
         let grapheme_width = usize::from(grapheme.symbol.cell_width());
-        if column + grapheme_width > width {
+        let next_column = column.saturating_add(grapheme_width);
+        if next_column > width {
             break;
         }
-        let part = if 2 * column + grapheme_width <= 2 * covered_width {
+        // A grapheme belongs to `done` when its midpoint is within the covered columns
+        let midpoint_twice = column.saturating_mul(2).saturating_add(grapheme_width);
+        let part = if midpoint_twice <= covered_width.saturating_mul(2) {
             &mut done
         } else {
             &mut rest
         };
         part.push_str(grapheme.symbol);
-        column += grapheme_width;
+        column = next_column;
     }
 
     // `rest` is empty whenever the text ends before the boundary, so padding `done` first
     // keeps the parts in order.
     let done_padding = covered_width.saturating_sub(column);
     done.extend(repeat_n(' ', done_padding));
-    rest.extend(repeat_n(' ', width - column - done_padding));
+    rest.extend(repeat_n(
+        ' ',
+        width.saturating_sub(column).saturating_sub(done_padding),
+    ));
     (done, rest)
 }
 

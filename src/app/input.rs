@@ -23,20 +23,17 @@ impl InputHandler {
 
     pub fn insert_char(&mut self, ch: char) {
         self.text.insert(self.cursor_position, ch);
-        self.cursor_position += ch.len_utf8();
+        self.cursor_position = self.cursor_position.saturating_add(ch.len_utf8());
         self.clear_completions();
     }
 
     pub fn delete_char(&mut self) {
-        if self.cursor_position > 0 {
-            let ch = self.text[..self.cursor_position]
-                .chars()
-                .next_back()
-                .expect("cursor position is valid");
-            self.cursor_position -= ch.len_utf8();
-            self.text.remove(self.cursor_position);
-            self.clear_completions();
-        }
+        let Some(ch) = self.before_cursor().chars().next_back() else {
+            return;
+        };
+        self.cursor_position = self.cursor_position.saturating_sub(ch.len_utf8());
+        self.text.remove(self.cursor_position);
+        self.clear_completions();
     }
 
     /// Deletes the character after the cursor.
@@ -52,9 +49,9 @@ impl InputHandler {
     ///
     /// On a path such as `/downloads/shows/`, this removes `shows/`.
     pub fn delete_word_before_cursor(&mut self) {
-        let before = &self.text[..self.cursor_position];
-        let word_end = before.trim_end_matches(is_word_boundary).len();
-        let word_start = before[..word_end]
+        let word_start = self
+            .before_cursor()
+            .trim_end_matches(is_word_boundary)
             .trim_end_matches(|ch| !is_word_boundary(ch))
             .len();
         self.delete_before_cursor(word_start);
@@ -67,16 +64,28 @@ impl InputHandler {
 
     /// Moves the cursor one character to the left.
     pub fn move_cursor_left(&mut self) {
-        if let Some(ch) = self.text[..self.cursor_position].chars().next_back() {
-            self.cursor_position -= ch.len_utf8();
+        if let Some(ch) = self.before_cursor().chars().next_back() {
+            self.cursor_position = self.cursor_position.saturating_sub(ch.len_utf8());
         }
     }
 
     /// Moves the cursor one character to the right.
     pub fn move_cursor_right(&mut self) {
-        if let Some(ch) = self.text[self.cursor_position..].chars().next() {
-            self.cursor_position += ch.len_utf8();
+        if let Some(ch) = self.after_cursor().chars().next() {
+            self.cursor_position = self.cursor_position.saturating_add(ch.len_utf8());
         }
+    }
+
+    /// The text before the cursor, or nothing if `cursor_position` is not a
+    /// character boundary within the text
+    fn before_cursor(&self) -> &str {
+        self.text.get(..self.cursor_position).unwrap_or_default()
+    }
+
+    /// The text after the cursor, or nothing if `cursor_position` is not a
+    /// character boundary within the text
+    fn after_cursor(&self) -> &str {
+        self.text.get(self.cursor_position..).unwrap_or_default()
     }
 
     pub const fn move_cursor_to_start(&mut self) {
@@ -135,7 +144,7 @@ impl InputHandler {
             self.completions = matches;
             self.completion_idx = 0;
         } else {
-            self.completion_idx = (self.completion_idx + 1) % self.completions.len();
+            self.next_completion();
         }
     }
 
@@ -150,8 +159,12 @@ impl InputHandler {
     }
 
     const fn next_completion(&mut self) {
-        if !self.completions.is_empty() {
-            self.completion_idx = (self.completion_idx + 1) % self.completions.len();
+        if let Some(next) = self
+            .completion_idx
+            .saturating_add(1)
+            .checked_rem(self.completions.len())
+        {
+            self.completion_idx = next;
         }
     }
 

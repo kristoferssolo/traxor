@@ -23,7 +23,7 @@ impl Section {
 
     /// Rows taken by the title and the key rows.
     const fn height(&self) -> usize {
-        1 + self.rows.len()
+        self.rows.len().saturating_add(1)
     }
 }
 
@@ -161,7 +161,7 @@ fn split(columns: &[Vec<Section>], count: usize) -> Vec<&[Vec<Section>]> {
         .map(|at| {
             let (head, tail) = columns.split_at(at);
             let mut groups = vec![head];
-            groups.extend(split(tail, count - 1));
+            groups.extend(split(tail, count.saturating_sub(1)));
             groups
         })
         .min_by_key(|groups| groups.iter().map(|group| group_height(group)).max())
@@ -172,7 +172,10 @@ fn split(columns: &[Vec<Section>], count: usize) -> Vec<&[Vec<Section>]> {
 fn group_height(group: &[Vec<Section>]) -> usize {
     let sections = group.iter().flatten();
     let count = sections.clone().count();
-    sections.map(Section::height).sum::<usize>() + count.saturating_sub(1)
+    sections
+        .map(Section::height)
+        .sum::<usize>()
+        .saturating_add(count.saturating_sub(1))
 }
 
 fn page_column(sections: &[&Section]) -> PageColumn {
@@ -183,7 +186,7 @@ fn page_column(sections: &[&Section]) -> PageColumn {
     let rows = sections.iter().flat_map(|section| &section.rows);
     let key_width = rows
         .clone()
-        .map(|(keys, _)| Span::raw(keys.as_str()).width() + 1)
+        .map(|(keys, _)| Span::raw(keys.as_str()).width().saturating_add(1))
         .max()
         .map_or(KEY_MIN_WIDTH, |width| {
             u16::try_from(width).unwrap_or(u16::MAX).max(KEY_MIN_WIDTH)
@@ -197,7 +200,9 @@ fn page_column(sections: &[&Section]) -> PageColumn {
         .map(|section| Span::raw(section.title).width())
         .max()
         .unwrap_or_default();
-    let width = (usize::from(key_width) + desc_width).max(title_width);
+    let width = usize::from(key_width)
+        .saturating_add(desc_width)
+        .max(title_width);
 
     let mut lines = Vec::new();
     for (index, section) in sections.iter().enumerate() {

@@ -43,8 +43,8 @@ impl EventHandler {
     ///
     /// # Panics
     ///
-    /// Panics if the OS cannot create the event thread. The spawned thread panics if
-    /// event polling fails.
+    /// Panics if the OS cannot create the event thread. The thread stops if polling
+    /// or reading an event fails, which [`Self::next`] then reports.
     #[must_use]
     pub fn new(tick_rate_ms: u64) -> Self {
         let tick_rate = Duration::from_millis(tick_rate_ms);
@@ -55,7 +55,14 @@ impl EventHandler {
             loop {
                 let timeout = tick_rate.saturating_sub(last_tick.elapsed());
 
-                if event::poll(timeout).expect("event polling failed") {
+                let ready = match event::poll(timeout) {
+                    Ok(ready) => ready,
+                    Err(e) => {
+                        error!("Error polling events: {e:?}");
+                        break;
+                    }
+                };
+                if ready {
                     let send_result = match event::read() {
                         Ok(CrosstermEvent::Key(e)) => sender.send(Event::Key(e)),
                         Ok(CrosstermEvent::Mouse(e)) => sender.send(Event::Mouse(e)),
