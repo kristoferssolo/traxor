@@ -38,7 +38,7 @@ clippy:
 # Run the test suite
 [group("checks")]
 test *ARGS:
-    cargo nextest run --all-features --no-tests=warn {{ ARGS }}
+    cargo nextest run --all-features {{ ARGS }}
 
 # Build documentation, including private items
 [group("checks")]
