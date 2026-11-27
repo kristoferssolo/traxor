@@ -29,9 +29,12 @@ pub struct Tab {
 }
 
 impl Tab {
-    /// Create a new tab from config.
+    /// Create a new tab from a config that passed [`TabConfig::validate`].
+    ///
+    /// Unknown statuses would leave the tab matching every torrent, so only
+    /// [`crate::app::App::new`], which validates first, builds tabs.
     #[must_use]
-    pub fn new(config: TabConfig) -> Self {
+    pub(crate) fn new(config: TabConfig) -> Self {
         let fields = config.fields();
         let statuses = config.statuses();
         Self {
