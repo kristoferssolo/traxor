@@ -81,7 +81,11 @@ impl Display for UnitDisplay<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         const THRESHOLD: f64 = 1024.0;
 
-        #[allow(clippy::cast_precision_loss)]
+        #[expect(
+            clippy::as_conversions,
+            clippy::cast_precision_loss,
+            reason = "sizes are displayed rounded to two decimals"
+        )]
         let value = self.unit.0 as f64;
 
         let Some((first, larger)) = self.units.split_first() else {

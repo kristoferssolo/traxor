@@ -267,6 +267,7 @@ fn filled_columns(width: u16, ratio: f32) -> u16 {
     }
     let filled = (ratio.clamp(0.0, 1.0) * f32::from(width)).round();
     #[expect(
+        clippy::as_conversions,
         clippy::cast_possible_truncation,
         clippy::cast_sign_loss,
         reason = "`filled` is a whole number in `0..=width`"
@@ -307,6 +308,7 @@ mod tests {
     }
 
     fn downloading_torrent(percent_done: f32) -> Torrent {
+        #[expect(clippy::as_conversions, reason = "reads the enum's wire value")]
         let status = TorrentStatus::Downloading as u8;
         assert_ok!(toml::from_str(&format!(
             "id = 1\nname = \"ubuntu.iso\"\nstatus = {status}\npercentDone = {percent_done:?}"
