@@ -194,12 +194,13 @@ jobs:
               git push origin "refs/tags/$TAG"
           fi
       # `--current` resolves HEAD with `git describe`, which can pick another tag on
-      # this commit, such as an annotated release candidate. `--latest` takes the newest
-      # tag that matches `tag_pattern` and is reachable from HEAD, which is the pinned tag
+      # this commit, such as an annotated release candidate. `--latest` takes the last
+      # reachable tag that matches `tag_pattern`; `--topo-order` makes that the pinned
+      # tag on HEAD even when an earlier release has a newer commit date
       - name: Generate release notes
         env:
           NOTES_PATH: ${{ runner.temp }}/release-notes.md
-        run: git cliff --latest --strip all --output "$NOTES_PATH"
+        run: git cliff --latest --topo-order --strip all --output "$NOTES_PATH"
       - name: Download traxor binaries
         uses: actions/download-artifact@v8
         with:
