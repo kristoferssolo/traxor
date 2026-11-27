@@ -136,11 +136,43 @@ jobs:
             dist/*.tar.gz
             dist/*.sha256
           if-no-files-found: error
-  publish:
-    name: Publish to crates.io
+  # Runs before the crates.io upload, which cannot be undone, so the crate, binaries,
+  # and GitHub release all come from the tagged commit
+  tag:
+    name: Pin release tag
     needs:
+      - metadata
       - audit
       - build-binaries
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-tags: true
+      - name: Pin the release tag to this commit
+        env:
+          TAG: ${{ needs.metadata.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          # GitHub releases an existing tag as it is, whatever `target_commitish` says.
+          # A manual run pushes the tag itself; the push is rejected if a tag pushed since
+          # checkout already exists, and a GITHUB_TOKEN push starts no workflow
+          if tag_commit="$(git rev-parse --quiet --verify "refs/tags/$TAG^{commit}")"; then
+              if [[ "$tag_commit" != "$GITHUB_SHA" ]]; then
+                  echo "::error::$TAG points to $tag_commit, not $GITHUB_SHA"
+                  exit 1
+              fi
+          else
+              git tag "$TAG" "$GITHUB_SHA"
+              git push origin "refs/tags/$TAG"
+          fi
+  publish:
+    name: Publish to crates.io
+    needs: tag
     runs-on: ubuntu-latest
     timeout-minutes: 25
     permissions:
@@ -175,24 +207,6 @@ jobs:
         with:
           version: 2026.11.14
           install_args: --locked git-cliff
-      - name: Pin the release tag to this commit
-        env:
-          TAG: ${{ needs.metadata.outputs.tag }}
-        run: |
-          set -euo pipefail
-
-          # GitHub releases an existing tag as it is, whatever `target_commitish` says.
-          # A manual run pushes the tag itself; the push is rejected if a tag pushed since
-          # checkout already exists, and a GITHUB_TOKEN push starts no workflow
-          if tag_commit="$(git rev-parse --quiet --verify "refs/tags/$TAG^{commit}")"; then
-              if [[ "$tag_commit" != "$GITHUB_SHA" ]]; then
-                  echo "::error::$TAG points to $tag_commit, not $GITHUB_SHA"
-                  exit 1
-              fi
-          else
-              git tag "$TAG" "$GITHUB_SHA"
-              git push origin "refs/tags/$TAG"
-          fi
       # `--current` resolves HEAD with `git describe`, which can pick another tag on
       # this commit, such as an annotated release candidate. `--latest` takes the last
       # reachable tag that matches `tag_pattern`; `--topo-order` makes that the pinned
