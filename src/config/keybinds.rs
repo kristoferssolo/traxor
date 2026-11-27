@@ -215,8 +215,9 @@ fn parse_keybind(key_str: &str) -> Result<KeyEvent, ParseKeybindError> {
 
             // function keys F1...F<N>
             f if f.len() > 1 && f.starts_with('f') => {
+                let number = f.strip_prefix('f').unwrap_or_default();
                 key_code =
-                    Some(KeyCode::F(f[1..].parse().map_err(|_| {
+                    Some(KeyCode::F(number.parse().map_err(|_| {
                         ParseKeybindError::UnknownPart(part.to_owned())
                     })?));
             }

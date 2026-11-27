@@ -19,7 +19,7 @@ use crate::{
         types::{DeleteTarget, Selected},
     },
     config::Config,
-    error::Result,
+    error::{Result, TraxorError},
 };
 use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
 use ratatui::{layout::Rect, widgets::TableState};
@@ -113,8 +113,13 @@ impl App {
     ///
     /// # Errors
     ///
-    /// Returns an error if the RPC URL or credentials are invalid.
+    /// Returns an error if the RPC URL or credentials are invalid, or if a tab names an
+    /// unknown column or status.
     pub fn new(config: Config) -> Result<Self> {
+        // `Config::tabs` is public, so tabs set after deserialization are checked here
+        for (idx, tab) in config.tabs.iter().enumerate() {
+            tab.validate(idx).map_err(TraxorError::Config)?;
+        }
         let tabs: Vec<_> = config.tabs.iter().cloned().map(Tab::new).collect();
         let mut torrents = Torrents::new(&config.rpc)?;
         torrents.set_fields(Some(tab::required_fields(&tabs)));
@@ -189,28 +194,26 @@ impl App {
 
     pub fn next(&mut self) {
         self.sync_highlight();
-        let len = self.filtered_torrents().len();
-        if len == 0 {
+        let Some(last) = self.filtered_torrents().len().checked_sub(1) else {
             return;
-        }
+        };
         let i = self
             .state
             .selected()
-            .map_or(0, |i| if i >= len - 1 { 0 } else { i + 1 });
+            .map_or(0, |i| if i >= last { 0 } else { i.saturating_add(1) });
         self.close_help();
         self.highlight_row(i);
     }
 
     pub fn previous(&mut self) {
         self.sync_highlight();
-        let len = self.filtered_torrents().len();
-        if len == 0 {
+        let Some(last) = self.filtered_torrents().len().checked_sub(1) else {
             return;
-        }
+        };
         let i = self
             .state
             .selected()
-            .map_or(0, |i| if i == 0 { len - 1 } else { i - 1 });
+            .map_or(0, |i| i.checked_sub(1).unwrap_or(last));
         self.close_help();
         self.highlight_row(i);
     }
@@ -303,7 +306,9 @@ impl App {
     #[inline]
     pub const fn next_tab(&mut self) {
         self.close_help();
-        self.index = (self.index + 1) % self.tabs.len();
+        if let Some(next) = self.index.saturating_add(1).checked_rem(self.tabs.len()) {
+            self.index = next;
+        }
     }
 
     /// Switches to the previous tab.
@@ -313,7 +318,7 @@ impl App {
         self.index = self
             .index
             .checked_sub(1)
-            .unwrap_or_else(|| self.tabs.len() - 1);
+            .unwrap_or_else(|| self.tabs.len().saturating_sub(1));
     }
 
     /// Switches to the tab whose index is `idx` if it exists.
@@ -335,13 +340,17 @@ impl App {
     /// Sorts the current tab by its next column, or back to daemon order after the last.
     pub fn cycle_sort(&mut self) {
         self.close_help();
-        self.tabs[self.index].cycle_sort();
+        if let Some(tab) = self.tabs.get_mut(self.index) {
+            tab.cycle_sort();
+        }
     }
 
     /// Flips the sort direction of the current tab.
     pub fn reverse_sort(&mut self) {
         self.close_help();
-        self.tabs[self.index].reverse_sort();
+        if let Some(tab) = self.tabs.get_mut(self.index) {
+            tab.reverse_sort();
+        }
     }
 
     /// Returns [`Tab`] slice
@@ -481,7 +490,9 @@ impl App {
     #[must_use]
     pub fn filtered_torrents(&self) -> Vec<&Torrent> {
         let filter = self.active_filter();
-        let tab = &self.tabs[self.index];
+        let Some(tab) = self.tabs.get(self.index) else {
+            return Vec::new();
+        };
         let sort = tab.sort();
         let in_tab = self
             .torrents

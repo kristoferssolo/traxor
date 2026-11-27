@@ -32,8 +32,10 @@ pub fn table_row_at(
     if !inner.contains(position) {
         return None;
     }
-    let row_offset = position.y.checked_sub(inner.y + TABLE_HEADER_ROWS)?;
-    let row = offset + usize::from(row_offset);
+    let row_offset = position
+        .y
+        .checked_sub(inner.y.saturating_add(TABLE_HEADER_ROWS))?;
+    let row = offset.checked_add(usize::from(row_offset))?;
     (row < row_count).then_some(row)
 }
 
@@ -51,16 +53,16 @@ pub fn tab_at(
     if !inner.contains(position) || position.y != inner.y {
         return None;
     }
-    let column = usize::from(position.x - inner.x);
-    let padding = 2 * Span::raw(TAB_PADDING).width();
+    let column = usize::from(position.x.checked_sub(inner.x)?);
+    let padding = Span::raw(TAB_PADDING).width().saturating_mul(2);
     let divider = Span::raw(TAB_DIVIDER).width();
-    let mut start = 0;
+    let mut start: usize = 0;
     for (index, title_width) in title_widths.into_iter().enumerate() {
-        let end = start + padding + title_width;
+        let end = start.saturating_add(padding).saturating_add(title_width);
         if column < end {
             return (column >= start).then_some(index);
         }
-        start = end + divider;
+        start = end.saturating_add(divider);
     }
     None
 }

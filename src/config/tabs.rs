@@ -49,29 +49,25 @@ impl TabConfig {
 
     /// Parse column strings into `TorrentGetField` variants.
     ///
-    /// # Panics
-    ///
-    /// Panics if called before [`Self::validate`] succeeds for this tab.
+    /// Unknown columns are skipped; [`Self::validate`] reports them, and
+    /// [`crate::app::App::new`] rejects them.
     #[must_use]
     pub fn fields(&self) -> Vec<TorrentGetField> {
         self.columns
             .iter()
-            .map(|column| parse_field(column).expect("tab columns should be validated before use"))
+            .filter_map(|column| parse_field(column))
             .collect()
     }
 
     /// Parse status strings into `TorrentStatus` variants.
     ///
-    /// # Panics
-    ///
-    /// Panics if called before [`Self::validate`] succeeds for this tab.
+    /// Unknown statuses are skipped; [`Self::validate`] reports them, and
+    /// [`crate::app::App::new`] rejects them.
     #[must_use]
     pub fn statuses(&self) -> Vec<TorrentStatus> {
         self.statuses
             .iter()
-            .map(|status| {
-                parse_status(status).expect("tab statuses should be validated before use")
-            })
+            .filter_map(|status| parse_status(status))
             .collect()
     }
 }

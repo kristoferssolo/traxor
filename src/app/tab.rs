@@ -29,9 +29,12 @@ pub struct Tab {
 }
 
 impl Tab {
-    /// Create a new tab from config.
+    /// Create a new tab from a config that passed [`TabConfig::validate`].
+    ///
+    /// Unknown statuses would leave the tab matching every torrent, so only
+    /// [`crate::app::App::new`], which validates first, builds tabs.
     #[must_use]
-    pub fn new(config: TabConfig) -> Self {
+    pub(crate) fn new(config: TabConfig) -> Self {
         let fields = config.fields();
         let statuses = config.statuses();
         Self {
@@ -64,7 +67,7 @@ impl Tab {
     ///
     /// Cycles from daemon order through each column in order, then back to daemon order.
     pub fn cycle_sort(&mut self) {
-        let column = self.sort.map_or(0, |sort| sort.column + 1);
+        let column = self.sort.map_or(0, |sort| sort.column.saturating_add(1));
         self.sort = self
             .fields
             .get(column)
@@ -115,7 +118,7 @@ mod tests {
         app::{App, sort::SortDirection},
         config::Config,
     };
-    use claims::{assert_none, assert_ok, assert_some, assert_some_eq};
+    use claims::{assert_err, assert_none, assert_ok, assert_some, assert_some_eq};
 
     fn default_config() -> Config {
         assert_ok!(toml::from_str(include_str!("../../config/default.toml")))
@@ -133,6 +136,20 @@ mod tests {
         for field in tabs.iter().flat_map(Tab::fields) {
             assert!(fields.contains(field), "missing {}", field.to_str());
         }
+    }
+
+    #[test]
+    fn app_rejects_a_tab_with_an_unknown_status() {
+        let mut config = default_config();
+        config.tabs = vec![TabConfig {
+            name: "Seeding".to_owned(),
+            columns: vec!["name".to_owned()],
+            statuses: vec!["seedng".to_owned()],
+        }];
+
+        let error = assert_err!(App::new(config));
+
+        assert!(error.to_string().contains("seedng"), "{error}");
     }
 
     #[test]

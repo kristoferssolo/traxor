@@ -28,14 +28,12 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     let tab_style = tab_style(&app.config.colors);
     let highlighted_tab_style = highlighted_tab_style(&app.config.colors);
 
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(3),
-            Constraint::Min(0),
-            Constraint::Length(3),
-        ])
-        .split(size);
+    let [tabs_area, body_area, status_area] = Layout::vertical([
+        Constraint::Length(3),
+        Constraint::Min(0),
+        Constraint::Length(3),
+    ])
+    .areas(size);
 
     let titles = app
         .tabs()
@@ -51,18 +49,17 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         .padding(TAB_PADDING, TAB_PADDING)
         .divider(TAB_DIVIDER);
 
-    frame.render_widget(tabs, chunks[0]);
+    frame.render_widget(tabs, tabs_area);
 
     app.sync_highlight();
-    app.set_page_size(hit_test::table_body_rows(chunks[1]));
+    app.set_page_size(hit_test::table_body_rows(body_area));
 
     if app.show_help {
-        render_help(frame, app, chunks[1]);
-    } else {
+        render_help(frame, app, body_area);
+    } else if let Some(tab) = app.tabs().get(app.index()) {
         let torrents = app.filtered_torrents();
         let table_rows = torrents.iter().map(|torrent| torrent.id).collect();
         let selected = &app.torrents.selected;
-        let tab = &app.tabs()[app.index()];
 
         let table = build_table(
             &torrents,
@@ -70,19 +67,19 @@ pub fn render(app: &mut App, frame: &mut Frame) {
             app.state.selected(),
             &app.config,
             tab.fields(),
-            chunks[1],
+            body_area,
             tab.sort(),
         );
-        frame.render_stateful_widget(table, chunks[1], &mut app.state);
+        frame.render_stateful_widget(table, body_area, &mut app.state);
         app.areas = RenderedAreas {
-            tabs: chunks[0],
-            table: chunks[1],
+            tabs: tabs_area,
+            table: body_area,
             table_offset: app.state.offset(),
             table_rows,
         };
     }
 
-    status::render(frame, app, chunks[2]);
+    status::render(frame, app, status_area);
 
     if app.input_mode != InputMode::None {
         input::render(frame, app);
