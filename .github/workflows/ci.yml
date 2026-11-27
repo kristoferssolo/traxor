@@ -3,7 +3,6 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
 permissions:
   contents: read
 concurrency:
@@ -11,65 +10,38 @@ concurrency:
   cancel-in-progress: true
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: --deny warnings
-  RUSTDOCFLAGS: --deny warnings
 jobs:
-  test:
-    name: Tests
+  check:
+    name: ${{ matrix.recipe }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-      - name: Install nextest
-        uses: taiki-e/install-action@nextest
-      - name: Populate target directory from cache
-        uses: Swatinem/rust-cache@v2
-      - name: Run tests
-        run: cargo nextest run --locked --workspace --all-features
-      # nextest does not run doctests
-      - name: Run doctests
-        run: cargo test --locked --workspace --all-features --doc
-  clippy:
-    name: Clippy
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        recipe: [fmt-check, clippy, test, docs]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: clippy
-      - name: Populate target directory from cache
-        uses: Swatinem/rust-cache@v2
-      - name: Run clippy lints
-        run: cargo clippy --locked --workspace --all-features --all-targets -- --deny warnings
-  format:
-    name: Format
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+          components: clippy, rustfmt
+      - name: Install just and nextest
+        uses: taiki-e/install-action@v2
         with:
-          components: rustfmt
-      - name: Run cargo fmt
-        run: cargo fmt --all -- --check
-  doc:
-    name: Docs
+          tool: just@1.59.0,cargo-nextest@0.9.152
+      - name: Populate target directory from cache
+        uses: Swatinem/rust-cache@v2
+      - name: Verify Cargo.lock is up to date
+        run: cargo fetch --locked
+      - name: Run just ${{ matrix.recipe }}
+        run: just ${{ matrix.recipe }}
+  audit:
+    name: Audit
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-      - name: Populate target directory from cache
-        uses: Swatinem/rust-cache@v2
-      - name: Check documentation
-        run: cargo doc --locked --workspace --all-features --document-private-items --no-deps
+      - uses: actions/checkout@v7
+      - uses: actions-rust-lang/audit@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

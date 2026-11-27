@@ -29,13 +29,18 @@ check: fmt clippy docs test
 fmt:
     cargo fmt --all
 
+# Fail if anything is unformatted
+[group("dev")]
+fmt-check:
+    cargo fmt --all -- --check
+
 [group("dev")]
 clippy:
     cargo clippy --all-targets --all-features -- -D warnings
 
 [group("dev")]
 docs:
-    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features
+    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features --document-private-items
 
 [group("dev")]
 test:
