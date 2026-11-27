@@ -226,7 +226,8 @@ fn render(app: &mut App, width: u16, height: u16) -> Vec<String> {
 fn find(screen: &[String], text: &str) -> (usize, usize) {
     let found = screen.iter().enumerate().find_map(|(row, line)| {
         line.find(text)
-            .map(|byte| (row, line[..byte].chars().count()))
+            .and_then(|byte| line.get(..byte))
+            .map(|prefix| (row, prefix.chars().count()))
     });
     assert_some!(found, "{text:?} not on screen:\n{}", screen.join("\n"))
 }
@@ -352,7 +353,7 @@ fn lines(buffer: &Buffer) -> Vec<String> {
 fn find_in_buffer(buffer: &Buffer, text: &str) -> Option<(u16, u16)> {
     lines(buffer).iter().zip(0..).find_map(|(line, y)| {
         let byte = line.find(text)?;
-        let x = u16::try_from(line[..byte].chars().count()).ok()?;
+        let x = u16::try_from(line.get(..byte)?.chars().count()).ok()?;
         Some((x, y))
     })
 }
@@ -439,7 +440,7 @@ fn status_row(buffer: &Buffer) -> String {
 /// Returns the status row cell where `text` starts.
 fn cell_at<'a>(buffer: &'a Buffer, status_line: &str, text: &str) -> &'a Cell {
     let byte_index = assert_some!(status_line.find(text), "{text:?} in {status_line:?}");
-    let column = status_line[..byte_index].chars().count();
+    let column = assert_some!(status_line.get(..byte_index)).chars().count();
     let column = u16::try_from(column).expect("column fits in u16");
     &buffer[(column, STATUS_ROW)]
 }

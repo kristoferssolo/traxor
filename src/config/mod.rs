@@ -216,50 +216,47 @@ mod tests {
     }
 
     #[test]
-    fn rejects_invalid_tab_column() -> Result<()> {
-        let value = defaults_with(
+    fn rejects_invalid_tab_column() {
+        let value = assert_ok!(defaults_with(
             r#"
             [[tabs]]
             name = "Broken"
             columns = ["name", "bogus"]
             "#,
-        )?;
+        ));
 
         let err = format!("{:#}", assert_err!(Config::from_value(value)));
         assert!(err.contains("invalid columns"));
         assert!(err.contains("bogus"));
-        Ok(())
     }
 
     #[test]
-    fn rejects_invalid_tab_status() -> Result<()> {
-        let value = defaults_with(
+    fn rejects_invalid_tab_status() {
+        let value = assert_ok!(defaults_with(
             r#"
             [[tabs]]
             name = "Broken"
             columns = ["name"]
             statuses = ["Flying"]
             "#,
-        )?;
+        ));
 
         let err = format!("{:#}", assert_err!(Config::from_value(value)));
         assert!(err.contains("invalid statuses"));
         assert!(err.contains("Flying"));
-        Ok(())
     }
 
     #[test]
-    fn rejects_invalid_eta_format() -> Result<()> {
-        let value = defaults_with(
+    fn rejects_invalid_eta_format() {
+        let value = assert_ok!(defaults_with(
             r#"
             [time]
             eta_format = "verbose"
             "#,
-        )?;
+        ));
 
         let err = format!("{:#}", assert_err!(Config::from_value(value)));
         assert!(err.contains("time.eta_format"));
-        Ok(())
     }
 
     fn default_with_keybinds(overrides: &str) -> Result<Value> {
@@ -267,94 +264,89 @@ mod tests {
     }
 
     #[test]
-    fn rejects_invalid_keybind() -> Result<()> {
-        let value = default_with_keybinds(r#"move_torrent = "ctrl+bogus""#)?;
+    fn rejects_invalid_keybind() {
+        let value = assert_ok!(default_with_keybinds(r#"move_torrent = "ctrl+bogus""#));
 
         let err = format!("{:#}", assert_err!(Config::from_value(value)));
         assert!(err.contains("keybinds.move_torrent"));
         assert!(err.contains("ctrl+bogus"));
-        Ok(())
     }
 
     #[test]
-    fn rejects_duplicate_keybind() -> Result<()> {
-        let value = default_with_keybinds(r#"rename_torrent = "m""#)?;
+    fn rejects_duplicate_keybind() {
+        let value = assert_ok!(default_with_keybinds(r#"rename_torrent = "m""#));
 
         let err = format!("{:#}", assert_err!(Config::from_value(value)));
         assert!(err.contains("keybinds.move_torrent"));
         assert!(err.contains("keybinds.rename_torrent"));
-        Ok(())
     }
 
     #[test]
-    fn accepts_default_config() -> Result<()> {
-        assert_ok!(Config::from_value(defaults_with("")?));
-        Ok(())
+    fn accepts_default_config() {
+        assert_ok!(Config::from_value(assert_ok!(defaults_with(""))));
     }
 
     #[test]
-    fn direct_deserialization_builds_keymap() -> Result<()> {
+    fn direct_deserialization_builds_keymap() {
         let quit = KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE);
 
-        let config: Config = toml::from_str(DEFAULT_CONFIG)?;
+        let config: Config = assert_ok!(toml::from_str(DEFAULT_CONFIG));
         assert_some_eq!(config.keymap().action(&quit), Action::Quit);
 
-        let round_tripped: Config = toml::from_str(&toml::to_string(&config)?)?;
+        let round_tripped: Config =
+            assert_ok!(toml::from_str(&assert_ok!(toml::to_string(&config))));
         assert_some_eq!(round_tripped.keymap().action(&quit), Action::Quit);
-        Ok(())
     }
 
     #[test]
-    fn direct_deserialization_rejects_duplicate_keybind() -> Result<()> {
-        let input = toml::to_string(&default_with_keybinds(r#"rename_torrent = "m""#)?)?;
+    fn direct_deserialization_rejects_duplicate_keybind() {
+        let input = assert_ok!(toml::to_string(&assert_ok!(default_with_keybinds(
+            r#"rename_torrent = "m""#
+        ))));
 
         let err = assert_err!(toml::from_str::<Config>(&input)).to_string();
         assert!(err.contains("keybinds.rename_torrent"));
-        Ok(())
     }
 
     #[test]
-    fn rejects_invalid_rpc_url() -> Result<()> {
-        let value = defaults_with(
+    fn rejects_invalid_rpc_url() {
+        let value = assert_ok!(defaults_with(
             r#"
             [rpc]
             url = "not a url"
             "#,
-        )?;
+        ));
 
         let err = format!("{:#}", assert_err!(Config::from_value(value)));
         assert!(err.contains("rpc.url"));
         assert!(err.contains("not a url"));
-        Ok(())
     }
 
     #[test]
-    fn rejects_rpc_username_without_password() -> Result<()> {
-        let value = defaults_with(
+    fn rejects_rpc_username_without_password() {
+        let value = assert_ok!(defaults_with(
             r#"
             [rpc]
             username = "user"
             "#,
-        )?;
+        ));
 
         let err = format!("{:#}", assert_err!(Config::from_value(value)));
         assert!(err.contains("rpc.password is missing"));
-        Ok(())
     }
 
     #[test]
-    fn merges_rpc_credentials_over_default_url() -> Result<()> {
-        let value = defaults_with(
+    fn merges_rpc_credentials_over_default_url() {
+        let value = assert_ok!(defaults_with(
             r#"
             [rpc]
             username = "user"
             password = "secret"
             "#,
-        )?;
+        ));
 
-        let config = Config::from_value(value)?;
+        let config = assert_ok!(Config::from_value(value));
         assert_eq!(config.rpc.url, "http://localhost:9091/transmission/rpc");
-        assert_some!(config.rpc.basic_auth()?);
-        Ok(())
+        assert_some!(assert_ok!(config.rpc.basic_auth()));
     }
 }

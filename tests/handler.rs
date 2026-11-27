@@ -316,7 +316,7 @@ async fn handle_event_routes_keys_and_mouse() {
 /// divider, then left padding.
 fn click_on_second_tab(app: &App) -> MouseEvent {
     let first_title_width = assert_ok!(u16::try_from(Line::from(app.tabs()[0].name()).width()));
-    left_click(1 + first_title_width + 2 + 1 + 1, 1)
+    left_click(first_title_width.saturating_add(1 + 2 + 1 + 1), 1)
 }
 
 const fn left_click(column: u16, row: u16) -> MouseEvent {
